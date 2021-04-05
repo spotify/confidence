@@ -1,0 +1,16 @@
+-e .
+pip==21.0.1
+build
+twine
+bumpversion==0.5.3
+watchdog==0.8.3
+flake8==3.7.7
+tox==3.21.0
+Sphinx==1.4.8
+pytest-runner==2.11.1
+jupyter==1.0.0
+pylint==1.7.4
+coverage==4.5.1
+pytest==4.3.1
+pytest-cov==2.5.1
+ipywidgets>=7.1.0

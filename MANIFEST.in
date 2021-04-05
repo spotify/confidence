@@ -1,0 +1,10 @@
+include README.md
+include CONTRIBUTING.md
+include AUTHORS.md
+
+recursive-include tests *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+
+recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.py
+recursive-include confidence/ *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.py
