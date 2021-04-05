@@ -18,7 +18,7 @@ Each function comes in two versions:
  - one that returns a [Chartify](https://github.com/spotify/chartify) chart.
 
 Spotify Confidence has support calculating p-values and confidence intervals using Z-statistics, Student's T-statistics 
-(or more exactly [Welch's T-test](https://en.wikipedia.org/wiki/Welch%27s_t-test), as well as Chi Squared statistics)
+(or more exactly [Welch's T-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)), as well as Chi-squared statistics.
 
 There is also a Bayesian alternative in the BetaBinomial class.
 
