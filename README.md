@@ -25,6 +25,9 @@ There is also a Bayesian alternative in the BetaBinomial class.
 Examples
 --------
 ```
+import spotify_confidence as confidence
+import pandas as pd
+
 data = pd.DataFrame(
     {'variation_name': ['treatment1', 'control', 'treatment2', 'treatment3'],
      'success': [50, 40, 10, 20],
