@@ -47,7 +47,8 @@ test.summary()
 test.difference(level_1='control', level_2='treatment1')
 test.multiple_diffence(level='control', level_as_reference=True)
 
-test.summary_plot()
+test.summary_plot().show()
+test.difference_plot(level_1='control', level_2='treatment1').show()
 test.multiple_diffence_plot(level='control', level_as_reference=True).show()
 ```
 
