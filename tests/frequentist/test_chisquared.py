@@ -408,7 +408,7 @@ class TestOrdinal(object):
         with pytest.raises(ValueError):
             self.test.difference(('control', 1),
                                  ('test', 1),
-                                 non_inferiority_margins=('blah','hah'))
+                                 non_inferiority_margins=('blah', 'hah'))
 
     def test_difference(self):
         with pytest.raises(ValueError):

@@ -17,7 +17,6 @@ from typing import (Union, Iterable, Tuple, Dict)
 from pandas import DataFrame
 
 from .chartify_grapher import ChartifyGrapher
-from .statsmodels_computer import ZTestComputer
 from ..abstract_base_classes.confidence_abc import ConfidenceABC
 from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
@@ -60,7 +59,6 @@ class Test(ConfidenceABC):
                       self._denominator,
                       self._all_group_columns,
                       self._ordinal_group_column)
-
 
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
