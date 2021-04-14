@@ -20,12 +20,12 @@ from .statsmodels_computer import TTestComputer
 from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from .test import Test
+from .generic_test import GenericTest
 from ..confidence_utils import listify
 from ..constants import BONFERRONI
 
 
-class StudentsTTest(Test):
+class StudentsTTest(GenericTest):
 
     def __init__(self,
                  data_frame: DataFrame,

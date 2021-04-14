@@ -2,6 +2,11 @@
 History
 =======
 
+2.0.2 (2021-04-15)
+------------------
+
+* Introduce frequentist test superclass to reduce code duplication
+
 2.0.1 (2021-03-10)
 ------------------
 

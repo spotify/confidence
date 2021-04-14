@@ -20,12 +20,12 @@ from .statsmodels_computer import ChiSquaredComputer
 from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from .test import Test
+from .generic_test import GenericTest
 from ..confidence_utils import listify
 from ..constants import BONFERRONI, NIM_TYPE
 
 
-class ChiSquared(Test):
+class ChiSquared(GenericTest):
 
     def __init__(self,
                  data_frame: DataFrame,
@@ -65,8 +65,7 @@ class ChiSquared(Test):
                    level_2: Union[str, Tuple],
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
-                   non_inferiority_margins: NIM_TYPE = None,
-                   final_expected_sample_size: float = None
+                   non_inferiority_margins: NIM_TYPE = None
                    ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError('Non-inferiority margins not supported in '
@@ -76,15 +75,13 @@ class ChiSquared(Test):
             level_2,
             absolute,
             groupby,
-            None,
-            final_expected_sample_size)
+            None)
 
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
-                            level_as_reference: bool = False,
-                            non_inferiority_margins: NIM_TYPE = None,
-                            final_expected_sample_size: float = None
+                            level_as_reference: bool = None,
+                            non_inferiority_margins: NIM_TYPE = None
                             ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError('Non-inferiority margins not supported in '
@@ -94,5 +91,4 @@ class ChiSquared(Test):
             absolute,
             groupby,
             level_as_reference,
-            None,
-            final_expected_sample_size)
+            None)
