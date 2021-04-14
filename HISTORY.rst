@@ -6,6 +6,7 @@ History
 ------------------
 
 * Introduce frequentist test superclass to reduce code duplication
+* Change default of level_as_reference to None to require more explicit intents
 
 2.0.1 (2021-03-10)
 ------------------
