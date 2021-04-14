@@ -23,6 +23,7 @@ from abc import abstractmethod
 
 from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
+from .sequential_bound_solver import bounds as sequential_bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR,
                          ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
@@ -100,7 +101,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                            level_2: Union[str, Iterable],
                            absolute: bool,
                            groupby: str,
-                           nims: NIM_TYPE
+                           nims: NIM_TYPE,
+                           final_expected_sample_size: float
                            ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(level_columns,
@@ -109,7 +111,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   absolute,
                                                   groupby,
                                                   level_as_reference=True,
-                                                  nims=nims)
+                                                  nims=nims,
+                                                  final_expected_sample_size=final_expected_sample_size)
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
@@ -122,7 +125,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                     absolute: bool,
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
-                                    nims: NIM_TYPE
+                                    nims: NIM_TYPE,
+                                    final_expected_sample_size: float
                                     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [other for other in self._sufficient_statistics
@@ -133,7 +137,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   absolute,
                                                   groupby,
                                                   level_as_reference,
-                                                  nims=nims)
+                                                  nims,
+                                                  final_expected_sample_size)
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
@@ -148,7 +153,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                              absolute: bool,
                              groupby: Union[str, Iterable],
                              level_as_reference: bool,
-                             nims: NIM_TYPE):
+                             nims: NIM_TYPE,
+                             final_expected_sample_size: float):
         groupby = listify(groupby)
         validate_levels(self._sufficient_statistics,
                         level_columns,
@@ -167,7 +173,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 .pipe(self._create_comparison_df,
                       groups_to_compare=levels,
                       absolute=absolute,
-                      nims=nims)
+                      nims=nims,
+                      final_expected_sample_size=final_expected_sample_size)
                 .assign(level_1=lambda df:
                         df['level_1'].map(lambda s: str2level[s]))
                 .assign(level_2=lambda df:
@@ -180,7 +187,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               df: DataFrame,
                               groups_to_compare: List[Tuple[str, str]],
                               absolute: bool,
-                              nims: NIM_TYPE
+                              nims: NIM_TYPE,
+                              final_expected_sample_size: float
                               ) -> DataFrame:
 
         def join(df: DataFrame) -> DataFrame:
@@ -316,7 +324,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                       True,
                                       groupby,
                                       level_as_reference=True,
-                                      nims=None)  # TODO: IS this right?
+                                      nims=None, # TODO: IS this right?
+                                      final_expected_sample_size=None)  # TODO: IS this right?
                 .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
                 .pipe(self._achieved_power, mde=mde, alpha=alpha)
         )
