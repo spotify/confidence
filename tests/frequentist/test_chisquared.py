@@ -404,6 +404,12 @@ class TestOrdinal(object):
 
         assert (diff1['p-value'].iloc[0] == diff2['p-value'].iloc[0])
 
+    def test_raise_error_with_nim(self):
+        with pytest.raises(ValueError):
+            self.test.difference(('control', 1),
+                                 ('test', 1),
+                                 non_inferiority_margins=('blah', 'hah'))
+
     def test_difference(self):
         with pytest.raises(ValueError):
             self.test.difference(('control', 'us'), ('test', 'usf'))
