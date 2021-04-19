@@ -86,6 +86,7 @@ class GenericTest(ConfidenceABC):
                    non_inferiority_margins: NIM_TYPE = None,
                    final_expected_sample_size: float = None
                    ) -> DataFrame:
+        self._validate_sequential(final_expected_sample_size, groupby)
         return self._confidence_computer.compute_difference(
             level_1,
             level_2,
@@ -101,6 +102,7 @@ class GenericTest(ConfidenceABC):
                             non_inferiority_margins: NIM_TYPE = None,
                             final_expected_sample_size: float = None
                             ) -> DataFrame:
+        self._validate_sequential(final_expected_sample_size, groupby)
         return self._confidence_computer.compute_multiple_difference(
             level,
             absolute,
@@ -194,3 +196,11 @@ class GenericTest(ConfidenceABC):
         """
         return self._confidence_computer.achieved_power(level_1, level_2,
                                                         mde, alpha, groupby)
+
+    def _validate_sequential(self,
+                             final_expected_sample_size: float,
+                             groupby: Union[str, Iterable]):
+        if final_expected_sample_size is not None:
+            if self._ordinal_group_column not in listify(groupby):
+                raise ValueError(f"{self._ordinal_group_column} must be in groupby argument to use "
+                                 f"sequential testing with final_expected_sample_size")

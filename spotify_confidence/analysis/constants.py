@@ -22,6 +22,9 @@ P_VALUE = "p-value"
 ADJUSTED_P = "adjusted p-value"
 SFX1, SFX2 = '_1', '_2'
 STD_ERR = 'std_err'
+Z_CRIT = "z_crit"
+ALPHA = 'alpha'
+ADJUSTED_ALPHA = 'adjusted_alpha'
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"
