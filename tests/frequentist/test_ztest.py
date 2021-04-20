@@ -960,6 +960,9 @@ class TestWithNims(object):
 
 class TestSequentialOrdinalPlusTwoCategorical(object):
     def setup(self):
+        np.random.seed(123)
+        d = 50 + 1 * np.random.randn(60)
+        u = np.floor(2000 + np.linspace(0, 1000, 60) + 10 * np.random.randn(60))
         self.data = pd.DataFrame(
             {'variation_name': ['test', 'control', 'test2',
                                 'test', 'control', 'test2',
@@ -970,74 +973,103 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                                 'test', 'control', 'test2',
                                 'test', 'control', 'test2',
                                 'test', 'control', 'test2',
-                                'test', 'control', 'test2', ],
-             'nr_of_items': [500, 8, 100,
-                             510, 8, 100,
-                             520, 9, 104,
-                             530, 10, 104,
-                             530, 11, 107,
-                             540, 13, 108,
-                             560, 15, 109,
-                             570, 15, 114,
-                             590, 16, 114,
-                             600, 17, 123, ],
-             'nr_of_items_sumsq': [1010, 32, 250,
-                                   1010, 33, 253,
-                                   1030, 33, 254,
-                                   1050, 35, 255,
-                                   1060, 36, 255,
-                                   1090, 38, 260,
-                                   2000, 40, 273,
-                                   2030, 43, 284,
-                                   2030, 45, 290,
-                                   2070, 46, 295, ],
-             'users': [2010, 42, 250,
-                       2020, 42, 253,
-                       2030, 43, 254,
-                       2040, 44, 254,
-                       2040, 44, 255,
-                       1010, 22, 150,
-                       1020, 23, 153,
-                       1030, 23, 154,
-                       1040, 25, 155,
-                       1040, 28, 156, ],
-             'date':           [1, 1, 1,
-                                2, 2, 2,
-                                3, 3, 3,
-                                4, 4, 4,
-                                5, 5, 5,
-                                1, 1, 1,
-                                2, 2, 2,
-                                3, 3, 3,
-                                4, 4, 4,
-                                5, 5, 5],
-             'country': ['us', 'us', 'us', 'us', 'us', 'us', 'us',
-                         'us', 'us', 'us', 'us', 'us', 'us', 'us',
-                         'us',
-                         'gb', 'gb', 'gb', 'gb', 'gb', 'gb', 'gb',
-                         'gb', 'gb', 'gb', 'gb', 'gb', 'gb', 'gb',
-                         'gb', ]})
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2',
+                                'test', 'control', 'test2'],
+             'nr_of_items': d,
+             'nr_of_items_sumsq': d/20,
+             'users': u,
+             'date': pd.to_datetime(['2021-04-01', '2021-04-01', '2021-04-01',
+                                     '2021-04-02', '2021-04-02', '2021-04-02',
+                                     '2021-04-03', '2021-04-03', '2021-04-03',
+                                     '2021-04-04', '2021-04-04', '2021-04-04',
+                                     '2021-04-05', '2021-04-05', '2021-04-05',
+                                     '2021-04-01', '2021-04-01', '2021-04-01',
+                                     '2021-04-02', '2021-04-02', '2021-04-02',
+                                     '2021-04-03', '2021-04-03', '2021-04-03',
+                                     '2021-04-04', '2021-04-04', '2021-04-04',
+                                     '2021-04-05', '2021-04-05', '2021-04-05',
+                                     '2021-04-01', '2021-04-01', '2021-04-01',
+                                     '2021-04-02', '2021-04-02', '2021-04-02',
+                                     '2021-04-03', '2021-04-03', '2021-04-03',
+                                     '2021-04-04', '2021-04-04', '2021-04-04',
+                                     '2021-04-05', '2021-04-05', '2021-04-05',
+                                     '2021-04-01', '2021-04-01', '2021-04-01',
+                                     '2021-04-02', '2021-04-02', '2021-04-02',
+                                     '2021-04-03', '2021-04-03', '2021-04-03',
+                                     '2021-04-04', '2021-04-04', '2021-04-04',
+                                     '2021-04-05', '2021-04-05', '2021-04-05']),
+             'country': ['us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb'],
+             'metric': ['m1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm1', 'm1', 'm1',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2',
+                        'm2', 'm2', 'm2']
+             }
+        )
 
         self.test = spotify_confidence.ZTest(
             self.data,
             numerator_column='nr_of_items',
             numerator_sum_squares_column='nr_of_items_sumsq',
             denominator_column='users',
-            categorical_group_columns=['variation_name', 'country'],
+            categorical_group_columns=['variation_name', 'country', 'metric'],
             ordinal_group_column='date')
 
     def test_multiple_difference_groupby(self):
-        final_sample_size = self.data.query("date == 5")['users'].sum()
+        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
         difference_df = self.test.multiple_difference(
             level='control',
-            groupby=['date',
-                     'country'],
+            groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             final_expected_sample_size=final_sample_size)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
             * self.data.country.unique().size
+            * self.data.metric.unique().size
         )
         n_comp = len(difference_df)
         assert np.allclose(
@@ -1045,11 +1077,10 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_groupby_onesided_decrease(self):
-        final_sample_size = self.data.query("date == 5")['users'].sum()
+        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
         difference_df = self.test.multiple_difference(
             level='control',
-            groupby=['date',
-                     'country'],
+            groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             non_inferiority_margins=(0.05, 'decrease'),
             final_expected_sample_size=final_sample_size)
@@ -1057,6 +1088,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
             * self.data.country.unique().size
+            * self.data.metric.unique().size
         )
         n_comp = len(difference_df)
         assert np.allclose(
@@ -1064,11 +1096,10 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_groupby_onesided_increase(self):
-        final_sample_size = self.data.query("date == 5")['users'].sum()
+        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
         difference_df = self.test.multiple_difference(
             level='control',
-            groupby=['date',
-                     'country'],
+            groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             non_inferiority_margins=(0.05, 'increase'),
             final_expected_sample_size=final_sample_size)
@@ -1076,6 +1107,46 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
             * self.data.country.unique().size
+            * self.data.metric.unique().size
+        )
+        n_comp = len(difference_df)
+        assert np.allclose(
+            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df['adjusted p-value'], rtol=0.01)
+
+    def test_multiple_difference_groupby_mixed_nims(self):
+        nims = {(pd.to_datetime('2021-04-01'), 'us', 'm1'): (0.2, 'increase'),
+                (pd.to_datetime('2021-04-02'), 'us', 'm1'): (0.2, 'increase'),
+                (pd.to_datetime('2021-04-03'), 'us', 'm1'): (0.2, 'increase'),
+                (pd.to_datetime('2021-04-04'), 'us', 'm1'): (0.2, 'increase'),
+                (pd.to_datetime('2021-04-05'), 'us', 'm1'): (0.2, 'increase'),
+                (pd.to_datetime('2021-04-01'), 'gb', 'm1'): (0.1, 'increase'),
+                (pd.to_datetime('2021-04-02'), 'gb', 'm1'): (0.1, 'increase'),
+                (pd.to_datetime('2021-04-03'), 'gb', 'm1'): (0.1, 'increase'),
+                (pd.to_datetime('2021-04-04'), 'gb', 'm1'): (0.1, 'increase'),
+                (pd.to_datetime('2021-04-05'), 'gb', 'm1'): (0.1, 'increase'),
+                (pd.to_datetime('2021-04-01'), 'us', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-02'), 'us', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-03'), 'us', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-04'), 'us', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-05'), 'us', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-01'), 'gb', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-02'), 'gb', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-03'), 'gb', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-04'), 'gb', 'm2'): (0, None),
+                (pd.to_datetime('2021-04-05'), 'gb', 'm2'): (0, None)}
+        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
+        difference_df = self.test.multiple_difference(
+            level='control',
+            groupby=['date', 'country', 'metric'],
+            level_as_reference=True,
+            non_inferiority_margins=nims,
+            final_expected_sample_size=final_sample_size)
+        assert len(difference_df) == (
+            (self.data.variation_name.unique().size - 1)
+            * self.data.date.unique().size
+            * self.data.country.unique().size
+            * self.data.metric.unique().size
         )
         n_comp = len(difference_df)
         assert np.allclose(
