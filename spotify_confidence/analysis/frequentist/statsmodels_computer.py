@@ -294,7 +294,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 .df.set_index(sample_size_proportions.index)['zb']
             ) if not (df[PREFERENCE] == TWO_SIDED).all() else None
             z_crit_two_sided = (
-                sequential_bounds(t=sample_size_proportions.values, alpha=alpha, sides=1)
+                sequential_bounds(t=sample_size_proportions.values, alpha=alpha, sides=2)
                 .df.set_index(sample_size_proportions.index)['zb']
             ) if not (df[PREFERENCE] != TWO_SIDED).all() else None
             ordinal_index = df.index.names.index(self._ordinal_group_column)
