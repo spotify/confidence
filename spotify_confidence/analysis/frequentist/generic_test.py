@@ -98,7 +98,7 @@ class GenericTest(ConfidenceABC):
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
-                            level_as_reference: bool = False,
+                            level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
                             final_expected_sample_size: float = None
                             ) -> DataFrame:
