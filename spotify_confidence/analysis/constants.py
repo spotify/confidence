@@ -30,6 +30,7 @@ BONFERRONI = "bonferroni"
 HOLM = "holm"
 HOMMEL = "hommel"
 SIMES_HOCHBERG = "simes-hochberg"
+BONFERRONI_ONLY_COUNT_TWOSIDED = "bonferroni-only-count-twosided"
 
 NULL_HYPOTHESIS = "null_hypothesis"
 NIM = "non-inferiority margin"

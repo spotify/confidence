@@ -8,7 +8,8 @@ from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
     DECREASE_PREFFERED, POINT_ESTIMATE,
     CI_LOWER, CI_UPPER, P_VALUE,
-    DIFFERENCE)
+    ADJUSTED_LOWER, ADJUSTED_UPPER,
+    DIFFERENCE, BONFERRONI_ONLY_COUNT_TWOSIDED)
 
 
 class TestBinary(object):
@@ -1152,3 +1153,653 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
         assert np.allclose(
             difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
             difference_df['adjusted p-value'], rtol=0.01)
+
+
+DATE = 'date'
+COUNT = 'count'
+SUM = 'sum'
+SUM_OF_SQUARES = 'sum_of_squares'
+GROUP = 'group'
+
+
+class TestSequentialOrdinalPlusTwoCategorical2(object):
+    def setup(self):
+        self.data = pd.DataFrame(
+            [
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 2016.416,
+                    SUM_OF_SQUARES: 5082.122,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 2028.478,
+                    SUM_OF_SQUARES: 5210.193,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1991.554,
+                    SUM_OF_SQUARES: 4919.282,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1958.713,
+                    SUM_OF_SQUARES: 4818.665,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 2030.252,
+                    SUM_OF_SQUARES: 5129.574,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1966.138,
+                    SUM_OF_SQUARES: 4848.321,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1995.389,
+                    SUM_OF_SQUARES: 4992.710,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1952.098,
+                    SUM_OF_SQUARES: 4798.772,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2986.667,
+                    SUM_OF_SQUARES: 7427.582,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2989.488,
+                    SUM_OF_SQUARES: 7421.710,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 3008.681,
+                    SUM_OF_SQUARES: 7565.406,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2933.173,
+                    SUM_OF_SQUARES: 7207.038,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2986.308,
+                    SUM_OF_SQUARES: 7584.148,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2985.802,
+                    SUM_OF_SQUARES: 7446.539,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 3008.190,
+                    SUM_OF_SQUARES: 7532.521,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 3001.494,
+                    SUM_OF_SQUARES: 7467.535,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 2016.416,
+                    SUM_OF_SQUARES: 5082.122,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 2028.478,
+                    SUM_OF_SQUARES: 5210.193,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1991.554,
+                    SUM_OF_SQUARES: 4919.282,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1958.713,
+                    SUM_OF_SQUARES: 4818.665,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 2030.252,
+                    SUM_OF_SQUARES: 5129.574,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1966.138,
+                    SUM_OF_SQUARES: 4848.321,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1995.389,
+                    SUM_OF_SQUARES: 4992.710,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1952.098,
+                    SUM_OF_SQUARES: 4798.772,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2986.667,
+                    SUM_OF_SQUARES: 7427.582,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2989.488,
+                    SUM_OF_SQUARES: 7421.710,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 3008.681,
+                    SUM_OF_SQUARES: 7565.406,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2933.173,
+                    SUM_OF_SQUARES: 7207.038,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2986.308,
+                    SUM_OF_SQUARES: 7584.148,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2985.802,
+                    SUM_OF_SQUARES: 7446.539,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 3008.190,
+                    SUM_OF_SQUARES: 7532.521,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 3001.494,
+                    SUM_OF_SQUARES: 7467.535,
+                }
+            ]
+        )
+        self.data[DATE] = pd.to_datetime(self.data[DATE])
+        self.data = (
+            self.data
+                .groupby([DATE, GROUP, 'country', 'platform', 'metric']).sum()
+                .groupby([GROUP, 'country', 'platform', 'metric']).cumsum()
+                .reset_index()
+        )
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, 'country', 'platform', 'metric'],
+            ordinal_group_column=DATE,
+            interval_size=1-0.01,
+            correction_method=BONFERRONI_ONLY_COUNT_TWOSIDED
+        )
+
+    def test_with_maual_correction(self):
+        test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, 'country', 'platform', 'metric'],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01/4
+        )
+
+        difference_df = test.difference(
+            level_1=('1', 'fin', 'andr', 'bananas_per_user_1d'),
+            level_2=('2', 'fin', 'andr', 'bananas_per_user_1d'),
+            groupby='date',
+            final_expected_sample_size=5000
+        )
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.2016570, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.11507406, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[1], -0.1063633, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[1], 0.06637345, 3)
+
+        difference_df = test.difference(
+            level_1=('1', 'swe', 'ios', 'bananas_per_user_1d'),
+            level_2=('2', 'swe', 'ios', 'bananas_per_user_1d'),
+            groupby='date',
+            final_expected_sample_size=5000
+        )
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.1506963, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.17481994, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[1], -0.0812409, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[1], 0.09314668, 3)
+
+        difference_df = test.difference(
+            level_1=('1', 'fin', 'andr', 'bananas_per_user_7d'),
+            level_2=('2', 'fin', 'andr', 'bananas_per_user_7d'),
+            groupby='date',
+            non_inferiority_margins=(0.01, 'increase'),
+            final_expected_sample_size=5000
+        )
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.1932786, 3)
+        np.isinf(difference_df[ADJUSTED_UPPER].values[0])
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[1], -0.10027731, 3)
+        np.isinf(difference_df[ADJUSTED_UPPER].values[1])
+
+        difference_df = test.difference(
+            level_1=('1', 'swe', 'ios', 'bananas_per_user_7d'),
+            level_2=('2', 'swe', 'ios', 'bananas_per_user_7d'),
+            groupby='date',
+            non_inferiority_margins=(0.01, 'increase'),
+            final_expected_sample_size=5000
+        )
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.1420855, 3)
+        np.isinf(difference_df[ADJUSTED_UPPER].values[0])
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[1], -0.07509674, 3)
+        np.isinf(difference_df[ADJUSTED_UPPER].values[1])
+
+    def test_multiple_difference_groupby(self):
+        final_sample_size = self.data.query("date == '2020-04-02'")['count'].sum()
+        summary_df = self.test.summary()
+
+        np.testing.assert_almost_equal(
+            summary_df.query('date == "2020-04-01" and group == "1" and country == "fin" '
+                             'and platform == "andr" and metric=="bananas_per_user_1d"')[
+                POINT_ESTIMATE].values[0], 1.995389, 5)
+        np.testing.assert_almost_equal(
+            summary_df.query('date == "2020-04-01" and group == "2" and country == "fin" '
+                             'and platform == "andr" and metric=="bananas_per_user_1d"')[
+                POINT_ESTIMATE].values[0], 1.952098, 5)
+        np.testing.assert_almost_equal(
+            summary_df.query('date == "2020-04-01" and group == "1" and country == "swe" '
+                             'and platform == "ios" and metric=="bananas_per_user_1d"')[
+                POINT_ESTIMATE].values[0], 2.016416, 5)
+        np.testing.assert_almost_equal(
+            summary_df.query('date == "2020-04-01" and group == "2" and country == "swe" '
+                             'and platform == "ios" and metric=="bananas_per_user_1d"')[
+                POINT_ESTIMATE].values[0], 2.028478, 5)
+
+        nims = {(pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'fin', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'fin', 'andr',): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'fin', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'fin', 'ios', ): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'swe', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'swe', 'andr',): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'swe', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'swe', 'ios', ): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'fin', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'fin', 'andr',): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'fin', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'fin', 'ios', ): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'swe', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'swe', 'andr',): (0.01, 'increase'),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'swe', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'swe', 'ios', ): (0.01, 'increase')}
+
+        difference_df = self.test.multiple_difference(
+            level='1',
+            groupby=['date', 'metric', 'country', 'platform'],
+            level_as_reference=True,
+            final_expected_sample_size=final_sample_size,
+            non_inferiority_margins=nims)
+        assert len(difference_df) == (
+            (self.data.group.unique().size - 1)
+            * self.data.date.unique().size
+            * self.data.country.unique().size
+            * self.data.platform.unique().size
+            * self.data.metric.unique().size
+        )
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-01" and country == "fin" and platform == "andr" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_LOWER].values[0], -0.2016570, 3)
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-01" and country == "fin" and platform == "andr" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_UPPER].values[0], 0.11507406, 3)
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-01" and country == "swe" and platform == "ios" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_LOWER].values[0], -0.1506963, 3)
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-01" and country == "swe" and platform == "ios" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_UPPER].values[0], 0.17481994, 3)
+
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-02" and country == "fin" and platform == "andr" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_LOWER].values[0], -0.1063633, 3)
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-02" and country == "fin" and platform == "andr" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_UPPER].values[0], 0.06637345, 3)
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-02" and country == "swe" and platform == "ios" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_LOWER].values[0], -0.0812409, 3)
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-02" and country == "swe" and platform == "ios" and metric=="bananas_per_user_1d"')[
+                ADJUSTED_UPPER].values[0], 0.09314668, 3)
+
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-01" and country == "fin" and platform == "andr" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_LOWER].values[0], -0.1932786, 3)
+        np.isinf(
+            difference_df.query(
+                'date == "2020-04-01" and country == "fin" and platform == "andr" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_UPPER].values[0])
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-01" and country == "swe" and platform == "ios" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_LOWER].values[0], -0.1420855, 3)
+        np.isinf(
+            difference_df.query(
+                'date == "2020-04-01" and country == "swe" and platform == "ios" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_UPPER].values[0])
+
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-02" and country == "fin" and platform == "andr" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_LOWER].values[0], -0.10027731, 3)
+        np.isinf(
+            difference_df.query(
+                'date == "2020-04-02" and country == "fin" and platform == "andr" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_UPPER].values[0])
+        np.testing.assert_almost_equal(
+            difference_df.query(
+                'date == "2020-04-02" and country == "swe" and platform == "ios" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_LOWER].values[0], -0.07509674, 3)
+        np.isinf(
+            difference_df.query(
+                'date == "2020-04-02" and country == "swe" and platform == "ios" and metric=="bananas_per_user_7d"')[
+                ADJUSTED_UPPER].values[0])
+
+        n_comp = len(difference_df)
+        assert np.allclose(
+            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df['adjusted p-value'], rtol=0.01)
+
+
+class TestSequentialOneSided(object):
+    def setup(self):
+        DATE = 'date'
+        COUNT = 'count'
+        SUM = 'sum'
+        SUM_OF_SQUARES = 'sum_of_squares'
+        GROUP = 'group'
+
+        self.data = pd.DataFrame(
+            [
+                {
+                    DATE: 1,
+                    GROUP: "1",
+                    COUNT: 1250,
+                    SUM: 2510.0,
+                    SUM_OF_SQUARES: 6304.0
+                },
+                {
+                    DATE: 1,
+                    GROUP: "2",
+                    COUNT: 1250,
+                    SUM: -2492.0,
+                    SUM_OF_SQUARES: 6163.0
+                },
+            ]
+        )
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=GROUP,
+            ordinal_group_column=DATE,
+            interval_size=0.99
+        )
+
+    def test_multiple_difference_groupby(self):
+        difference_df = self.test.multiple_difference(
+            level='1',
+            groupby='date',
+            level_as_reference=True,
+            final_expected_sample_size=1e4,
+            non_inferiority_margins=(0.01, 'increase'))
+        assert len(difference_df) == (
+                (self.data.group.unique().size - 1)
+                * self.data.date.unique().size
+        )
+        n_comp = len(difference_df)
+        assert np.allclose(
+            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df['adjusted p-value'], rtol=0.01
+        )
+        assert np.isinf(difference_df[CI_UPPER].values[0])
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -4.129515314002298, 3)
+        np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -4.001416, 3)
+
+
+class TestSequentialTwoSided(object):
+    def setup(self):
+        DATE = 'date'
+        COUNT = 'count'
+        SUM = 'sum'
+        SUM_OF_SQUARES = 'sum_of_squares'
+        GROUP = 'group'
+
+        self.data = pd.DataFrame(
+            [
+                {
+                    "date": pd.to_datetime("2020-04-01"),
+                    GROUP: "1",
+                    COUNT: 1250,
+                    SUM: 2510.0,
+                    SUM_OF_SQUARES: 6304.0
+                },
+                {
+                    "date": pd.to_datetime("2020-04-01"),
+                    GROUP: "2",
+                    COUNT: 1250,
+                    SUM: 2492.0,
+                    SUM_OF_SQUARES: 6163.0
+                },
+            ]
+        )
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=GROUP,
+            ordinal_group_column=DATE,
+            interval_size=0.99
+        )
+
+    def test_multiple_difference_groupby(self):
+        difference_df = self.test.multiple_difference(
+            level='1',
+            groupby='date',
+            level_as_reference=True,
+            final_expected_sample_size=1e4
+        )
+        assert len(difference_df) == (
+                (self.data.group.unique().size - 1)
+                * self.data.date.unique().size
+        )
+        n_comp = len(difference_df)
+        assert np.allclose(
+            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df['adjusted p-value'], rtol=0.01
+        )
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.121, 3)
+        np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.151, 3)
+        np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -0.0149, 3)

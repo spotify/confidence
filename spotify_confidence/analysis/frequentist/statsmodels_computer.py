@@ -26,10 +26,10 @@ from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
-                         DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, Z_CRIT, ALPHA,
+                         DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
                          ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
-                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI)
+                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
                                 power_calculation, validate_nims, signed_nims)
@@ -68,7 +68,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
-        correction_methods = [BONFERRONI]
+        correction_methods = [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED]
         if correction_method.lower() not in correction_methods:
             raise ValueError(f'Use one of the correction methods ' +
                              f'in {correction_methods}')
@@ -284,26 +284,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         if(final_expected_sample_size is None):
             df[ADJUSTED_ALPHA] = (1-self._interval_size)/len(df)
         else:
-            sample_size_proportions = (
-                    df[self._denominator + SFX1].groupby(self._ordinal_group_column).sum() +
-                    df[self._denominator + SFX2].groupby(self._ordinal_group_column).sum()
-            ) / final_expected_sample_size
-            alpha = (1 - self._interval_size) / (len(df) / len(sample_size_proportions))
-            z_crit_one_sided = (
-                sequential_bounds(t=sample_size_proportions.values, alpha=alpha, sides=1)
-                .df.set_index(sample_size_proportions.index)['zb']
-            ) if not (df[PREFERENCE] == TWO_SIDED).all() else None
-            z_crit_two_sided = (
-                sequential_bounds(t=sample_size_proportions.values, alpha=alpha, sides=2)
-                .df.set_index(sample_size_proportions.index)['zb']
-            ) if not (df[PREFERENCE] != TWO_SIDED).all() else None
-            ordinal_index = df.index.names.index(self._ordinal_group_column)
-            df[Z_CRIT] = df.apply(lambda row:
-                                  z_crit_two_sided.loc[row.name[ordinal_index]] if row[PREFERENCE] == TWO_SIDED else
-                                  z_crit_one_sided.loc[row.name[ordinal_index]],
-                                  axis=1)
-            # Convert back to alpha to be able to use _ci function
-            df[ADJUSTED_ALPHA] = 2 * (1 - st.norm.cdf(df[Z_CRIT]))
+            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df, final_expected_sample_size)
 
         ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
         ci_df = DataFrame(index=ci.index,
@@ -323,6 +304,46 @@ class StatsmodelsComputer(ConfidenceComputerABC):
               .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
               .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
         )
+
+    def _compute_sequential_adjusted_alpha(self, df, final_expected_sample_size):
+        sample_size_by_ordinal = (
+                df[self._denominator + SFX1].groupby(self._ordinal_group_column).sum() +
+                df[self._denominator + SFX2].groupby(self._ordinal_group_column).sum()
+        )
+        final_expected_sample_size = max(final_expected_sample_size, sample_size_by_ordinal.max())
+        sample_size_proportions = sample_size_by_ordinal / final_expected_sample_size
+
+        def get_num_comparisons(df):
+            if self._correction_method == BONFERRONI:
+                return len(df)
+            elif self._correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
+                return max(1, len(df.query(f'{PREFERENCE} == "{TWO_SIDED}"')))
+            else:
+                raise ValueError("Unsupported correction method")
+
+        alpha = (1 - self._interval_size) / (get_num_comparisons(df) / len(sample_size_proportions))
+
+        z_crit_one_sided = (
+            sequential_bounds(
+                t=sample_size_proportions.values, alpha=alpha, sides=1
+            ).df.set_index(sample_size_proportions.index)['zb']
+        ) if not (df[PREFERENCE] == TWO_SIDED).all() else None
+
+        z_crit_two_sided = (
+            sequential_bounds(
+                t=sample_size_proportions.values, alpha=alpha, sides=2
+            ).df.set_index(sample_size_proportions.index)['zb']
+        ) if not (df[PREFERENCE] != TWO_SIDED).all() else None
+
+        def z_crit(row):
+            has_multi_index = len(df.index.names) > 1
+            ordinal = row.name[df.index.names.index(self._ordinal_group_column)] if has_multi_index else row.name
+            return z_crit_two_sided.loc[ordinal] if row[PREFERENCE] == TWO_SIDED else z_crit_one_sided.loc[ordinal]
+
+        def alpha_from_z_crit(row):
+            return 2 * (1 - st.norm.cdf(z_crit(row))) if row[PREFERENCE] == TWO_SIDED else 1 - st.norm.cdf(z_crit(row))
+
+        return df.apply(alpha_from_z_crit, axis=1)
 
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         """Calculated the achieved power of test of differences between
