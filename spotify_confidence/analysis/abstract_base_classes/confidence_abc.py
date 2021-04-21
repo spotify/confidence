@@ -67,7 +67,8 @@ class ConfidenceABC(ABC):
                    level_2: Union[str, Tuple],
                    absolute: bool,
                    groupby: Union[str, Iterable],
-                   non_inferiority_margins: NIM_TYPE
+                   non_inferiority_margins: NIM_TYPE,
+                   final_expected_sample_size: float
                    ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
@@ -86,6 +87,10 @@ class ConfidenceABC(ABC):
                 groupby column.
                 To performe a one-sided test without nim, use
                 (None, preffered direction).
+            final_expected_sample_size (float): Expected number of observations
+                    at end of experiment.
+                Use in combination with ordinal groupby to perform a
+                sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
 
         Returns:
             Dataframe containing the difference in means between
@@ -100,7 +105,8 @@ class ConfidenceABC(ABC):
                             absolute: bool,
                             groupby: Union[str, Iterable],
                             level_as_reference: bool,
-                            non_inferiority_margins: NIM_TYPE
+                            non_inferiority_margins: NIM_TYPE,
+                            final_expected_sample_size: float
                             ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
@@ -122,6 +128,10 @@ class ConfidenceABC(ABC):
                 groupby column.
                 To performe a one-sided test without nim, use
                 (None, preffered direction).
+            final_expected_sample_size (float): Expected number of observations
+                    at end of experiment.
+                Use in combination with ordinal groupby to perform a
+                sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
 
         Returns:
             Dataframe containing the difference in means between
@@ -157,7 +167,8 @@ class ConfidenceABC(ABC):
                         absolute: bool,
                         groupby: Union[str, Iterable],
                         non_inferiority_margins: NIM_TYPE,
-                        use_adjusted_intervals: bool
+                        use_adjusted_intervals: bool,
+                        final_expected_sample_size: float
                         ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2.
         - Difference in means or proportions, depending
@@ -192,6 +203,10 @@ class ConfidenceABC(ABC):
             use_adjusted_intervals (bool):
                 If true, use e.g. bon-ferroni corrected
                 (or other method provided) confidence intervals
+            final_expected_sample_size (float): Expected number of observations
+                    at end of experiment.
+                Use in combination with ordinal groupby to perform a
+                sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
 
         Returns:
             Chartify Chart object and a DataFrame with numerical results.
@@ -204,7 +219,8 @@ class ConfidenceABC(ABC):
                                  groupby: Union[str, Iterable],
                                  level_as_reference: bool,
                                  non_inferiority_margins: NIM_TYPE,
-                                 use_adjusted_intervals: bool
+                                 use_adjusted_intervals: bool,
+                                 final_expected_sample_size: float
                                  ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
@@ -236,6 +252,10 @@ class ConfidenceABC(ABC):
             use_adjusted_intervals (bool):
                 If true, use e.g. bon-ferroni corrected
                 (or other method provided) confidence intervals
+            final_expected_sample_size (float): Expected number of observations
+                    at end of experiment.
+                Use in combination with ordinal groupby to perform a
+                sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
 
         Returns:
             ChartGrid object and a DataFrame with numerical results.

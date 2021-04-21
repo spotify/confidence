@@ -14,6 +14,7 @@
 
 from pandas import DataFrame, Series
 import numpy as np
+import scipy.stats as st
 from statsmodels.stats.proportion import (
     proportions_chisquare, proportion_confint, confint_proportions_2indep)
 from statsmodels.stats.weightstats import (
@@ -23,14 +24,19 @@ from abc import abstractmethod
 
 from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
+from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
-                         DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR,
-                         ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
+                         DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
+                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
-                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI)
+                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
                                 power_calculation, validate_nims, signed_nims)
+
+
+def sequential_bounds(t: np.array, alpha: float, sides: int):
+    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
 
 
 class StatsmodelsComputer(ConfidenceComputerABC):
@@ -62,7 +68,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
-        correction_methods = [BONFERRONI]
+        correction_methods = [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED]
         if correction_method.lower() not in correction_methods:
             raise ValueError(f'Use one of the correction methods ' +
                              f'in {correction_methods}')
@@ -100,7 +106,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                            level_2: Union[str, Iterable],
                            absolute: bool,
                            groupby: str,
-                           nims: NIM_TYPE
+                           nims: NIM_TYPE,
+                           final_expected_sample_size: float
                            ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(level_columns,
@@ -109,7 +116,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   absolute,
                                                   groupby,
                                                   level_as_reference=True,
-                                                  nims=nims)
+                                                  nims=nims,
+                                                  final_expected_sample_size=final_expected_sample_size)
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
@@ -122,7 +130,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                     absolute: bool,
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
-                                    nims: NIM_TYPE
+                                    nims: NIM_TYPE,
+                                    final_expected_sample_size: float
                                     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [other for other in self._sufficient_statistics
@@ -133,7 +142,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   absolute,
                                                   groupby,
                                                   level_as_reference,
-                                                  nims=nims)
+                                                  nims,
+                                                  final_expected_sample_size)
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
@@ -148,7 +158,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                              absolute: bool,
                              groupby: Union[str, Iterable],
                              level_as_reference: bool,
-                             nims: NIM_TYPE):
+                             nims: NIM_TYPE,
+                             final_expected_sample_size: float):
         groupby = listify(groupby)
         validate_levels(self._sufficient_statistics,
                         level_columns,
@@ -167,7 +178,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 .pipe(self._create_comparison_df,
                       groups_to_compare=levels,
                       absolute=absolute,
-                      nims=nims)
+                      nims=nims,
+                      final_expected_sample_size=final_expected_sample_size)
                 .assign(level_1=lambda df:
                         df['level_1'].map(lambda s: str2level[s]))
                 .assign(level_2=lambda df:
@@ -180,7 +192,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               df: DataFrame,
                               groups_to_compare: List[Tuple[str, str]],
                               absolute: bool,
-                              nims: NIM_TYPE
+                              nims: NIM_TYPE,
+                              final_expected_sample_size: float
                               ) -> DataFrame:
 
         def join(df: DataFrame) -> DataFrame:
@@ -214,7 +227,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                          self._nims_2_series(df, nims)[NULL_HYPOTHESIS]})
               .assign(**{PREFERENCE: lambda df:
                          self._nims_2_series(df, nims)[PREFERENCE]})
-              .pipe(self._add_p_value_and_ci)
+              .pipe(self._add_p_value_and_ci, final_expected_sample_size=final_expected_sample_size)
               .pipe(self._adjust_if_absolute, absolute=absolute)
               .assign(**{PREFERENCE: lambda df:
                          df[PREFERENCE].map(PREFERENCE_DICT)})
@@ -265,12 +278,19 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         return np.sqrt(df[VARIANCE + SFX1] / df[self._denominator + SFX1] +
                        df[VARIANCE + SFX2] / df[self._denominator + SFX2])
 
-    def _add_p_value_and_ci(self, df: DataFrame) -> DataFrame:
-        ci = df.apply(self._ci, axis=1, num_comparisons=1)
+    def _add_p_value_and_ci(self, df: DataFrame, final_expected_sample_size: float) -> DataFrame:
+        df[ALPHA] = 1 - self._interval_size
+
+        if(final_expected_sample_size is None):
+            df[ADJUSTED_ALPHA] = (1-self._interval_size)/len(df)
+        else:
+            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df, final_expected_sample_size)
+
+        ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
         ci_df = DataFrame(index=ci.index,
                           columns=[CI_LOWER, CI_UPPER],
                           data=list(ci.values))
-        adjusted_ci = df.apply(self._ci, axis=1, num_comparisons=len(df))
+        adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
         adjusted_ci_df = DataFrame(index=adjusted_ci.index,
                                    columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
                                    data=list(adjusted_ci.values))
@@ -284,6 +304,46 @@ class StatsmodelsComputer(ConfidenceComputerABC):
               .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
               .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
         )
+
+    def _compute_sequential_adjusted_alpha(self, df, final_expected_sample_size):
+        sample_size_by_ordinal = (
+                df[self._denominator + SFX1].groupby(self._ordinal_group_column).sum() +
+                df[self._denominator + SFX2].groupby(self._ordinal_group_column).sum()
+        )
+        final_expected_sample_size = max(final_expected_sample_size, sample_size_by_ordinal.max())
+        sample_size_proportions = sample_size_by_ordinal / final_expected_sample_size
+
+        def get_num_comparisons(df):
+            if self._correction_method == BONFERRONI:
+                return len(df)
+            elif self._correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
+                return max(1, len(df.query(f'{PREFERENCE} == "{TWO_SIDED}"')))
+            else:
+                raise ValueError("Unsupported correction method")
+
+        alpha = (1 - self._interval_size) / (get_num_comparisons(df) / len(sample_size_proportions))
+
+        z_crit_one_sided = (
+            sequential_bounds(
+                t=sample_size_proportions.values, alpha=alpha, sides=1
+            ).df.set_index(sample_size_proportions.index)['zb']
+        ) if not (df[PREFERENCE] == TWO_SIDED).all() else None
+
+        z_crit_two_sided = (
+            sequential_bounds(
+                t=sample_size_proportions.values, alpha=alpha, sides=2
+            ).df.set_index(sample_size_proportions.index)['zb']
+        ) if not (df[PREFERENCE] != TWO_SIDED).all() else None
+
+        def z_crit(row):
+            has_multi_index = len(df.index.names) > 1
+            ordinal = row.name[df.index.names.index(self._ordinal_group_column)] if has_multi_index else row.name
+            return z_crit_two_sided.loc[ordinal] if row[PREFERENCE] == TWO_SIDED else z_crit_one_sided.loc[ordinal]
+
+        def alpha_from_z_crit(row):
+            return 2 * (1 - st.norm.cdf(z_crit(row))) if row[PREFERENCE] == TWO_SIDED else 1 - st.norm.cdf(z_crit(row))
+
+        return df.apply(alpha_from_z_crit, axis=1)
 
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         """Calculated the achieved power of test of differences between
@@ -316,7 +376,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                       True,
                                       groupby,
                                       level_as_reference=True,
-                                      nims=None)  # TODO: IS this right?
+                                      nims=None,  # TODO: IS this right?
+                                      final_expected_sample_size=None)  # TODO: IS this right?
                 .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
                 .pipe(self._achieved_power, mde=mde, alpha=alpha)
         )
@@ -334,7 +395,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         pass
 
     @abstractmethod
-    def _ci(self, row, num_comparisons: int) -> Tuple[float, float]:
+    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         pass
 
     @abstractmethod
@@ -370,13 +431,13 @@ class ChiSquaredComputer(StatsmodelsComputer):
         )
         return p_value
 
-    def _ci(self, row, num_comparisons: int) -> Tuple[float, float]:
+    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         return confint_proportions_2indep(
             count1=row[self._numerator + SFX2],
             nobs1=row[self._denominator + SFX2],
             count2=row[self._numerator + SFX1],
             nobs2=row[self._denominator + SFX1],
-            alpha=(1 - self._interval_size) / num_comparisons,
+            alpha=row[alpha_column],
             compare='diff',
             method='wald'
         )
@@ -436,12 +497,12 @@ class TTestComputer(StatsmodelsComputer):
                                     diff=row[NULL_HYPOTHESIS])
         return p_value
 
-    def _ci(self, row, num_comparisons: int) -> Tuple[float, float]:
+    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         return _tconfint_generic(
             mean=row[DIFFERENCE],
             std_mean=row[STD_ERR],
             dof=self._dof(row),
-            alpha=(1 - self._interval_size) / num_comparisons,
+            alpha=row[alpha_column],
             alternative=row[PREFERENCE])
 
     def _achieved_power(self,
@@ -489,11 +550,11 @@ class ZTestComputer(StatsmodelsComputer):
                                     diff=row[NULL_HYPOTHESIS])
         return p_value
 
-    def _ci(self, row, num_comparisons: int) -> Tuple[float, float]:
+    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         return _zconfint_generic(
             mean=row[DIFFERENCE],
             std_mean=row[STD_ERR],
-            alpha=(1 - self._interval_size) / num_comparisons,
+            alpha=row[alpha_column],
             alternative=row[PREFERENCE])
 
     def _achieved_power(self,
