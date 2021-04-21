@@ -2,6 +2,11 @@
 History
 =======
 
+2.1.0 (2021-04-21)
+------------------
+
+* Introduced sequential testing - see https://cran.r-project.org/web/packages/ldbounds/index.html for details.
+
 2.0.2 (2021-04-15)
 ------------------
 
