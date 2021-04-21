@@ -2,6 +2,11 @@
 History
 =======
 
+2.1.1 (2021-04-21)
+------------------
+
+* Fixed broken setup.cfg that led to pip install spotify-confidence not installing correctly
+
 2.1.0 (2021-04-21)
 ------------------
 
