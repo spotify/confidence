@@ -36,7 +36,7 @@ data = pd.DataFrame(
 )
 
 test = confidence.ZTest(
-    self.data,
+    data,
     numerator_column='success',
     numerator_sum_squares_column=None,
     denominator_column='total',
@@ -45,11 +45,11 @@ test = confidence.ZTest(
     
 test.summary()
 test.difference(level_1='control', level_2='treatment1')
-test.multiple_diffence(level='control', level_as_reference=True)
+test.multiple_difference(level='control', level_as_reference=True)
 
 test.summary_plot().show()
 test.difference_plot(level_1='control', level_2='treatment1').show()
-test.multiple_diffence_plot(level='control', level_as_reference=True).show()
+test.multiple_difference_plot(level='control', level_as_reference=True).show()
 ```
 
 See jupyter notebooks in `examples` folder for more complete examples.
