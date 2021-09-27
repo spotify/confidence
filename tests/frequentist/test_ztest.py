@@ -556,12 +556,40 @@ class TestOrdinalPlusTwoCategorical(object):
                                 3, 3, 3,
                                 4, 4, 4,
                                 5, 5, 5],
-             'country': ['us', 'us', 'us', 'us', 'us', 'us', 'us',
-                         'us', 'us', 'us', 'us', 'us', 'us', 'us',
-                         'us',
-                         'gb', 'gb', 'gb', 'gb', 'gb', 'gb', 'gb',
-                         'gb', 'gb', 'gb', 'gb', 'gb', 'gb', 'gb',
-                         'gb', ]})
+             'country': ['us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'us', 'us', 'us',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb',
+                         'gb', 'gb', 'gb'],
+             'non_inferiority_margin': [
+                         0.01, 0.01, 0.01,
+                         0.01, 0.01, 0.01,
+                         0.01, 0.01, 0.01,
+                         0.01, 0.01, 0.01,
+                         0.01, 0.01, 0.01,
+                         0.1, 0.1, 0.1,
+                         0.1, 0.1, 0.1,
+                         0.1, 0.1, 0.1,
+                         0.1, 0.1, 0.1,
+                         0.1, 0.1, 0.1],
+             'preferred_direction': [
+                         DECREASE_PREFFERED, DECREASE_PREFFERED, DECREASE_PREFFERED,
+                         DECREASE_PREFFERED, DECREASE_PREFFERED, DECREASE_PREFFERED,
+                         DECREASE_PREFFERED, DECREASE_PREFFERED, DECREASE_PREFFERED,
+                         DECREASE_PREFFERED, DECREASE_PREFFERED, DECREASE_PREFFERED,
+                         DECREASE_PREFFERED, DECREASE_PREFFERED, DECREASE_PREFFERED,
+                         INCREASE_PREFFERED, INCREASE_PREFFERED, INCREASE_PREFFERED,
+                         INCREASE_PREFFERED, INCREASE_PREFFERED, INCREASE_PREFFERED,
+                         INCREASE_PREFFERED, INCREASE_PREFFERED, INCREASE_PREFFERED,
+                         INCREASE_PREFFERED, INCREASE_PREFFERED, INCREASE_PREFFERED,
+                         INCREASE_PREFFERED, INCREASE_PREFFERED, INCREASE_PREFFERED],
+             }
+        )
 
         self.test = spotify_confidence.ZTest(
             self.data,
@@ -676,6 +704,51 @@ class TestOrdinalPlusTwoCategorical(object):
             level_as_reference=True,
             groupby=['country', 'days_since_reg'],
             non_inferiority_margins=nims)
+        assert (len(df) == 20)
+
+    def test_differece_with_nims_in_df(self):
+        df = self.test.difference(level_1=('test', 'us'),
+                                  level_2=('control', 'us'),
+                                  groupby='days_since_reg',
+                                  non_inferiority_margins=True)
+        assert (len(df) == 5)
+        assert ('days_since_reg' in df.columns)
+
+        df = self.test.difference(level_1=('test', 'us'),
+                                  level_2=('control', 'us'),
+                                  groupby=['days_since_reg'],
+                                  non_inferiority_margins=True)
+        assert (len(df) == 5)
+        assert ('days_since_reg' in df.columns)
+
+        df = self.test.difference(level_1=('test', 1),
+                                  level_2=('control', 1),
+                                  groupby=['country'],
+                                  non_inferiority_margins=True)
+        assert (len(df) == 2)
+        assert ('country' in df.columns)
+
+        df = self.test.difference(level_1='test',
+                                  level_2='control',
+                                  groupby=['country', 'days_since_reg'],
+                                  non_inferiority_margins=True)
+        assert (len(df) == 10)
+        assert ('country' in df.columns)
+        assert ('days_since_reg' in df.columns)
+
+        df = self.test.difference(level_1='test',
+                                  level_2='control',
+                                  groupby=['country', 'days_since_reg'],
+                                  non_inferiority_margins=True)
+        assert (len(df) == 10)
+        assert ('country' in df.columns)
+        assert ('days_since_reg' in df.columns)
+
+        df = self.test.multiple_difference(
+            level='control',
+            level_as_reference=True,
+            groupby=['country', 'days_since_reg'],
+            non_inferiority_margins=True)
         assert (len(df) == 20)
 
     def test_summary_plot(self):
@@ -1507,7 +1580,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             correction_method=BONFERRONI_ONLY_COUNT_TWOSIDED
         )
 
-    def test_with_maual_correction(self):
+    def test_with_manual_correction(self):
         test = spotify_confidence.ZTest(
             self.data,
             numerator_column=SUM,

@@ -19,7 +19,7 @@ from statsmodels.stats.proportion import (
     proportions_chisquare, proportion_confint, confint_proportions_2indep)
 from statsmodels.stats.weightstats import (
     _zstat_generic, _zconfint_generic, _tstat_generic, _tconfint_generic)
-from typing import (Union, Iterable, List, Tuple, Dict)
+from typing import (Union, Iterable, List, Tuple)
 from abc import abstractmethod
 
 from ..abstract_base_classes.confidence_computer_abc import \
@@ -32,7 +32,7 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
-                                power_calculation, validate_nims, signed_nims)
+                                power_calculation, add_nim_columns, validate_and_rename_nims)
 
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
@@ -164,7 +164,6 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         validate_levels(self._sufficient_statistics,
                         level_columns,
                         [level] + other_levels)
-        validate_nims(self._sufficient_statistics, groupby, nims)
         levels = [(level2str(level), level2str(other))
                   if level_as_reference
                   else (level2str(other), level2str(level))
@@ -216,17 +215,14 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 )
 
         comparison_df = (
-            df.pipe(join)
+            df.pipe(add_nim_columns, nims=nims)
+              .pipe(join)
               .query(f'level_1 in {[l1 for l1,l2 in groups_to_compare]} and ' +
                      f'level_2 in {[l2 for l1,l2 in groups_to_compare]}')
               .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] -
                       df[POINT_ESTIMATE + SFX1]})
               .assign(**{STD_ERR: self._std_err})
-              .assign(**{NIM: lambda df: self._nims_2_series(df, nims)[NIM]})
-              .assign(**{NULL_HYPOTHESIS: lambda df:
-                         self._nims_2_series(df, nims)[NULL_HYPOTHESIS]})
-              .assign(**{PREFERENCE: lambda df:
-                         self._nims_2_series(df, nims)[PREFERENCE]})
+              .pipe(validate_and_rename_nims)
               .pipe(self._add_p_value_and_ci, final_expected_sample_size=final_expected_sample_size)
               .pipe(self._adjust_if_absolute, absolute=absolute)
               .assign(**{PREFERENCE: lambda df:
@@ -253,25 +249,6 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                           df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
                   .assign(**{NULL_HYPOTHESIS:
                           df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
-            )
-
-    def _nims_2_series(self,
-                       df: DataFrame,
-                       nims: NIM_TYPE
-                       ) -> Union[DataFrame, Dict[float, str]]:
-
-        sgnd_nims = signed_nims(nims)
-        if nims is None or type(nims) is tuple:
-            return {NIM: sgnd_nims[0],
-                    NULL_HYPOTHESIS: df[POINT_ESTIMATE + SFX1]*sgnd_nims[1],
-                    PREFERENCE: np.repeat(sgnd_nims[2], len(df))}
-        else:
-            return (
-                DataFrame(index=df.index,
-                          columns=[NIM, NULL_HYPOTHESIS, PREFERENCE],
-                          data=list(df.index.to_series().map(sgnd_nims)))
-                .assign(**{NULL_HYPOTHESIS: lambda d:
-                           d[NULL_HYPOTHESIS]*df[POINT_ESTIMATE + SFX1]})
             )
 
     def _std_err(self, df: DataFrame) -> Series:
