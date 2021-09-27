@@ -853,6 +853,44 @@ class TestOrdinalPlusTwoCategorical(object):
             non_inferiority_margins=nims)
         assert (len(ch.charts) == 1)
 
+    def test_differece_plot_with_nims_in_df(self):
+        ch = self.test.difference_plot(level_1=('test', 'us'),
+                                       level_2=('control', 'us'),
+                                       groupby='days_since_reg',
+                                       non_inferiority_margins=True)
+        assert (len(ch.charts) == 1)
+
+        ch = self.test.difference_plot(level_1=('test', 'us'),
+                                       level_2=('control', 'us'),
+                                       groupby=['days_since_reg'],
+                                       non_inferiority_margins=True)
+        assert (len(ch.charts) == 1)
+
+        ch = self.test.difference_plot(level_1=('test', 1),
+                                       level_2=('control', 1),
+                                       groupby=['country'],
+                                       non_inferiority_margins=True)
+        assert (len(ch.charts) == 1)
+
+        ch = self.test.difference_plot(level_1='test',
+                                       level_2='control',
+                                       groupby=['country', 'days_since_reg'],
+                                       non_inferiority_margins=True)
+        assert (len(ch.charts) == 1)
+
+        ch = self.test.difference_plot(level_1='test',
+                                       level_2='control',
+                                       groupby=['country', 'days_since_reg'],
+                                       non_inferiority_margins=True)
+        assert (len(ch.charts) == 1)
+
+        ch = self.test.multiple_difference_plot(
+            level='control',
+            level_as_reference=True,
+            groupby=['country', 'days_since_reg'],
+            non_inferiority_margins=True)
+        assert (len(ch.charts) == 1)
+
 
 class TestCategoricalBinomialData(object):
     def setup(self):
@@ -1120,7 +1158,49 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                         'm2', 'm2', 'm2',
                         'm2', 'm2', 'm2',
                         'm2', 'm2', 'm2',
-                        'm2', 'm2', 'm2']
+                        'm2', 'm2', 'm2'],
+             'non_inferiority_margin': [
+                        0.2, 0.2, 0.2,
+                        0.2, 0.2, 0.2,
+                        0.2, 0.2, 0.2,
+                        0.2, 0.2, 0.2,
+                        0.2, 0.2, 0.2,
+                        0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1,
+                        0.1, 0.1, 0.1,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0],
+             'preferred_direction': [
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        'increase', 'increase', 'increase',
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None,
+                        None, None, None]
              }
         )
 
@@ -1227,6 +1307,15 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
             difference_df['adjusted p-value'], rtol=0.01)
 
+        difference_df_2 = self.test.multiple_difference(
+            level='control',
+            groupby=['date', 'country', 'metric'],
+            level_as_reference=True,
+            non_inferiority_margins=True,
+            final_expected_sample_size=final_sample_size)
+
+        assert (difference_df == difference_df_2).all().all()
+
 
 DATE = 'date'
 COUNT = 'count'
@@ -1248,6 +1337,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2016.416,
                     SUM_OF_SQUARES: 5082.122,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1258,6 +1349,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2028.478,
                     SUM_OF_SQUARES: 5210.193,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1268,6 +1361,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1991.554,
                     SUM_OF_SQUARES: 4919.282,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1278,6 +1373,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1958.713,
                     SUM_OF_SQUARES: 4818.665,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1288,6 +1385,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2030.252,
                     SUM_OF_SQUARES: 5129.574,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1298,6 +1397,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1966.138,
                     SUM_OF_SQUARES: 4848.321,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1308,6 +1409,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1995.389,
                     SUM_OF_SQUARES: 4992.710,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1318,6 +1421,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1952.098,
                     SUM_OF_SQUARES: 4798.772,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1328,6 +1433,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2986.667,
                     SUM_OF_SQUARES: 7427.582,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1338,6 +1445,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2989.488,
                     SUM_OF_SQUARES: 7421.710,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1348,6 +1457,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3008.681,
                     SUM_OF_SQUARES: 7565.406,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1358,6 +1469,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2933.173,
                     SUM_OF_SQUARES: 7207.038,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1368,6 +1481,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2986.308,
                     SUM_OF_SQUARES: 7584.148,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1378,6 +1493,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2985.802,
                     SUM_OF_SQUARES: 7446.539,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1388,6 +1505,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3008.190,
                     SUM_OF_SQUARES: 7532.521,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-02",
@@ -1398,6 +1517,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3001.494,
                     SUM_OF_SQUARES: 7467.535,
+                    "non_inferiority_margin": 0,
+                    "preferred_direction": None
                 },
                 {
                     DATE: "2020-04-01",
@@ -1408,6 +1529,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2016.416,
                     SUM_OF_SQUARES: 5082.122,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1418,6 +1541,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2028.478,
                     SUM_OF_SQUARES: 5210.193,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1428,6 +1553,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1991.554,
                     SUM_OF_SQUARES: 4919.282,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1438,6 +1565,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1958.713,
                     SUM_OF_SQUARES: 4818.665,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1448,6 +1577,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2030.252,
                     SUM_OF_SQUARES: 5129.574,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1458,6 +1589,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1966.138,
                     SUM_OF_SQUARES: 4848.321,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1468,6 +1601,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1995.389,
                     SUM_OF_SQUARES: 4992.710,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-01",
@@ -1478,6 +1613,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1952.098,
                     SUM_OF_SQUARES: 4798.772,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1488,6 +1625,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2986.667,
                     SUM_OF_SQUARES: 7427.582,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1498,6 +1637,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2989.488,
                     SUM_OF_SQUARES: 7421.710,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1508,6 +1649,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3008.681,
                     SUM_OF_SQUARES: 7565.406,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1518,6 +1661,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2933.173,
                     SUM_OF_SQUARES: 7207.038,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1528,6 +1673,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2986.308,
                     SUM_OF_SQUARES: 7584.148,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1538,6 +1685,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2985.802,
                     SUM_OF_SQUARES: 7446.539,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1548,6 +1697,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3008.190,
                     SUM_OF_SQUARES: 7532.521,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 },
                 {
                     DATE: "2020-04-02",
@@ -1558,6 +1709,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3001.494,
                     SUM_OF_SQUARES: 7467.535,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase"
                 }
             ]
         )
@@ -1567,6 +1720,10 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                 .groupby([DATE, GROUP, 'country', 'platform', 'metric']).sum()
                 .groupby([GROUP, 'country', 'platform', 'metric']).cumsum()
                 .reset_index()
+                .assign(non_inferiority_margin=lambda df: df['metric'].map(
+                    {'bananas_per_user_1d': 0, 'bananas_per_user_7d': 0.01}))
+                .assign(preferred_direction=lambda df: df['metric'].map(
+                    {'bananas_per_user_1d': None, 'bananas_per_user_7d': 'increase'}))
         )
 
         self.test = spotify_confidence.ZTest(
@@ -1760,6 +1917,15 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
         assert np.allclose(
             difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
             difference_df['adjusted p-value'], rtol=0.01)
+
+        difference_df_2 = self.test.multiple_difference(
+            level='1',
+            groupby=['date', 'metric', 'country', 'platform'],
+            level_as_reference=True,
+            final_expected_sample_size=final_sample_size,
+            non_inferiority_margins=True)
+
+        assert (difference_df == difference_df_2).all().all()
 
 
 class TestSequentialOneSided(object):
