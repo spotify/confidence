@@ -83,8 +83,8 @@ def validate_levels(df: DataFrame,
 
 def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
     def _nim_2_signed_nim(nim: Tuple[float, str]) -> Tuple[float, float, str]:
-        nim_value = 0 if nim[0] is None or np.isnan(nim[0]) else nim[0]
-        if nim[1] is None:
+        nim_value = 0 if nim[0] is None or (type(nim[0]) is float and np.isnan(nim[0])) else nim[0]
+        if nim[1] is None or (type(nim[1]) is float and np.isnan(nim[1])):
             return (nim[0], nim_value, TWO_SIDED)
         elif nim[1].lower() == INCREASE_PREFFERED:
             return (nim[0], -nim_value, 'larger')
@@ -134,7 +134,8 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
 
 def validate_and_rename_nims(df: DataFrame) -> DataFrame:
     def nim_equals(nim1, nim2):
-        return True if nim1 == nim2 or (nim1 is None and nim2 is None) else False
+        return True if nim1 == nim2 or (nim1 is None and nim2 is None) \
+                       or (type(nim1) is float and type(nim2) is float and np.isnan(nim1) and np.isnan(nim2)) else False
 
     if (df.apply(lambda row: nim_equals(row[NIM + SFX1], row[NIM + SFX2]), axis=1).all() and
             df.apply(lambda row: nim_equals(row[PREFERENCE + SFX1], row[PREFERENCE + SFX2]), axis=1).all()):
