@@ -2042,3 +2042,91 @@ class TestSequentialTwoSided(object):
         np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.121, 3)
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.151, 3)
         np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -0.0149, 3)
+
+
+class TestNimsWithNaN(object):
+    def setup(self):
+        self.data = pd.DataFrame(
+            {'count': {0: 252934,
+                       1: 253656,
+                       2: 252328,
+                       3: 464640,
+                       4: 465726,
+                       5: 465194,
+                       6: 463493,
+                       7: 464487,
+                       8: 464059},
+             'sum': {0: 89984.0,
+                     1: 89992.0,
+                     2: 89108.0,
+                     3: 5815.0,
+                     4: 5867.0,
+                     5: 5896.0,
+                     6: 13928.0,
+                     7: 13688.0,
+                     8: 13505.0},
+             'sum_of_squares': {0: 89984.0,
+                                1: 89992.0,
+                                2: 89108.0,
+                                3: 5815.0,
+                                4: 5867.0,
+                                5: 5896.0,
+                                6: 13928.0,
+                                7: 13688.0,
+                                8: 13505.0},
+             'exposure_experiment_group_id': {0: 'Control',
+                                              1: 'Treatment1',
+                                              2: 'Treatment2',
+                                              3: 'Control',
+                                              4: 'Treatment1',
+                                              5: 'Treatment2',
+                                              6: 'Control',
+                                              7: 'Treatment1',
+                                              8: 'Treatment2'},
+             'non_inferiority_margin': {0: np.nan,
+                                        1: np.nan,
+                                        2: np.nan,
+                                        3: np.nan,
+                                        4: np.nan,
+                                        5: np.nan,
+                                        6: 5.0,
+                                        7: 5.0,
+                                        8: 5.0},
+             'preferred_direction': {0: np.nan,
+                                     1: np.nan,
+                                     2: np.nan,
+                                     3: 'DECREASE',
+                                     4: 'DECREASE',
+                                     5: 'DECREASE',
+                                     6: 'INCREASE',
+                                     7: 'INCREASE',
+                                     8: 'INCREASE'},
+             'metric': {0: 'm1',
+                        1: 'm1',
+                        2: 'm1',
+                        3: 'm2',
+                        4: 'm2',
+                        5: 'm2',
+                        6: 'm3',
+                        7: 'm3',
+                        8: 'm3'}
+             }
+        )
+
+    def test_nims_with_nans(self):
+        ztest = spotify_confidence.ZTest(
+            data_frame=self.data,
+            numerator_column='sum',
+            numerator_sum_squares_column='sum_of_squares',
+            denominator_column='count',
+            categorical_group_columns=['metric', 'exposure_experiment_group_id'],
+            interval_size=0.99)
+
+        diff_df = ztest.multiple_difference(
+            level='Control',
+            level_as_reference=True,
+            absolute=False,
+            groupby='metric',
+            non_inferiority_margins=True)
+
+        assert len(diff_df) == 6
