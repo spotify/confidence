@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable, Tuple, List, Dict)
+from typing import (Union, Iterable, Tuple, List)
 from pandas import (DataFrame, concat, Series)
 import numpy as np
 from scipy.stats import norm
 
 from spotify_confidence.analysis.constants import (
-    INCREASE_PREFFERED, DECREASE_PREFFERED, TWO_SIDED)
+    INCREASE_PREFFERED, DECREASE_PREFFERED, TWO_SIDED,
+    NIM_TYPE, NIM_INPUT_COLUMN_NAME, PREFERRED_DIRECTION_INPUT_NAME,
+    NIM, NULL_HYPOTHESIS, PREFERENCE,
+    SFX1, SFX2, POINT_ESTIMATE)
 
 
 def get_all_group_columns(categorical_columns: Iterable,
@@ -78,18 +81,7 @@ def validate_levels(df: DataFrame,
                 list(df.groupby(level_columns).groups.keys())))
 
 
-def validate_nims(df: DataFrame,
-                  groupby: List,
-                  nims: Union[Tuple, Dict[str, Tuple[float, str]]]):
-    assert (nims is None or
-            type(nims) is tuple or
-            (type(nims) is dict and
-             set(df.groupby(groupby).groups.keys()) == set(nims.keys())))
-
-
-def signed_nims(nims: Union[Tuple, Dict[str, Tuple[float, str]]]
-                ) -> Union[Tuple[float, float, str],
-                           Dict[str, Tuple[float, float, str]]]:
+def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
     def _nim_2_signed_nim(nim: Tuple[float, str]) -> Tuple[float, float, str]:
         nim_value = 0 if nim[0] is None or np.isnan(nim[0]) else nim[0]
         if nim[1] is None:
@@ -101,15 +93,61 @@ def signed_nims(nims: Union[Tuple, Dict[str, Tuple[float, str]]]
         else:
             raise ValueError(f'{nim[1].lower()} not in '
                              f'{[INCREASE_PREFFERED, DECREASE_PREFFERED]}')
+
     if nims is None:
-        return (None, 0.0, TWO_SIDED)
+        return (
+            df.assign(**{NIM: None})
+              .assign(**{NULL_HYPOTHESIS: 0})
+              .assign(**{PREFERENCE: TWO_SIDED})
+        )
     elif type(nims) is tuple:
-        return _nim_2_signed_nim(nims)
+        return (
+            df.assign(**{NIM: _nim_2_signed_nim((nims[0], nims[1]))[0]})
+              .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * _nim_2_signed_nim((nims[0], nims[1]))[1]})
+              .assign(**{PREFERENCE: _nim_2_signed_nim((nims[0], nims[1]))[2]})
+        )
     elif type(nims) is dict:
-        return {group: _nim_2_signed_nim(nim) for group, nim in nims.items()}
+        sgnd_nims = {group: _nim_2_signed_nim(nim) for group, nim in nims.items()}
+        nim_df = (
+            DataFrame(index=df.index,
+                      columns=[NIM, NULL_HYPOTHESIS, PREFERENCE],
+                      data=list(df.index.to_series().map(sgnd_nims)))
+        )
+        return (
+            df.assign(**{NIM: nim_df[NIM]})
+              .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * nim_df[NULL_HYPOTHESIS]})
+              .assign(**{PREFERENCE: nim_df[PREFERENCE]})
+        )
+    elif type(nims) is bool:
+        return (
+            df.assign(**{NIM: lambda df: df[NIM_INPUT_COLUMN_NAME]})
+              .assign(**{NULL_HYPOTHESIS: lambda df: df.apply(
+                lambda row: row[POINT_ESTIMATE] * _nim_2_signed_nim((row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[1],
+                axis=1)})
+              .assign(**{PREFERENCE: lambda df: df.apply(lambda row: _nim_2_signed_nim(
+                (row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[2], axis=1)})
+        )
     else:
-        raise ValueError(f'Non inferiority margins need to be either tuple '
-                         f'or dictionary')
+        raise ValueError(f'non_inferiority_margins must be None, tuple, dict,'
+                         f'or DataFrame, but is {type(nims)}.')
+
+
+def validate_and_rename_nims(df: DataFrame) -> DataFrame:
+    def nim_equals(nim1, nim2):
+        return True if nim1 == nim2 or (nim1 is None and nim2 is None) else False
+
+    if (df.apply(lambda row: nim_equals(row[NIM + SFX1], row[NIM + SFX2]), axis=1).all() and
+            df.apply(lambda row: nim_equals(row[PREFERENCE + SFX1], row[PREFERENCE + SFX2]), axis=1).all()):
+        return (
+            df.rename(columns={NIM + SFX1: NIM,
+                               NULL_HYPOTHESIS + SFX1: NULL_HYPOTHESIS,
+                               PREFERENCE + SFX1: PREFERENCE})
+              .drop(columns=[NIM + SFX2,
+                             NULL_HYPOTHESIS + SFX2,
+                             PREFERENCE + SFX2])
+        )
+
+    raise ValueError("Non-inferiority margins do not agree across levels")
 
 
 def select_levels(df: DataFrame,

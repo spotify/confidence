@@ -2,6 +2,12 @@
 History
 =======
 
+
+2.1.3 (2021-09-28)
+------------------
+
+* Added option to pass non_inferiority_margins=True which then uses NIMs in source data_frame, rather than passing in dict of tuples with NIMs
+
 2.1.2 (2021-09-02)
 ------------------
 

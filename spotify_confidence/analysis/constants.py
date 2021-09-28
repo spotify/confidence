@@ -34,6 +34,8 @@ BONFERRONI_ONLY_COUNT_TWOSIDED = "bonferroni-only-count-twosided"
 
 NULL_HYPOTHESIS = "null_hypothesis"
 NIM = "non-inferiority margin"
+NIM_INPUT_COLUMN_NAME = "non_inferiority_margin"
+PREFERRED_DIRECTION_INPUT_NAME = "preferred_direction"
 INCREASE_PREFFERED = "increase"
 DECREASE_PREFFERED = "decrease"
 TWO_SIDED = "two-sided"
@@ -41,4 +43,4 @@ PREFERENCE = "preference"
 PREFERENCE_DICT = {'smaller': DECREASE_PREFFERED,
                    'larger': INCREASE_PREFFERED,
                    TWO_SIDED: TWO_SIDED}
-NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]]]
+NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]
