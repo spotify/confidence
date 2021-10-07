@@ -66,7 +66,7 @@ class ChiSquared(GenericTest):
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
                    non_inferiority_margins: NIM_TYPE = None,
-                   final_expected_sample_size: float = None
+                   final_expected_sample_size_column: str = None
                    ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError('Non-inferiority margins not supported in '
@@ -77,14 +77,14 @@ class ChiSquared(GenericTest):
             absolute,
             groupby,
             None,
-            final_expected_sample_size)
+            final_expected_sample_size_column)
 
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
                             level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
-                            final_expected_sample_size: float = None
+                            final_expected_sample_size_column: str = None
                             ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError('Non-inferiority margins not supported in '
@@ -95,4 +95,4 @@ class ChiSquared(GenericTest):
             groupby,
             level_as_reference,
             None,
-            final_expected_sample_size)
+            final_expected_sample_size_column)

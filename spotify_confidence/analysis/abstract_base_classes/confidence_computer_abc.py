@@ -47,7 +47,7 @@ class ConfidenceComputerABC(ABC):
                            absolute: bool,
                            groupby: Union[str, Iterable],
                            nims: NIM_TYPE,
-                           final_expected_sample_size: float
+                           final_expected_sample_size_column: str
                            ) -> DataFrame:
         """Return dataframe containing the difference in means between
             group 1 and 2, p-value and confidence interval
@@ -61,7 +61,7 @@ class ConfidenceComputerABC(ABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
-                                    final_expected_sample_size: float
+                                    final_expected_sample_size_column: str
                                     ) -> DataFrame:
         """The pairwise probability that the specific group
         is greater than all other groups.

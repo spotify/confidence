@@ -132,13 +132,14 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
                          f'or DataFrame, but is {type(nims)}.')
 
 
-def validate_and_rename_nims(df: DataFrame) -> DataFrame:
-    def nim_equals(nim1, nim2):
-        return True if nim1 == nim2 or (nim1 is None and nim2 is None) \
-                       or (type(nim1) is float and type(nim2) is float and np.isnan(nim1) and np.isnan(nim2)) else False
+def equals_none_or_nan(x, y):
+    return True if x == y or (x is None and y is None) \
+                   or (type(x) is float and type(y) is float and np.isnan(x) and np.isnan(y)) else False
 
-    if (df.apply(lambda row: nim_equals(row[NIM + SFX1], row[NIM + SFX2]), axis=1).all() and
-            df.apply(lambda row: nim_equals(row[PREFERENCE + SFX1], row[PREFERENCE + SFX2]), axis=1).all()):
+
+def validate_and_rename_nims(df: DataFrame) -> DataFrame:
+    if (df.apply(lambda row: equals_none_or_nan(row[NIM + SFX1], row[NIM + SFX2]), axis=1).all() and
+            df.apply(lambda row: equals_none_or_nan(row[PREFERENCE + SFX1], row[PREFERENCE + SFX2]), axis=1).all()):
         return (
             df.rename(columns={NIM + SFX1: NIM,
                                NULL_HYPOTHESIS + SFX1: NULL_HYPOTHESIS,
@@ -149,6 +150,19 @@ def validate_and_rename_nims(df: DataFrame) -> DataFrame:
         )
 
     raise ValueError("Non-inferiority margins do not agree across levels")
+
+
+def validate_and_rename_final_expected_sample_sizes(df: DataFrame, column: str) -> DataFrame:
+    if column is None:
+        return df
+
+    if df.apply(lambda row: equals_none_or_nan(row[column + SFX1], row[column + SFX2]), axis=1).all():
+        return (
+            df.rename(columns={column + SFX1: column})
+              .drop(columns=[column + SFX2])
+        )
+
+    raise ValueError("Final expected sample sizes do not agree across levels")
 
 
 def select_levels(df: DataFrame,

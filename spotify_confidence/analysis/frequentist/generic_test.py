@@ -84,32 +84,32 @@ class GenericTest(ConfidenceABC):
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
                    non_inferiority_margins: NIM_TYPE = None,
-                   final_expected_sample_size: float = None
+                   final_expected_sample_size_column: str = None
                    ) -> DataFrame:
-        self._validate_sequential(final_expected_sample_size, groupby)
+        self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_difference(
             level_1,
             level_2,
             absolute,
             groupby,
             non_inferiority_margins,
-            final_expected_sample_size)
+            final_expected_sample_size_column)
 
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
                             level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
-                            final_expected_sample_size: float = None
+                            final_expected_sample_size_column: str = None
                             ) -> DataFrame:
-        self._validate_sequential(final_expected_sample_size, groupby)
+        self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_multiple_difference(
             level,
             absolute,
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            final_expected_sample_size)
+            final_expected_sample_size_column)
 
     def summary_plot(self,
                      groupby: Union[str, Iterable] = None) -> ChartGrid:

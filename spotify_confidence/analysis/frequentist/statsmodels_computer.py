@@ -32,7 +32,8 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
-                                power_calculation, add_nim_columns, validate_and_rename_nims)
+                                power_calculation, add_nim_columns,
+                                validate_and_rename_nims, validate_and_rename_final_expected_sample_sizes)
 
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
@@ -107,7 +108,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                            absolute: bool,
                            groupby: str,
                            nims: NIM_TYPE,
-                           final_expected_sample_size: float
+                           final_expected_sample_size_column: str
                            ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(level_columns,
@@ -117,7 +118,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   groupby,
                                                   level_as_reference=True,
                                                   nims=nims,
-                                                  final_expected_sample_size=final_expected_sample_size)
+                                                  final_expected_sample_size_column=final_expected_sample_size_column)
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
@@ -131,7 +132,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
-                                    final_expected_sample_size: float
+                                    final_expected_sample_size_column: str
                                     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [other for other in self._sufficient_statistics
@@ -143,7 +144,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   groupby,
                                                   level_as_reference,
                                                   nims,
-                                                  final_expected_sample_size)
+                                                  final_expected_sample_size_column)
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
@@ -159,7 +160,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                              groupby: Union[str, Iterable],
                              level_as_reference: bool,
                              nims: NIM_TYPE,
-                             final_expected_sample_size: float):
+                             final_expected_sample_size_column: str):
         groupby = listify(groupby)
         validate_levels(self._sufficient_statistics,
                         level_columns,
@@ -180,7 +181,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                       groups_to_compare=levels,
                       absolute=absolute,
                       nims=nims,
-                      final_expected_sample_size=final_expected_sample_size,
+                      final_expected_sample_size_column=final_expected_sample_size_column,
                       filtered_sufficient_statistics=filtered_sufficient_statistics)
                 .assign(level_1=lambda df:
                         df['level_1'].map(lambda s: str2level[s]))
@@ -195,7 +196,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               groups_to_compare: List[Tuple[str, str]],
                               absolute: bool,
                               nims: NIM_TYPE,
-                              final_expected_sample_size: float,
+                              final_expected_sample_size_column: str,
                               filtered_sufficient_statistics: DataFrame
                               ) -> DataFrame:
 
@@ -227,8 +228,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                       df[POINT_ESTIMATE + SFX1]})
               .assign(**{STD_ERR: self._std_err})
               .pipe(validate_and_rename_nims)
+              .pipe(validate_and_rename_final_expected_sample_sizes, final_expected_sample_size_column)
               .pipe(self._add_p_value_and_ci,
-                    final_expected_sample_size=final_expected_sample_size,
+                    final_expected_sample_size_column=final_expected_sample_size_column,
                     filtered_sufficient_statistics=filtered_sufficient_statistics)
               .pipe(self._adjust_if_absolute, absolute=absolute)
               .assign(**{PREFERENCE: lambda df:
@@ -263,15 +265,15 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
     def _add_p_value_and_ci(self,
                             df: DataFrame,
-                            final_expected_sample_size: float,
+                            final_expected_sample_size_column: str,
                             filtered_sufficient_statistics: DataFrame) -> DataFrame:
         df[ALPHA] = 1 - self._interval_size
 
-        if(final_expected_sample_size is None):
+        if(final_expected_sample_size_column is None):
             df[ADJUSTED_ALPHA] = (1-self._interval_size)/len(df)
         else:
             df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
-                                                                         final_expected_sample_size,
+                                                                         final_expected_sample_size_column,
                                                                          filtered_sufficient_statistics)
 
         ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
@@ -295,19 +297,17 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
     def _compute_sequential_adjusted_alpha(self,
                                            df,
-                                           final_expected_sample_size,
+                                           final_expected_sample_size_column,
                                            filtered_sufficient_statistics):
         total_sample_size = (
-            filtered_sufficient_statistics
-                .groupby(df.index.names)[self._denominator]
-                .sum()
-                .rename(f'total_{self._denominator}')
-                .to_frame()
+            filtered_sufficient_statistics.groupby(df.index.names)
+                                          .agg({self._denominator: sum, final_expected_sample_size_column: np.mean})
+                                          .rename(columns={self._denominator: f'total_{self._denominator}'})
         )
         groups_except_ordinal = [
             column for column in total_sample_size.index.names if column != self._ordinal_group_column]
         max_sample_size_by_group = (total_sample_size.max() if len(groups_except_ordinal) == 0
-            else total_sample_size.groupby(groups_except_ordinal).max())
+                                    else total_sample_size.groupby(groups_except_ordinal).max())
 
         if type(max_sample_size_by_group) is Series:
             total_sample_size = total_sample_size.assign(**{f'total_{self._denominator}_max': max_sample_size_by_group})
@@ -317,13 +317,10 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                         right_index=True,
                                                         suffixes=('', '_max'))
 
-        # TODO: join in final_expected_sample_size and take max of that and max_sample_size_by_group
-        total_sample_size = total_sample_size.assign(final_expected_sample_size=final_expected_sample_size)
-        # TODO: Remove line above ^^^^^^^
         total_sample_size = (
             total_sample_size
             .assign(final_expected_sample_size=lambda df: df[[f'total_{self._denominator}_max',
-                                                              'final_expected_sample_size']].max(axis=1))
+                                                              final_expected_sample_size_column]].max(axis=1))
             .assign(
                     sample_size_proportions=lambda df: df['total_' + self._denominator]/df['final_expected_sample_size']
             )
@@ -396,7 +393,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                       groupby,
                                       level_as_reference=True,
                                       nims=None,  # TODO: IS this right?
-                                      final_expected_sample_size=None)  # TODO: IS this right?
+                                      final_expected_sample_size_column=None)  # TODO: IS this right?
                 .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
                 .pipe(self._achieved_power, mde=mde, alpha=alpha)
         )

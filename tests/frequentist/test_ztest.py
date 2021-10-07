@@ -1202,7 +1202,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                         None, None, None,
                         None, None, None]
              }
-        )
+        ).assign(final_sample_size=5000)
 
         self.test = spotify_confidence.ZTest(
             self.data,
@@ -1213,12 +1213,11 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             ordinal_group_column='date')
 
     def test_multiple_difference_groupby(self):
-        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
         difference_df = self.test.multiple_difference(
             level='control',
             groupby=['date', 'country', 'metric'],
             level_as_reference=True,
-            final_expected_sample_size=final_sample_size)
+            final_expected_sample_size_column='final_sample_size')
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
@@ -1231,13 +1230,12 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_groupby_onesided_decrease(self):
-        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
         difference_df = self.test.multiple_difference(
             level='control',
             groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             non_inferiority_margins=(0.05, 'decrease'),
-            final_expected_sample_size=final_sample_size)
+            final_expected_sample_size_column='final_sample_size')
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
@@ -1250,13 +1248,12 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_groupby_onesided_increase(self):
-        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
         difference_df = self.test.multiple_difference(
             level='control',
             groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             non_inferiority_margins=(0.05, 'increase'),
-            final_expected_sample_size=final_sample_size)
+            final_expected_sample_size_column='final_sample_size')
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
@@ -1289,13 +1286,13 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                 (pd.to_datetime('2021-04-03'), 'gb', 'm2'): (0, None),
                 (pd.to_datetime('2021-04-04'), 'gb', 'm2'): (0, None),
                 (pd.to_datetime('2021-04-05'), 'gb', 'm2'): (0, None)}
-        final_sample_size = self.data.query("date == '2021-04-05'")['users'].sum()
+
         difference_df = self.test.multiple_difference(
             level='control',
             groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             non_inferiority_margins=nims,
-            final_expected_sample_size=final_sample_size)
+            final_expected_sample_size_column='final_sample_size')
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.date.unique().size
@@ -1312,7 +1309,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             groupby=['date', 'country', 'metric'],
             level_as_reference=True,
             non_inferiority_margins=True,
-            final_expected_sample_size=final_sample_size)
+            final_expected_sample_size_column='final_sample_size')
 
         assert (difference_df == difference_df_2).all().all()
 
@@ -1753,7 +1750,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level_1=('1', 'fin', 'andr', 'bananas_per_user_1d'),
             level_2=('2', 'fin', 'andr', 'bananas_per_user_1d'),
             groupby='date',
-            final_expected_sample_size=5000
+            final_expected_sample_size_column='final_expected_sample_size'
         )
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.2016570, 3)
         np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.11507406, 3)
@@ -1764,7 +1761,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level_1=('1', 'swe', 'ios', 'bananas_per_user_1d'),
             level_2=('2', 'swe', 'ios', 'bananas_per_user_1d'),
             groupby='date',
-            final_expected_sample_size=5000
+            final_expected_sample_size_column='final_expected_sample_size'
         )
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.1506963, 3)
         np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.17481994, 3)
@@ -1776,7 +1773,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level_2=('2', 'fin', 'andr', 'bananas_per_user_7d'),
             groupby='date',
             non_inferiority_margins=(0.01, 'increase'),
-            final_expected_sample_size=5000
+            final_expected_sample_size_column='final_expected_sample_size'
         )
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.1932786, 3)
         np.isinf(difference_df[ADJUSTED_UPPER].values[0])
@@ -1788,7 +1785,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level_2=('2', 'swe', 'ios', 'bananas_per_user_7d'),
             groupby='date',
             non_inferiority_margins=(0.01, 'increase'),
-            final_expected_sample_size=5000
+            final_expected_sample_size_column='final_expected_sample_size'
         )
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.1420855, 3)
         np.isinf(difference_df[ADJUSTED_UPPER].values[0])
@@ -1836,7 +1833,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level='1',
             groupby=['date', 'metric', 'country', 'platform'],
             level_as_reference=True,
-            final_expected_sample_size=5000,
+            final_expected_sample_size_column='final_expected_sample_size',
             non_inferiority_margins=nims)
         assert len(difference_df) == (
             (self.data.group.unique().size - 1)
@@ -1922,7 +1919,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level='1',
             groupby=['date', 'metric', 'country', 'platform'],
             level_as_reference=True,
-            final_expected_sample_size=5000,
+            final_expected_sample_size_column='final_expected_sample_size',
             non_inferiority_margins=True)
 
         assert (difference_df == difference_df_2).all().all()
@@ -1953,7 +1950,7 @@ class TestSequentialOneSided(object):
                     SUM_OF_SQUARES: 6163.0
                 },
             ]
-        )
+        ).assign(final_expected_sample_size=1e4)
 
         self.test = spotify_confidence.ZTest(
             self.data,
@@ -1970,7 +1967,7 @@ class TestSequentialOneSided(object):
             level='1',
             groupby='date',
             level_as_reference=True,
-            final_expected_sample_size=1e4,
+            final_expected_sample_size_column='final_expected_sample_size',
             non_inferiority_margins=(0.01, 'increase'))
         assert len(difference_df) == (
                 (self.data.group.unique().size - 1)
@@ -2011,7 +2008,7 @@ class TestSequentialTwoSided(object):
                     SUM_OF_SQUARES: 6163.0
                 },
             ]
-        )
+        ).assign(final_expected_sample_size=1e4)
 
         self.test = spotify_confidence.ZTest(
             self.data,
@@ -2028,7 +2025,7 @@ class TestSequentialTwoSided(object):
             level='1',
             groupby='date',
             level_as_reference=True,
-            final_expected_sample_size=1e4
+            final_expected_sample_size_column='final_expected_sample_size'
         )
         assert len(difference_df) == (
                 (self.data.group.unique().size - 1)
