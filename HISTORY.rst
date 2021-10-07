@@ -2,6 +2,11 @@
 History
 =======
 
+2.2.0 (2021-09-28)
+------------------
+
+* Changed how sequential tests are done. Now, instead of passing a single (number) final_expected_sample_size, you pass a column name final_expected_sample_size. This is to ensure that groupby works as expected, i.e. different groups can have different expected sample sizes.
+
 2.1.4 (2021-09-28)
 ------------------
 
