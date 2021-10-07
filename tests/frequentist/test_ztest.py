@@ -1229,6 +1229,14 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
             difference_df['adjusted p-value'], rtol=0.01)
 
+    def test_multiple_difference_plot_groupby(self):
+        charts = self.test.multiple_difference_plot(
+            level='control',
+            groupby=['date', 'country', 'metric'],
+            level_as_reference=True,
+            final_expected_sample_size_column='final_sample_size').charts
+        assert len(charts) == 1
+
     def test_multiple_difference_groupby_onesided_decrease(self):
         difference_df = self.test.multiple_difference(
             level='control',
@@ -1791,6 +1799,23 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
         np.isinf(difference_df[ADJUSTED_UPPER].values[0])
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[1], -0.07509674, 3)
         np.isinf(difference_df[ADJUSTED_UPPER].values[1])
+
+    def test_multiple_difference_plot(self):
+        charts = self.test.multiple_difference_plot(
+            level='1',
+            groupby=['date', 'country', 'platform', 'metric'],
+            level_as_reference=True,
+            final_expected_sample_size_column='final_expected_sample_size').charts
+        assert len(charts) == 1
+
+        charts = self.test.difference_plot(
+            level_1=('1', 'fin', 'andr', 'bananas_per_user_7d'),
+            level_2=('2', 'fin', 'andr', 'bananas_per_user_7d'),
+            groupby='date',
+            non_inferiority_margins=(0.01, 'increase'),
+            final_expected_sample_size_column='final_expected_sample_size'
+        ).charts
+        assert len(charts) == 1
 
     def test_multiple_difference_groupby(self):
         summary_df = self.test.summary()

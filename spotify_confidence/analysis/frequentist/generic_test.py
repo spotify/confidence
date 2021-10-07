@@ -124,14 +124,14 @@ class GenericTest(ConfidenceABC):
                         groupby: Union[str, Iterable] = None,
                         non_inferiority_margins: NIM_TYPE = None,
                         use_adjusted_intervals: bool = False,
-                        final_expected_sample_size: float = None
+                        final_expected_sample_size_column: str = None
                         ) -> ChartGrid:
         difference_df = self.difference(level_1,
                                         level_2,
                                         absolute,
                                         groupby,
                                         non_inferiority_margins,
-                                        final_expected_sample_size)
+                                        final_expected_sample_size_column)
         chartgrid = self._confidence_grapher.plot_difference(
             difference_df,
             absolute,
@@ -147,14 +147,14 @@ class GenericTest(ConfidenceABC):
                                  level_as_reference: bool = False,
                                  non_inferiority_margins: NIM_TYPE = None,
                                  use_adjusted_intervals: bool = False,
-                                 final_expected_sample_size: float = None
+                                 final_expected_sample_size_column: str = None
                                  ) -> ChartGrid:
         difference_df = self.multiple_difference(level,
                                                  absolute,
                                                  groupby,
                                                  level_as_reference,
                                                  non_inferiority_margins,
-                                                 final_expected_sample_size)
+                                                 final_expected_sample_size_column)
         chartgrid = self._confidence_grapher.plot_multiple_difference(
             difference_df,
             absolute,

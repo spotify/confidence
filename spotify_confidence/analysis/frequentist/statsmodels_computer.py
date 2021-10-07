@@ -306,10 +306,11 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         )
         groups_except_ordinal = [
             column for column in total_sample_size.index.names if column != self._ordinal_group_column]
-        max_sample_size_by_group = (total_sample_size.max() if len(groups_except_ordinal) == 0
-                                    else total_sample_size.groupby(groups_except_ordinal).max())
+        max_sample_size_by_group = (
+            total_sample_size[f'total_{self._denominator}'].max() if len(groups_except_ordinal) == 0
+            else total_sample_size.groupby(groups_except_ordinal)[f'total_{self._denominator}'].max())
 
-        if type(max_sample_size_by_group) is Series:
+        if type(max_sample_size_by_group) is not Series:
             total_sample_size = total_sample_size.assign(**{f'total_{self._denominator}_max': max_sample_size_by_group})
         else:
             total_sample_size = total_sample_size.merge(right=max_sample_size_by_group,
@@ -328,7 +329,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
         def get_num_comparisons_for_correction_method(df: DataFrame, correction_method: str) -> int:
             def _get_num_comparisons(df: DataFrame) -> int:
-                n_levels_to_compare = df.groupby(df.index.names).count()[DIFFERENCE].values[0]
+                n_levels_to_compare = 1 if df.empty else df.groupby(df.index.names).count()[DIFFERENCE].values[0]
                 n_groupby_groups = 1 if len(groups_except_ordinal) == 0 else df.groupby(groups_except_ordinal).ngroups
                 return max(1, n_levels_to_compare*n_groupby_groups)
 

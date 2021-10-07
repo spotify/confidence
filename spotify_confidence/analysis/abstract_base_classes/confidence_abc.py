@@ -169,7 +169,7 @@ class ConfidenceABC(ABC):
                         groupby: Union[str, Iterable],
                         non_inferiority_margins: NIM_TYPE,
                         use_adjusted_intervals: bool,
-                        final_expected_sample_size: float
+                        final_expected_sample_size_column: str
                         ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2.
         - Difference in means or proportions, depending
@@ -204,8 +204,8 @@ class ConfidenceABC(ABC):
             use_adjusted_intervals (bool):
                 If true, use e.g. bon-ferroni corrected
                 (or other method provided) confidence intervals
-            final_expected_sample_size (float): Expected number of observations
-                    at end of experiment.
+            final_expected_sample_size_column (str): Column in source data frame containing expected number of
+                    observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
 
@@ -221,7 +221,7 @@ class ConfidenceABC(ABC):
                                  level_as_reference: bool,
                                  non_inferiority_margins: NIM_TYPE,
                                  use_adjusted_intervals: bool,
-                                 final_expected_sample_size: float
+                                 final_expected_sample_size_column: str
                                  ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
@@ -253,8 +253,8 @@ class ConfidenceABC(ABC):
             use_adjusted_intervals (bool):
                 If true, use e.g. bon-ferroni corrected
                 (or other method provided) confidence intervals
-            final_expected_sample_size (float): Expected number of observations
-                    at end of experiment.
+            final_expected_sample_size_column (str): Column in source data frame containing expected number of
+                    observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
 
