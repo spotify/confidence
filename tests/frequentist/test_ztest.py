@@ -1724,7 +1724,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     {'bananas_per_user_1d': 0, 'bananas_per_user_7d': 0.01}))
                 .assign(preferred_direction=lambda df: df['metric'].map(
                     {'bananas_per_user_1d': None, 'bananas_per_user_7d': 'increase'}))
-                .assign(final_expected_sample_size = 5000)
+                .assign(final_expected_sample_size=5000)
         )
 
         self.test = spotify_confidence.ZTest(
@@ -1740,7 +1740,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
 
     def test_with_manual_correction(self):
         test = spotify_confidence.ZTest(
-            self.data,
+            self.data.assign(blabla='hej'),
             numerator_column=SUM,
             numerator_sum_squares_column=SUM_OF_SQUARES,
             denominator_column=COUNT,
@@ -1796,7 +1796,6 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
         np.isinf(difference_df[ADJUSTED_UPPER].values[1])
 
     def test_multiple_difference_groupby(self):
-        final_sample_size = self.data.query("date == '2020-04-02'")['count'].sum()
         summary_df = self.test.summary()
 
         np.testing.assert_almost_equal(
@@ -1837,7 +1836,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level='1',
             groupby=['date', 'metric', 'country', 'platform'],
             level_as_reference=True,
-            final_expected_sample_size=final_sample_size,
+            final_expected_sample_size=5000,
             non_inferiority_margins=nims)
         assert len(difference_df) == (
             (self.data.group.unique().size - 1)
@@ -1923,7 +1922,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             level='1',
             groupby=['date', 'metric', 'country', 'platform'],
             level_as_reference=True,
-            final_expected_sample_size=final_sample_size,
+            final_expected_sample_size=5000,
             non_inferiority_margins=True)
 
         assert (difference_df == difference_df_2).all().all()

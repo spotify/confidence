@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, concat
 import numpy as np
 import scipy.stats as st
 from statsmodels.stats.proportion import (
@@ -169,6 +169,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                   else (level2str(other), level2str(level))
                   for other in other_levels]
         str2level = {level2str(lv): lv for lv in [level] + other_levels}
+        filtered_sufficient_statistics = concat(
+            [self._sufficient_statistics.groupby(level_columns).get_group(group) for group in [level] + other_levels])
         return (
             self._sufficient_statistics
                 .assign(level=self._sufficient_statistics[level_columns]
@@ -178,7 +180,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                       groups_to_compare=levels,
                       absolute=absolute,
                       nims=nims,
-                      final_expected_sample_size=final_expected_sample_size)
+                      final_expected_sample_size=final_expected_sample_size,
+                      filtered_sufficient_statistics=filtered_sufficient_statistics)
                 .assign(level_1=lambda df:
                         df['level_1'].map(lambda s: str2level[s]))
                 .assign(level_2=lambda df:
@@ -192,7 +195,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               groups_to_compare: List[Tuple[str, str]],
                               absolute: bool,
                               nims: NIM_TYPE,
-                              final_expected_sample_size: float
+                              final_expected_sample_size: float,
+                              filtered_sufficient_statistics: DataFrame
                               ) -> DataFrame:
 
         def join(df: DataFrame) -> DataFrame:
@@ -223,7 +227,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                       df[POINT_ESTIMATE + SFX1]})
               .assign(**{STD_ERR: self._std_err})
               .pipe(validate_and_rename_nims)
-              .pipe(self._add_p_value_and_ci, final_expected_sample_size=final_expected_sample_size)
+              .pipe(self._add_p_value_and_ci,
+                    final_expected_sample_size=final_expected_sample_size,
+                    filtered_sufficient_statistics=filtered_sufficient_statistics)
               .pipe(self._adjust_if_absolute, absolute=absolute)
               .assign(**{PREFERENCE: lambda df:
                          df[PREFERENCE].map(PREFERENCE_DICT)})
@@ -255,13 +261,18 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         return np.sqrt(df[VARIANCE + SFX1] / df[self._denominator + SFX1] +
                        df[VARIANCE + SFX2] / df[self._denominator + SFX2])
 
-    def _add_p_value_and_ci(self, df: DataFrame, final_expected_sample_size: float) -> DataFrame:
+    def _add_p_value_and_ci(self,
+                            df: DataFrame,
+                            final_expected_sample_size: float,
+                            filtered_sufficient_statistics: DataFrame) -> DataFrame:
         df[ALPHA] = 1 - self._interval_size
 
         if(final_expected_sample_size is None):
             df[ADJUSTED_ALPHA] = (1-self._interval_size)/len(df)
         else:
-            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df, final_expected_sample_size)
+            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
+                                                                         final_expected_sample_size,
+                                                                         filtered_sufficient_statistics)
 
         ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
         ci_df = DataFrame(index=ci.index,
@@ -282,30 +293,36 @@ class StatsmodelsComputer(ConfidenceComputerABC):
               .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
         )
 
-    def _compute_sequential_adjusted_alpha(self, df, final_expected_sample_size):
-        total_sample_size_by_ordinal = (
-            self._sufficient_statistics
+    def _compute_sequential_adjusted_alpha(self,
+                                           df,
+                                           final_expected_sample_size,
+                                           filtered_sufficient_statistics):
+        total_sample_size = (
+            filtered_sufficient_statistics
                 .groupby(df.index.names)[self._denominator]
                 .sum()
                 .rename(f'total_{self._denominator}')
+                .to_frame()
         )
-        groups_except_ordinal_column = [
-            column for column in total_sample_size_by_ordinal.index.names if column != self._ordinal_group_column]
-        max_sample_size_by_group = (
-            total_sample_size_by_ordinal.groupby(groups_except_ordinal_column)
-                                        .max()
-                                        .rename('max_total_' + self._denominator)
-        )
-        total_sample_size_by_ordinal = (
-            total_sample_size_by_ordinal.to_frame()
-                                        .merge(right=max_sample_size_by_group, left_index=True, right_index=True)
-        )
+        groups_except_ordinal = [
+            column for column in total_sample_size.index.names if column != self._ordinal_group_column]
+        max_sample_size_by_group = (total_sample_size.max() if len(groups_except_ordinal) == 0
+            else total_sample_size.groupby(groups_except_ordinal).max())
+
+        if type(max_sample_size_by_group) is Series:
+            total_sample_size = total_sample_size.assign(**{f'total_{self._denominator}_max': max_sample_size_by_group})
+        else:
+            total_sample_size = total_sample_size.merge(right=max_sample_size_by_group,
+                                                        left_index=True,
+                                                        right_index=True,
+                                                        suffixes=('', '_max'))
+
         # TODO: join in final_expected_sample_size and take max of that and max_sample_size_by_group
-        total_sample_size_by_ordinal = total_sample_size_by_ordinal.assign(final_expected_sample_size=5000)
+        total_sample_size = total_sample_size.assign(final_expected_sample_size=final_expected_sample_size)
         # TODO: Remove line above ^^^^^^^
-        total_sample_size_by_ordinal = (
-            total_sample_size_by_ordinal
-            .assign(final_expected_sample_size=lambda df: df[['max_total_' + self._denominator,
+        total_sample_size = (
+            total_sample_size
+            .assign(final_expected_sample_size=lambda df: df[[f'total_{self._denominator}_max',
                                                               'final_expected_sample_size']].max(axis=1))
             .assign(
                     sample_size_proportions=lambda df: df['total_' + self._denominator]/df['final_expected_sample_size']
@@ -314,8 +331,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
         def get_num_comparisons_for_correction_method(df: DataFrame, correction_method: str) -> int:
             def _get_num_comparisons(df: DataFrame) -> int:
-                n_levels_to_compare = df.groupby(df.index.names).count()[DIFFERENCE][0]
-                n_groupby_groups = df.groupby(groups_except_ordinal_column).ngroups
+                n_levels_to_compare = df.groupby(df.index.names).count()[DIFFERENCE].values[0]
+                n_groupby_groups = 1 if len(groups_except_ordinal) == 0 else df.groupby(groups_except_ordinal).ngroups
                 return max(1, n_levels_to_compare*n_groupby_groups)
 
             if correction_method == BONFERRONI:
@@ -328,7 +345,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         alpha = (1.0 - self._interval_size) / get_num_comparisons_for_correction_method(df, self._correction_method)
 
         def adjusted_alphas_for_group(grp) -> Series:
-            return(
+            return (
                 sequential_bounds(
                     t=grp['sample_size_proportions'].values,
                     alpha=alpha,
@@ -341,9 +358,10 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             )[['zb', 'adjusted_alpha']]
 
         return (
-            df.merge(total_sample_size_by_ordinal, left_index=True, right_index=True)
-              .groupby(groups_except_ordinal_column + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE]]
+            df.merge(total_sample_size, left_index=True, right_index=True)
+              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE]]
               .apply(adjusted_alphas_for_group)
+              .reset_index().set_index(df.index.names)
         )['adjusted_alpha']
 
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
