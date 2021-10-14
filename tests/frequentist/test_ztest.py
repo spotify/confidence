@@ -1224,10 +1224,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_plot_groupby(self):
         charts = self.test.multiple_difference_plot(
@@ -1250,10 +1248,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_groupby_onesided_increase(self):
         difference_df = self.test.multiple_difference(
@@ -1268,10 +1264,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_groupby_mixed_nims(self):
         nims = {(pd.to_datetime('2021-04-01'), 'us', 'm1'): (0.2, 'increase'),
@@ -1307,10 +1301,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
         difference_df_2 = self.test.multiple_difference(
             level='control',
@@ -1319,7 +1311,9 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             non_inferiority_margins=True,
             final_expected_sample_size_column='final_sample_size')
 
-        assert (difference_df == difference_df_2).all().all()
+        for column in difference_df.columns:
+            assert (difference_df[column] == difference_df_2[column]).all() or \
+                   (difference_df['p-value'].isnull() == difference_df_2['p-value'].isnull()).all()
 
 
 DATE = 'date'
@@ -1935,10 +1929,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                 'date == "2020-04-02" and country == "swe" and platform == "ios" and metric=="bananas_per_user_7d"')[
                 ADJUSTED_UPPER].values[0])
 
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
         difference_df_2 = self.test.multiple_difference(
             level='1',
@@ -1947,7 +1939,9 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             final_expected_sample_size_column='final_expected_sample_size',
             non_inferiority_margins=True)
 
-        assert (difference_df == difference_df_2).all().all()
+        for column in difference_df.columns:
+            assert (difference_df[column] == difference_df_2[column]).all() or \
+                   (difference_df['p-value'].isnull() == difference_df_2['p-value'].isnull()).all()
 
 
 class TestSequentialOneSided(object):
@@ -1998,11 +1992,8 @@ class TestSequentialOneSided(object):
                 (self.data.group.unique().size - 1)
                 * self.data.date.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01
-        )
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
         assert np.isinf(difference_df[CI_UPPER].values[0])
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -4.129515314002298, 3)
         np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -4.001416, 3)
@@ -2056,11 +2047,9 @@ class TestSequentialTwoSided(object):
                 (self.data.group.unique().size - 1)
                 * self.data.date.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01
-        )
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
+
         np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.121, 3)
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.151, 3)
         np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -0.0149, 3)

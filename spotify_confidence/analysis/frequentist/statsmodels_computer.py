@@ -19,6 +19,7 @@ from statsmodels.stats.proportion import (
     proportions_chisquare, proportion_confint, confint_proportions_2indep)
 from statsmodels.stats.weightstats import (
     _zstat_generic, _zconfint_generic, _tstat_generic, _tconfint_generic)
+from statsmodels.stats.multitest import multipletests
 from typing import (Union, Iterable, List, Tuple)
 from abc import abstractmethod
 
@@ -27,7 +28,7 @@ from ..abstract_base_classes.confidence_computer_abc import \
 from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
-                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
+                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG,
                          SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
@@ -126,7 +127,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
-                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P] +
+                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                               if nims is not None else [])]
 
@@ -152,7 +153,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         return difference_df[listify(groupby) +
                              ['level_1', 'level_2', 'absolute_difference',
                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
-                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P] +
+                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                               if nims is not None else [])]
 
@@ -274,9 +275,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         df[ALPHA] = 1 - self._interval_size
 
         if(final_expected_sample_size_column is None):
-            groupby = ['level_1', 'level_2'] + [
-                column for column in df.index.names if column is not None]
-            df[ADJUSTED_ALPHA] = (1-self._interval_size)/self._get_num_comparisons(df, self._correction_method, groupby)
+            groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
+            n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
+            df[ADJUSTED_ALPHA] = (1-self._interval_size) / n_comparisons
         else:
             df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
                                                                          final_expected_sample_size_column,
@@ -294,11 +295,21 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         return (
             df.assign(**{P_VALUE: df.apply(self._p_value, axis=1)})
               .assign(**{ADJUSTED_P: lambda df:
-                      df[P_VALUE].map(lambda p: min(p * len(df), 1))})
+                         df[P_VALUE].map(lambda p: min(p * n_comparisons, 1)
+                                         if final_expected_sample_size_column is None
+                                         else None)})
               .assign(**{CI_LOWER: ci_df[CI_LOWER]})
               .assign(**{CI_UPPER: ci_df[CI_UPPER]})
               .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
               .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
+              .assign(**{IS_SIGNIFICANT: lambda df: df[P_VALUE] < df[ADJUSTED_ALPHA]
+                         if BONFERRONI in self._correction_method
+                         else multipletests(pvals=df[P_VALUE],
+                                            alpha=df[ADJUSTED_ALPHA].values[0],
+                                            method=self._correction_method)[0]})
+              .assign(**{P_VALUE: lambda df: df[P_VALUE]
+                         if final_expected_sample_size_column is None
+                         else None})
         )
 
     def _get_num_comparisons(self, df: DataFrame, correction_method: str, groupby: Iterable) -> int:
