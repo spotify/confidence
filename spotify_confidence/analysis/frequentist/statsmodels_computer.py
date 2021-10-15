@@ -32,7 +32,7 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
                          HOLM, HOMMEL, SIMES_HOCHBERG,
-                         BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY)
+                         BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
                                 power_calculation, add_nim_columns,
@@ -270,8 +270,20 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                             final_expected_sample_size_column: str,
                             filtered_sufficient_statistics: DataFrame) -> DataFrame:
 
-        df[ALPHA] = 1 - self._interval_size
-        df[P_VALUE] = df.apply(self._p_value, axis=1)
+        def set_alpha_and_adjust_preference(df: DataFrame) -> DataFrame:
+            alpha_0 = 1 - self._interval_size
+            return (
+                df.assign(**{ALPHA: df.apply(lambda row: 2*alpha_0 if self._correction_method == SPOT_1
+                                             and row[PREFERENCE] != TWO_SIDED
+                                             else alpha_0, axis=1)})
+                  .assign(**{PREFERENCE: df.apply(lambda row: TWO_SIDED if self._correction_method == SPOT_1
+                                                  else row[PREFERENCE], axis=1)})
+            )
+
+        df = (
+            df.pipe(set_alpha_and_adjust_preference)
+              .assign(**{P_VALUE: lambda df: df.apply(self._p_value, axis=1)})
+        )
 
         if(final_expected_sample_size_column is not None):
             df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
@@ -284,12 +296,12 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
             df[ADJUSTED_ALPHA] = None
             is_significant, adjusted_p, _, _ = multipletests(pvals=df[P_VALUE],
-                                                                  alpha=df[ALPHA].values[0],
-                                                                  method=self._correction_method)
+                                                             alpha=df[ALPHA].values[0],
+                                                             method=self._correction_method)
         elif BONFERRONI in self._correction_method:
             groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
             n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
-            df[ADJUSTED_ALPHA] = (1-self._interval_size) / n_comparisons
+            df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
         else:
             raise ValueError("Can't figure out which correction method to use :(")
 
@@ -340,7 +352,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             return max(1, df.groupby(groupby).ngroups)
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
             return max(df.query(f'{PREFERENCE} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
-        elif correction_method == BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY:
+        elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1]:
             return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
@@ -411,7 +423,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                            filtered_sufficient_statistics: DataFrame) -> Series:
         raise NotImplementedError("Sequential tests are only supported for ZTests")
 
-    def _ci_for_multiple_comparison_methods(self,
+    def _ci_for_multiple_comparison_methods(
+            self,
             alternative: Union[Series, str],
             std_err: Union[Series, float],
             null_hypothesis: Union[Series, float],
