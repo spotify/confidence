@@ -31,6 +31,7 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
+                         HOLM, HOMMEL, SIMES_HOCHBERG,
                          BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
@@ -268,37 +269,58 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                             df: DataFrame,
                             final_expected_sample_size_column: str,
                             filtered_sufficient_statistics: DataFrame) -> DataFrame:
+
         df[ALPHA] = 1 - self._interval_size
+        df[P_VALUE] = df.apply(self._p_value, axis=1)
 
         if(final_expected_sample_size_column is not None):
             df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
                                                                          final_expected_sample_size_column,
                                                                          filtered_sufficient_statistics)
+            adjusted_p = None
+        elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            if not all(df[PREFERENCE] != TWO_SIDED):
+                raise ValueError(f"To use {self._correction_method} all tests have to be one-sided.")
+
+            df[ADJUSTED_ALPHA] = None
+            is_significant, adjusted_p, _, _ = multipletests(pvals=df[P_VALUE],
+                                                                  alpha=df[ALPHA].values[0],
+                                                                  method=self._correction_method)
         elif BONFERRONI in self._correction_method:
             groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
             n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
             df[ADJUSTED_ALPHA] = (1-self._interval_size) / n_comparisons
         else:
-            df[ADJUSTED_ALPHA] = (1-self._interval_size)
-
+            raise ValueError("Can't figure out which correction method to use :(")
 
         ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
         ci_df = DataFrame(index=ci.index,
                           columns=[CI_LOWER, CI_UPPER],
                           data=list(ci.values))
-        adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
+
+        if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG] and all(df[PREFERENCE] != TWO_SIDED):
+            lower, upper = self._ci_for_multiple_comparison_methods(
+                alternative=df[PREFERENCE],
+                std_err=df[STD_ERR],
+                observed_difference=df[DIFFERENCE],
+                null_hypothesis=df[NULL_HYPOTHESIS],
+                correction_method=self._correction_method,
+                alpha=1-self._interval_size,
+                is_significant=list(is_significant),
+            )
+            adjusted_ci = Series(index=df.index, data=list(zip(lower, upper)))
+        else:
+            adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
+
         adjusted_ci_df = DataFrame(index=adjusted_ci.index,
                                    columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
                                    data=list(adjusted_ci.values))
 
         return (
-            df.assign(**{P_VALUE: df.apply(self._p_value, axis=1)})
-              .assign(**{ADJUSTED_P: lambda df:
-                         df[P_VALUE].map(
-                             lambda p: min(p * n_comparisons, 1) if BONFERRONI in self._correction_method
-                                                                    and final_expected_sample_size_column is None
-                                         else None
-                         )})
+            df.assign(**{ADJUSTED_P: lambda df: df[P_VALUE].map(
+                             lambda p: min(p * n_comparisons, 1)
+                             if BONFERRONI in self._correction_method and final_expected_sample_size_column is None
+                             else adjusted_p)})
               .assign(**{CI_LOWER: ci_df[CI_LOWER]})
               .assign(**{CI_UPPER: ci_df[CI_UPPER]})
               .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
@@ -306,7 +328,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
               .assign(**{IS_SIGNIFICANT: lambda df: df[P_VALUE] < df[ADJUSTED_ALPHA]
                          if BONFERRONI in self._correction_method
                          else multipletests(pvals=df[P_VALUE],
-                                            alpha=df[ADJUSTED_ALPHA].values[0],
+                                            alpha=df[ALPHA].values[0],
                                             method=self._correction_method)[0]})
               .assign(**{P_VALUE: lambda df: df[P_VALUE]
                          if final_expected_sample_size_column is None
@@ -388,6 +410,18 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                            final_expected_sample_size_column: str,
                                            filtered_sufficient_statistics: DataFrame) -> Series:
         raise NotImplementedError("Sequential tests are only supported for ZTests")
+
+    def _ci_for_multiple_comparison_methods(self,
+            alternative: Union[Series, str],
+            std_err: Union[Series, float],
+            null_hypothesis: Union[Series, float],
+            observed_difference: Union[Series, float],
+            correction_method: str,
+            alpha: float,
+            is_significant: List[bool],
+            w: float = 1.0,
+    ) -> Tuple[Union[Series, float], Union[Series, float]]:
+        raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
 
 
 class ChiSquaredComputer(StatsmodelsComputer):
@@ -612,3 +646,64 @@ class ZTestComputer(StatsmodelsComputer):
               .apply(adjusted_alphas_for_group)
               .reset_index().set_index(df.index.names)
         )['adjusted_alpha']
+
+    def _ci_for_multiple_comparison_methods(
+            self,
+            alternative: Union[Series, str],
+            std_err: Union[Series, float],
+            null_hypothesis: Union[Series, float],
+            observed_difference: Union[Series, float],
+            correction_method: str,
+            alpha: float,
+            is_significant: List[bool],
+            w: float = 1.0,
+    ) -> Tuple[Union[Series, float], Union[Series, float]]:
+        if TWO_SIDED in alternative:
+            raise ValueError(
+                "CIs can only be produced for one-sided tests when other multiple test corrections "
+                "methods than bonferroni are applied"
+            )
+        m_scal = len(is_significant)
+        num_significant = sum(is_significant)
+        r = m_scal - num_significant
+
+        def _aw(W: float, alpha: float, m_scal: float, r: int):
+            return alpha * (1 - (1 - W) * (m_scal - r) / m_scal)
+
+        def _bw(W: float, alpha: float, m_scal: float, r: int):
+            return 1 - (1 - alpha) / np.power((1 - (1 - W) * (1 - np.power((1 - alpha), (1 / m_scal)))), (m_scal - r))
+
+        if correction_method == "holm":
+            adjusted_alpha_rej_equal_m = 1 - alpha / m_scal
+            adjusted_alpha_rej_less_m = 1 - (1 - w) * (alpha / m_scal)
+            adjusted_alpha_accept = 1 - _aw(w, alpha, m_scal, r) / r if r != 0 else 0
+        elif correction_method in ["hommel", "simes-hochberg"]:
+            adjusted_alpha_rej_equal_m = np.power((1 - alpha), (1 / m_scal))
+            adjusted_alpha_rej_less_m = 1 - (1 - w) * (1 - np.power((1 - alpha), (1 / m_scal)))
+            adjusted_alpha_accept = 1 - _bw(w, alpha, m_scal, r) / r if r != 0 else 0
+        else:
+            raise ValueError("CIs not supported for correction method. Supported methods: hommel, holm, simes-hochberg")
+
+        upper = []
+        lower = []
+        for i in range(len(is_significant)):
+            if is_significant[i] and num_significant == m_scal:
+                alpha_adj = adjusted_alpha_rej_equal_m
+            elif is_significant[i] and num_significant < m_scal:
+                alpha_adj = adjusted_alpha_rej_less_m
+            else:
+                alpha_adj = adjusted_alpha_accept
+
+            ci_sign = -1 if alternative.iloc[i] == "larger" else 1
+            bound1 = observed_difference.iloc[i] + ci_sign * st.norm.ppf(alpha_adj) * std_err.iloc[i]
+            if ci_sign == -1:
+                bound2 = max(null_hypothesis.iloc[i], bound1)
+            else:
+                bound2 = min(null_hypothesis.iloc[i], bound1)
+
+            bound = bound2 if is_significant[i] else bound1
+
+            upper.append(bound if alternative.iloc[i] == "smaller" else np.inf)
+            lower.append(bound if alternative.iloc[i] == "larger" else -np.inf)
+
+        return lower, upper

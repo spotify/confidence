@@ -9,7 +9,8 @@ from spotify_confidence.analysis.constants import (
     DECREASE_PREFFERED, POINT_ESTIMATE,
     CI_LOWER, CI_UPPER, P_VALUE,
     ADJUSTED_LOWER, ADJUSTED_UPPER,
-    DIFFERENCE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, CORRECTION_METHODS)
+    DIFFERENCE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, CORRECTION_METHODS,
+    HOLM, HOMMEL, SIMES_HOCHBERG)
 
 
 class TestBinary(object):
@@ -606,9 +607,19 @@ class TestOrdinalPlusTwoCategorical(object):
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_difference(self, correction_method):
         self.test._confidence_computer._correction_method = correction_method
-        difference_df = self.test.difference(level_1=('control', 'gb', 1),
-                                             level_2=('test', 'us', 2))
-        assert len(difference_df) == 1
+        if BONFERRONI in correction_method:
+            difference_df = self.test.difference(level_1=('control', 'gb', 1),
+                                                 level_2=('test', 'us', 2))
+            assert len(difference_df) == 1
+        elif correction_method  in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            difference_df = self.test.difference(level_1=('control', 'gb', 1),
+                                                 level_2=('test', 'us', 2),
+                                                 non_inferiority_margins=(0.2, 'increase'))
+            assert len(difference_df) == 1
+        else:
+            with pytest.raises(ValueError):
+                self.test.difference(level_1=('control', 'gb', 1),
+                                     level_2=('test', 'us', 2))
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_difference_groupby(self, correction_method):
