@@ -30,8 +30,7 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
                          ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
-                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG,
-                         SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
                          BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
@@ -72,12 +71,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
-        correction_methods = [BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK,
-                              FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
-                              BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY]
-        if correction_method.lower() not in correction_methods:
+        if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f'Use one of the correction methods ' +
-                             f'in {correction_methods}')
+                             f'in {CORRECTION_METHODS}')
         self._correction_method = correction_method
 
         self._all_group_columns = get_all_group_columns(
@@ -274,14 +270,17 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                             filtered_sufficient_statistics: DataFrame) -> DataFrame:
         df[ALPHA] = 1 - self._interval_size
 
-        if(final_expected_sample_size_column is None):
+        if(final_expected_sample_size_column is not None):
+            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
+                                                                         final_expected_sample_size_column,
+                                                                         filtered_sufficient_statistics)
+        elif BONFERRONI in self._correction_method:
             groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
             n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
             df[ADJUSTED_ALPHA] = (1-self._interval_size) / n_comparisons
         else:
-            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
-                                                                         final_expected_sample_size_column,
-                                                                         filtered_sufficient_statistics)
+            df[ADJUSTED_ALPHA] = (1-self._interval_size)
+
 
         ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
         ci_df = DataFrame(index=ci.index,
@@ -295,9 +294,11 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         return (
             df.assign(**{P_VALUE: df.apply(self._p_value, axis=1)})
               .assign(**{ADJUSTED_P: lambda df:
-                         df[P_VALUE].map(lambda p: min(p * n_comparisons, 1)
-                                         if final_expected_sample_size_column is None
-                                         else None)})
+                         df[P_VALUE].map(
+                             lambda p: min(p * n_comparisons, 1) if BONFERRONI in self._correction_method
+                                                                    and final_expected_sample_size_column is None
+                                         else None
+                         )})
               .assign(**{CI_LOWER: ci_df[CI_LOWER]})
               .assign(**{CI_UPPER: ci_df[CI_UPPER]})
               .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
@@ -318,7 +319,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
             return max(df.query(f'{PREFERENCE} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
         elif correction_method == BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY:
-            return max(1, df.query(f'{NIM} is None').groupby(groupby).ngroups)
+            return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
 

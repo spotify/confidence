@@ -41,6 +41,10 @@ FDR_TSBKY = "fdr_tsbky"
 BONFERRONI_ONLY_COUNT_TWOSIDED = "bonferroni-only-count-twosided"
 BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY = "bonferroni-do-not-count-non-inferiority"
 
+CORRECTION_METHODS = [
+    BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+    BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY]
+
 NULL_HYPOTHESIS = "null_hypothesis"
 NIM = "non-inferiority margin"
 NIM_INPUT_COLUMN_NAME = "non_inferiority_margin"

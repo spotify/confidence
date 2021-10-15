@@ -9,7 +9,7 @@ from spotify_confidence.analysis.constants import (
     DECREASE_PREFFERED, POINT_ESTIMATE,
     CI_LOWER, CI_UPPER, P_VALUE,
     ADJUSTED_LOWER, ADJUSTED_UPPER,
-    DIFFERENCE, BONFERRONI_ONLY_COUNT_TWOSIDED)
+    DIFFERENCE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, CORRECTION_METHODS)
 
 
 class TestBinary(object):
@@ -603,12 +603,16 @@ class TestOrdinalPlusTwoCategorical(object):
         summary_df = self.test.summary()
         assert len(summary_df) == len(self.data)
 
-    def test_difference(self):
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_difference(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
         difference_df = self.test.difference(level_1=('control', 'gb', 1),
                                              level_2=('test', 'us', 2))
         assert len(difference_df) == 1
 
-    def test_difference_groupby(self):
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_difference_groupby(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
         difference_df = self.test.difference(level_1='control',
                                              level_2='test',
                                              groupby=['country',
@@ -616,7 +620,9 @@ class TestOrdinalPlusTwoCategorical(object):
         assert len(difference_df) == self.data.days_since_reg.unique().size\
             * self.data.country.unique().size
 
-    def test_multiple_difference(self):
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_multiple_difference(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
         difference_df = self.test.multiple_difference(level=('control', 1),
                                                       groupby='country',
                                                       level_as_reference=True)
@@ -626,12 +632,16 @@ class TestOrdinalPlusTwoCategorical(object):
              * self.data.days_since_reg.unique().size +
              self.data.days_since_reg.unique().size-1)
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
 
-    def test_multiple_difference_groupby(self):
+        if BONFERRONI in correction_method:
+            n_comp = len(difference_df)
+            assert np.allclose(
+                difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+                difference_df['adjusted p-value'], rtol=0.01)
+
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_multiple_difference_groupby(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
         difference_df = self.test.multiple_difference(level='control',
                                                       groupby=['days_since_reg',
                                                                'country'],
@@ -641,12 +651,16 @@ class TestOrdinalPlusTwoCategorical(object):
             * self.data.days_since_reg.unique().size
             * self.data.country.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
 
-    def test_differece_with_nims(self):
+        if BONFERRONI in correction_method:
+            n_comp = len(difference_df)
+            assert np.allclose(
+                difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+                difference_df['adjusted p-value'], rtol=0.01)
+
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_differece_with_nims(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
         df = self.test.difference(level_1=('test', 'us'),
                                   level_2=('control', 'us'),
                                   groupby='days_since_reg',
@@ -706,7 +720,10 @@ class TestOrdinalPlusTwoCategorical(object):
             non_inferiority_margins=nims)
         assert (len(df) == 20)
 
-    def test_differece_with_nims_in_df(self):
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_differece_with_nims_in_df(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+
         df = self.test.difference(level_1=('test', 'us'),
                                   level_2=('control', 'us'),
                                   groupby='days_since_reg',
@@ -1212,20 +1229,30 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             categorical_group_columns=['variation_name', 'country', 'metric'],
             ordinal_group_column='date')
 
-    def test_multiple_difference_groupby(self):
-        difference_df = self.test.multiple_difference(
-            level='control',
-            groupby=['date', 'country', 'metric'],
-            level_as_reference=True,
-            final_expected_sample_size_column='final_sample_size')
-        assert len(difference_df) == (
-            (self.data.variation_name.unique().size - 1)
-            * self.data.date.unique().size
-            * self.data.country.unique().size
-            * self.data.metric.unique().size
-        )
-        assert difference_df['p-value'].isnull().all()
-        assert difference_df['adjusted p-value'].isnull().all()
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_multiple_difference_groupby(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+        def get_diff() -> pd.DataFrame:
+            return self.test.multiple_difference(
+                level='control',
+                groupby=['date', 'country', 'metric'],
+                level_as_reference=True,
+                final_expected_sample_size_column='final_sample_size')
+
+        if BONFERRONI not in correction_method:
+            with pytest.raises(ValueError):
+                difference_df = get_diff()
+        else:
+            difference_df = get_diff()
+
+            assert len(difference_df) == (
+                (self.data.variation_name.unique().size - 1)
+                * self.data.date.unique().size
+                * self.data.country.unique().size
+                * self.data.metric.unique().size
+            )
+            assert difference_df['p-value'].isnull().all()
+            assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_plot_groupby(self):
         charts = self.test.multiple_difference_plot(
