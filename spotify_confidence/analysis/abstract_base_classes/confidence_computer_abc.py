@@ -35,7 +35,7 @@ class ConfidenceComputerABC(ABC):
         pass
 
     @abstractmethod
-    def compute_summary(self, verbose: bool) -> DataFrame:
+    def compute_summary(self) -> DataFrame:
         """Return Pandas DataFrame with summary statistics.
         """
         pass
@@ -47,8 +47,7 @@ class ConfidenceComputerABC(ABC):
                            absolute: bool,
                            groupby: Union[str, Iterable],
                            nims: NIM_TYPE,
-                           final_expected_sample_size_column: str,
-                           verbose: bool
+                           final_expected_sample_size_column: str
                            ) -> DataFrame:
         """Return dataframe containing the difference in means between
             group 1 and 2, p-value and confidence interval
@@ -62,8 +61,7 @@ class ConfidenceComputerABC(ABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
-                                    final_expected_sample_size_column: str,
-                                    verbose: bool
+                                    final_expected_sample_size_column: str
                                     ) -> DataFrame:
         """The pairwise probability that the specific group
         is greater than all other groups.
@@ -75,5 +73,13 @@ class ConfidenceComputerABC(ABC):
                        level_2: Union[str, Iterable],
                        mde: float,
                        alpha: float,
+                       groupby: Union[str, Iterable]) -> DataFrame:
+        pass
+
+    def powered_effect(self,
+                       level_1: Union[str, Iterable],
+                       level_2: Union[str, Iterable],
+                       alpha: float,
+                       power: float,
                        groupby: Union[str, Iterable]) -> DataFrame:
         pass

@@ -54,9 +54,8 @@ class ConfidenceABC(ABC):
         pass
 
     @abstractmethod
-    def summary(self, verbose: bool) -> DataFrame:
-        """Args:
-            verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+    def summary(self) -> DataFrame:
+        """
         Returns:
             Dataframe containing summary statistics
         """
@@ -69,8 +68,7 @@ class ConfidenceABC(ABC):
                    absolute: bool,
                    groupby: Union[str, Iterable],
                    non_inferiority_margins: NIM_TYPE,
-                   final_expected_sample_size_column: str,
-                   verbose: bool
+                   final_expected_sample_size_column: str
                    ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
@@ -94,7 +92,6 @@ class ConfidenceABC(ABC):
                     observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
-            verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
 
         Returns:
             Dataframe containing the difference in means between
@@ -110,8 +107,7 @@ class ConfidenceABC(ABC):
                             groupby: Union[str, Iterable],
                             level_as_reference: bool,
                             non_inferiority_margins: NIM_TYPE,
-                            final_expected_sample_size_column: str,
-                            verbose: bool
+                            final_expected_sample_size_column: str
                             ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
@@ -133,13 +129,10 @@ class ConfidenceABC(ABC):
                 groupby column.
                 To performe a one-sided test without nim, use
                 (None, preffered direction).
-                Alternatively, pass True to use the "non_inferiority_margin" and "preferred_direction"
-                columns of dataframe that was passed to the contructor, as source of nims.
             final_expected_sample_size_column (str): Column in source data frame containing expected number of
                     observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
-            verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
 
         Returns:
             Dataframe containing the difference in means between

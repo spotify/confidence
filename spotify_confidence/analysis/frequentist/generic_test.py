@@ -75,8 +75,8 @@ class GenericTest(ConfidenceABC):
                 categorical_group_columns=self._categorical_group_columns,
                 ordinal_group_column=self._ordinal_group_column)
 
-    def summary(self, verbose: bool = False) -> DataFrame:
-        return self._confidence_computer.compute_summary(verbose)
+    def summary(self) -> DataFrame:
+        return self._confidence_computer.compute_summary()
 
     def difference(self,
                    level_1: Union[str, Tuple],
@@ -84,8 +84,7 @@ class GenericTest(ConfidenceABC):
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
                    non_inferiority_margins: NIM_TYPE = None,
-                   final_expected_sample_size_column: str = None,
-                   verbose: bool = False
+                   final_expected_sample_size_column: str = None
                    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_difference(
@@ -94,16 +93,14 @@ class GenericTest(ConfidenceABC):
             absolute,
             groupby,
             non_inferiority_margins,
-            final_expected_sample_size_column,
-            verbose)
+            final_expected_sample_size_column)
 
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
                             level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
-                            final_expected_sample_size_column: str = None,
-                            verbose: bool = False
+                            final_expected_sample_size_column: str = None
                             ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_multiple_difference(
@@ -112,8 +109,7 @@ class GenericTest(ConfidenceABC):
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            final_expected_sample_size_column,
-            verbose)
+            final_expected_sample_size_column)
 
     def summary_plot(self,
                      groupby: Union[str, Iterable] = None) -> ChartGrid:
@@ -200,6 +196,24 @@ class GenericTest(ConfidenceABC):
         """
         return self._confidence_computer.achieved_power(level_1, level_2,
                                                         mde, alpha, groupby)
+
+    def powered_effect(self, level_1, level_2, alpha, power, groupby=None) -> DataFrame:
+        """Calculated the effect for which the current sample size give power=POWER for.
+
+        Args:
+            level_1 (str, tuple of str): Name of control level.
+            power (float): Probability of rejecting the null under the alternative
+            alpha (float): Type I error rate, cutoff value for determining
+                statistical significance.
+
+        Returns:
+            Pandas DataFrame with the following columns:
+            - level_1: Name of level 1.
+            - effect: The hypothetical effect for which the
+                current sample size achieves power=POWER for.
+
+        """
+        return self._confidence_computer.powered_effect(level_1, level_2, alpha, power, groupby)
 
     def _validate_sequential(self,
                              final_expected_sample_size: float,

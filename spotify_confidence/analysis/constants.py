@@ -25,27 +25,12 @@ STD_ERR = 'std_err'
 Z_CRIT = "z_crit"
 ALPHA = 'alpha'
 ADJUSTED_ALPHA = 'adjusted_alpha'
-IS_SIGNIFICANT = "is_significant"
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"
 HOMMEL = "hommel"
 SIMES_HOCHBERG = "simes-hochberg"
-SIDAK = "sidak"
-HOLM_SIDAK = "holm-sidak"
-FDR_BH = "fdr_bh"
-FDR_BY = "fdr_by"
-FDR_TSBH = "fdr_tsbh"
-FDR_TSBKY = "fdr_tsbky"
-
 BONFERRONI_ONLY_COUNT_TWOSIDED = "bonferroni-only-count-twosided"
-BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY = "bonferroni-do-not-count-non-inferiority"
-SPOT_1 = "bonferroni-spot-1"
-
-CORRECTION_METHODS = [
-    BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG,  # SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
-    BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-    SPOT_1]
 
 NULL_HYPOTHESIS = "null_hypothesis"
 NIM = "non-inferiority margin"
