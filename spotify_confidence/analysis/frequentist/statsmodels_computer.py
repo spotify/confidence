@@ -280,71 +280,71 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   else row[PREFERENCE], axis=1)})
             )
 
-        df = (
-            df.pipe(set_alpha_and_adjust_preference)
-              .assign(**{P_VALUE: lambda df: df.apply(self._p_value, axis=1)})
-        )
+        def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
+            if(final_expected_sample_size_column is not None):
+                df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
+                                                                             final_expected_sample_size_column,
+                                                                             filtered_sufficient_statistics)
+                df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+                df[P_VALUE] = None
+                df[ADJUSTED_P] = None
+            elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+                if not all(df[PREFERENCE] != TWO_SIDED):
+                    raise ValueError(f"To use {self._correction_method} all tests have to be one-sided.")
 
-        if(final_expected_sample_size_column is not None):
-            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
-                                                                         final_expected_sample_size_column,
-                                                                         filtered_sufficient_statistics)
-            adjusted_p = None
-        elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
-            if not all(df[PREFERENCE] != TWO_SIDED):
-                raise ValueError(f"To use {self._correction_method} all tests have to be one-sided.")
+                df[ADJUSTED_ALPHA] = None
+                is_significant, adjusted_p, _, _ = multipletests(pvals=df[P_VALUE],
+                                                                 alpha=df[ALPHA].values[0],
+                                                                 method=self._correction_method)
+                df[ADJUSTED_P] = adjusted_p
+                df[IS_SIGNIFICANT] = is_significant
+            elif BONFERRONI in self._correction_method:
+                groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
+                n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
+                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+                df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
+                df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+            else:
+                raise ValueError("Can't figure out which correction method to use :(")
 
-            df[ADJUSTED_ALPHA] = None
-            is_significant, adjusted_p, _, _ = multipletests(pvals=df[P_VALUE],
-                                                             alpha=df[ALPHA].values[0],
-                                                             method=self._correction_method)
-        elif BONFERRONI in self._correction_method:
-            groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
-            n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
-            df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
-        else:
-            raise ValueError("Can't figure out which correction method to use :(")
+            return df
 
-        ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
-        ci_df = DataFrame(index=ci.index,
-                          columns=[CI_LOWER, CI_UPPER],
-                          data=list(ci.values))
+        def _add_ci(df: DataFrame) -> DataFrame:
+            ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
+            ci_df = DataFrame(index=ci.index,
+                              columns=[CI_LOWER, CI_UPPER],
+                              data=list(ci.values))
 
-        if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG] and all(df[PREFERENCE] != TWO_SIDED):
-            lower, upper = self._ci_for_multiple_comparison_methods(
-                alternative=df[PREFERENCE],
-                std_err=df[STD_ERR],
-                observed_difference=df[DIFFERENCE],
-                null_hypothesis=df[NULL_HYPOTHESIS],
-                correction_method=self._correction_method,
-                alpha=1-self._interval_size,
-                is_significant=list(is_significant),
+            if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG] and all(df[PREFERENCE] != TWO_SIDED):
+                lower, upper = self._ci_for_multiple_comparison_methods(
+                    alternative=df[PREFERENCE],
+                    std_err=df[STD_ERR],
+                    observed_difference=df[DIFFERENCE],
+                    null_hypothesis=df[NULL_HYPOTHESIS],
+                    correction_method=self._correction_method,
+                    alpha=1 - self._interval_size,
+                    is_significant=list(df[IS_SIGNIFICANT]),
+                )
+                adjusted_ci = Series(index=df.index, data=list(zip(lower, upper)))
+            else:
+                adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
+
+            adjusted_ci_df = DataFrame(index=adjusted_ci.index,
+                                       columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
+                                       data=list(adjusted_ci.values))
+
+            return (
+                df.assign(**{CI_LOWER: ci_df[CI_LOWER]})
+                  .assign(**{CI_UPPER: ci_df[CI_UPPER]})
+                  .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
+                  .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
             )
-            adjusted_ci = Series(index=df.index, data=list(zip(lower, upper)))
-        else:
-            adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
-
-        adjusted_ci_df = DataFrame(index=adjusted_ci.index,
-                                   columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
-                                   data=list(adjusted_ci.values))
 
         return (
-            df.assign(**{ADJUSTED_P: lambda df: df[P_VALUE].map(
-                             lambda p: min(p * n_comparisons, 1)
-                             if BONFERRONI in self._correction_method and final_expected_sample_size_column is None
-                             else adjusted_p)})
-              .assign(**{CI_LOWER: ci_df[CI_LOWER]})
-              .assign(**{CI_UPPER: ci_df[CI_UPPER]})
-              .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
-              .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
-              .assign(**{IS_SIGNIFICANT: lambda df: df[P_VALUE] < df[ADJUSTED_ALPHA]
-                         if BONFERRONI in self._correction_method
-                         else multipletests(pvals=df[P_VALUE],
-                                            alpha=df[ALPHA].values[0],
-                                            method=self._correction_method)[0]})
-              .assign(**{P_VALUE: lambda df: df[P_VALUE]
-                         if final_expected_sample_size_column is None
-                         else None})
+            df.pipe(set_alpha_and_adjust_preference)
+              .assign(**{P_VALUE: lambda df: df.apply(self._p_value, axis=1)})
+              .pipe(_add_adjusted_p_and_is_significant)
+              .pipe(_add_ci)
         )
 
     def _get_num_comparisons(self, df: DataFrame, correction_method: str, groupby: Iterable) -> int:
