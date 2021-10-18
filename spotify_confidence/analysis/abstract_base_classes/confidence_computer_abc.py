@@ -35,7 +35,7 @@ class ConfidenceComputerABC(ABC):
         pass
 
     @abstractmethod
-    def compute_summary(self) -> DataFrame:
+    def compute_summary(self, verbose: bool) -> DataFrame:
         """Return Pandas DataFrame with summary statistics.
         """
         pass
@@ -47,7 +47,8 @@ class ConfidenceComputerABC(ABC):
                            absolute: bool,
                            groupby: Union[str, Iterable],
                            nims: NIM_TYPE,
-                           final_expected_sample_size_column: str
+                           final_expected_sample_size_column: str,
+                           verbose: bool
                            ) -> DataFrame:
         """Return dataframe containing the difference in means between
             group 1 and 2, p-value and confidence interval
@@ -61,7 +62,8 @@ class ConfidenceComputerABC(ABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
-                                    final_expected_sample_size_column: str
+                                    final_expected_sample_size_column: str,
+                                    verbose: bool
                                     ) -> DataFrame:
         """The pairwise probability that the specific group
         is greater than all other groups.

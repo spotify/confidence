@@ -75,8 +75,8 @@ class GenericTest(ConfidenceABC):
                 categorical_group_columns=self._categorical_group_columns,
                 ordinal_group_column=self._ordinal_group_column)
 
-    def summary(self) -> DataFrame:
-        return self._confidence_computer.compute_summary()
+    def summary(self, verbose: bool = False) -> DataFrame:
+        return self._confidence_computer.compute_summary(verbose)
 
     def difference(self,
                    level_1: Union[str, Tuple],
@@ -84,7 +84,8 @@ class GenericTest(ConfidenceABC):
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
                    non_inferiority_margins: NIM_TYPE = None,
-                   final_expected_sample_size_column: str = None
+                   final_expected_sample_size_column: str = None,
+                   verbose: bool = False
                    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_difference(
@@ -93,14 +94,16 @@ class GenericTest(ConfidenceABC):
             absolute,
             groupby,
             non_inferiority_margins,
-            final_expected_sample_size_column)
+            final_expected_sample_size_column,
+            verbose)
 
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
                             level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
-                            final_expected_sample_size_column: str = None
+                            final_expected_sample_size_column: str = None,
+                            verbose: bool = False
                             ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_multiple_difference(
@@ -109,7 +112,8 @@ class GenericTest(ConfidenceABC):
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            final_expected_sample_size_column)
+            final_expected_sample_size_column,
+            verbose)
 
     def summary_plot(self,
                      groupby: Union[str, Iterable] = None) -> ChartGrid:

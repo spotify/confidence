@@ -81,11 +81,13 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             self._categorical_group_columns, self._ordinal_group_column)
         self._sufficient = None
 
-    def compute_summary(self) -> DataFrame:
-        return self._sufficient_statistics[
-              self._all_group_columns +
-              [self._numerator, self._denominator,
-               POINT_ESTIMATE, CI_LOWER, CI_UPPER]]
+    def compute_summary(self, verbose: bool) -> DataFrame:
+        return (
+            self._sufficient_statistics if verbose else
+            self._sufficient_statistics[
+                    self._all_group_columns + [self._numerator, self._denominator, POINT_ESTIMATE, CI_LOWER, CI_UPPER]
+            ]
+        )
 
     @property
     def _sufficient_statistics(self) -> DataFrame:
@@ -110,8 +112,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                            absolute: bool,
                            groupby: Union[str, Iterable],
                            nims: NIM_TYPE,
-                           final_expected_sample_size_column: str
-                           ) -> DataFrame:
+                           final_expected_sample_size_column: str,
+                           verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(level_columns,
                                                   level_1,
@@ -121,12 +123,13 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   level_as_reference=True,
                                                   nims=nims,
                                                   final_expected_sample_size_column=final_expected_sample_size_column)
-        return difference_df[listify(groupby) +
-                             ['level_1', 'level_2', 'absolute_difference',
-                              DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
-                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
-                             ([NIM, NULL_HYPOTHESIS, PREFERENCE]
-                              if nims is not None else [])]
+        return (difference_df if verbose else
+                difference_df[listify(groupby) +
+                              ['level_1', 'level_2', 'absolute_difference',
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
+                              [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
+                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
+                               if nims is not None else [])])
 
     def compute_multiple_difference(self,
                                     level: Union[str, Iterable],
@@ -134,8 +137,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
-                                    final_expected_sample_size_column: str
-                                    ) -> DataFrame:
+                                    final_expected_sample_size_column: str,
+                                    verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [other for other in self._sufficient_statistics
                         .groupby(level_columns).groups.keys() if other != level]
@@ -147,12 +150,13 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   level_as_reference,
                                                   nims,
                                                   final_expected_sample_size_column)
-        return difference_df[listify(groupby) +
-                             ['level_1', 'level_2', 'absolute_difference',
-                              DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
-                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
-                             ([NIM, NULL_HYPOTHESIS, PREFERENCE]
-                              if nims is not None else [])]
+        return (difference_df if verbose else
+                difference_df[listify(groupby) +
+                              ['level_1', 'level_2', 'absolute_difference',
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
+                              [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
+                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
+                               if nims is not None else [])])
 
     def _compute_differences(self,
                              level_columns: Iterable,
