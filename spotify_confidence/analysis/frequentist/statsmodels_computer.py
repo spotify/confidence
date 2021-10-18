@@ -316,16 +316,11 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               data=list(ci.values))
 
             if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG] and all(df[PREFERENCE] != TWO_SIDED):
-                lower, upper = self._ci_for_multiple_comparison_methods(
-                    alternative=df[PREFERENCE],
-                    std_err=df[STD_ERR],
-                    observed_difference=df[DIFFERENCE],
-                    null_hypothesis=df[NULL_HYPOTHESIS],
+                adjusted_ci = self._ci_for_multiple_comparison_methods(
+                    df,
                     correction_method=self._correction_method,
                     alpha=1 - self._interval_size,
-                    is_significant=list(df[IS_SIGNIFICANT]),
                 )
-                adjusted_ci = Series(index=df.index, data=list(zip(lower, upper)))
             else:
                 adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
 
@@ -425,13 +420,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
     def _ci_for_multiple_comparison_methods(
             self,
-            alternative: Union[Series, str],
-            std_err: Union[Series, float],
-            null_hypothesis: Union[Series, float],
-            observed_difference: Union[Series, float],
+            df: DataFrame,
             correction_method: str,
             alpha: float,
-            is_significant: List[bool],
             w: float = 1.0,
     ) -> Tuple[Union[Series, float], Union[Series, float]]:
         raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
@@ -662,22 +653,18 @@ class ZTestComputer(StatsmodelsComputer):
 
     def _ci_for_multiple_comparison_methods(
             self,
-            alternative: Union[Series, str],
-            std_err: Union[Series, float],
-            null_hypothesis: Union[Series, float],
-            observed_difference: Union[Series, float],
+            df: DataFrame,
             correction_method: str,
             alpha: float,
-            is_significant: List[bool],
             w: float = 1.0,
     ) -> Tuple[Union[Series, float], Union[Series, float]]:
-        if TWO_SIDED in alternative:
+        if TWO_SIDED in df[PREFERENCE]:
             raise ValueError(
                 "CIs can only be produced for one-sided tests when other multiple test corrections "
                 "methods than bonferroni are applied"
             )
-        m_scal = len(is_significant)
-        num_significant = sum(is_significant)
+        m_scal = len(df)
+        num_significant = sum(df[IS_SIGNIFICANT])
         r = m_scal - num_significant
 
         def _aw(W: float, alpha: float, m_scal: float, r: int):
@@ -686,37 +673,38 @@ class ZTestComputer(StatsmodelsComputer):
         def _bw(W: float, alpha: float, m_scal: float, r: int):
             return 1 - (1 - alpha) / np.power((1 - (1 - W) * (1 - np.power((1 - alpha), (1 / m_scal)))), (m_scal - r))
 
-        if correction_method == "holm":
+        if correction_method == HOLM:
             adjusted_alpha_rej_equal_m = 1 - alpha / m_scal
             adjusted_alpha_rej_less_m = 1 - (1 - w) * (alpha / m_scal)
             adjusted_alpha_accept = 1 - _aw(w, alpha, m_scal, r) / r if r != 0 else 0
-        elif correction_method in ["hommel", "simes-hochberg"]:
+        elif correction_method in [HOMMEL, SIMES_HOCHBERG]:
             adjusted_alpha_rej_equal_m = np.power((1 - alpha), (1 / m_scal))
             adjusted_alpha_rej_less_m = 1 - (1 - w) * (1 - np.power((1 - alpha), (1 / m_scal)))
             adjusted_alpha_accept = 1 - _bw(w, alpha, m_scal, r) / r if r != 0 else 0
         else:
-            raise ValueError("CIs not supported for correction method. Supported methods: hommel, holm, simes-hochberg")
+            raise ValueError("CIs not supported for correction method. "
+                             f"Supported methods: {HOMMEL}, {HOLM}, {SIMES_HOCHBERG}")
 
-        upper = []
-        lower = []
-        for i in range(len(is_significant)):
-            if is_significant[i] and num_significant == m_scal:
+        def _add_ci_for_row(row: Series):
+            if row[IS_SIGNIFICANT] and num_significant == m_scal:
                 alpha_adj = adjusted_alpha_rej_equal_m
-            elif is_significant[i] and num_significant < m_scal:
+            elif row[IS_SIGNIFICANT] and num_significant < m_scal:
                 alpha_adj = adjusted_alpha_rej_less_m
             else:
                 alpha_adj = adjusted_alpha_accept
 
-            ci_sign = -1 if alternative.iloc[i] == "larger" else 1
-            bound1 = observed_difference.iloc[i] + ci_sign * st.norm.ppf(alpha_adj) * std_err.iloc[i]
+            ci_sign = -1 if row[PREFERENCE] == "larger" else 1
+            bound1 = row[DIFFERENCE] + ci_sign * st.norm.ppf(alpha_adj) * row[STD_ERR]
             if ci_sign == -1:
-                bound2 = max(null_hypothesis.iloc[i], bound1)
+                bound2 = max(row[NULL_HYPOTHESIS], bound1)
             else:
-                bound2 = min(null_hypothesis.iloc[i], bound1)
+                bound2 = min(row[NULL_HYPOTHESIS], bound1)
 
-            bound = bound2 if is_significant[i] else bound1
+            bound = bound2 if row[IS_SIGNIFICANT] else bound1
 
-            upper.append(bound if alternative.iloc[i] == "smaller" else np.inf)
-            lower.append(bound if alternative.iloc[i] == "larger" else -np.inf)
+            lower = bound if row[PREFERENCE] == "larger" else -np.inf
+            upper = bound if row[PREFERENCE] == "smaller" else np.inf
 
-        return lower, upper
+            return lower, upper
+
+        return df.apply(_add_ci_for_row, axis=1)
