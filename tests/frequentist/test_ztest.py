@@ -7,9 +7,10 @@ import numpy as np
 from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
     DECREASE_PREFFERED, POINT_ESTIMATE,
-    CI_LOWER, CI_UPPER, P_VALUE,
+    CI_LOWER, CI_UPPER, P_VALUE, ADJUSTED_P,
     ADJUSTED_LOWER, ADJUSTED_UPPER,
-    DIFFERENCE, BONFERRONI_ONLY_COUNT_TWOSIDED)
+    DIFFERENCE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+    CORRECTION_METHODS, HOLM, HOMMEL, SIMES_HOCHBERG, SPOT_1)
 
 
 class TestBinary(object):
@@ -603,50 +604,122 @@ class TestOrdinalPlusTwoCategorical(object):
         summary_df = self.test.summary()
         assert len(summary_df) == len(self.data)
 
-    def test_difference(self):
-        difference_df = self.test.difference(level_1=('control', 'gb', 1),
-                                             level_2=('test', 'us', 2))
-        assert len(difference_df) == 1
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_difference(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+        if BONFERRONI in correction_method:
+            difference_df = self.test.difference(level_1=('control', 'gb', 1),
+                                                 level_2=('test', 'us', 2))
+            assert len(difference_df) == 1
+        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            difference_df = self.test.difference(level_1=('control', 'gb', 1),
+                                                 level_2=('test', 'us', 2),
+                                                 non_inferiority_margins=(None, 'increase'))
+            assert len(difference_df) == 1
+        else:
+            with pytest.raises(ValueError):
+                self.test.difference(level_1=('control', 'gb', 1),
+                                     level_2=('test', 'us', 2))
 
-    def test_difference_groupby(self):
-        difference_df = self.test.difference(level_1='control',
-                                             level_2='test',
-                                             groupby=['country',
-                                                      'days_since_reg'])
-        assert len(difference_df) == self.data.days_since_reg.unique().size\
-            * self.data.country.unique().size
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_difference_groupby(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+        if BONFERRONI in correction_method:
+            difference_df = self.test.difference(level_1='control',
+                                                 level_2='test',
+                                                 groupby=['country',
+                                                          'days_since_reg'])
+            assert len(difference_df) == self.data.days_since_reg.unique().size\
+                * self.data.country.unique().size
+        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            difference_df = self.test.difference(level_1='control',
+                                                 level_2='test',
+                                                 groupby=['country', 'days_since_reg'],
+                                                 non_inferiority_margins=(None, 'increase'))
+            assert len(difference_df) == self.data.days_since_reg.unique().size * self.data.country.unique().size
+        else:
+            with pytest.raises(ValueError):
+                self.test.difference(level_1='control',
+                                     level_2='test',
+                                     groupby=['country',
+                                              'days_since_reg'])
 
-    def test_multiple_difference(self):
-        difference_df = self.test.multiple_difference(level=('control', 1),
-                                                      groupby='country',
-                                                      level_as_reference=True)
-        assert len(difference_df) == (
-            self.data.country.unique().size *
-            ((self.data.variation_name.unique().size - 1)
-             * self.data.days_since_reg.unique().size +
-             self.data.days_since_reg.unique().size-1)
-        )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_multiple_difference(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+        if BONFERRONI in correction_method:
+            difference_df = self.test.multiple_difference(level=('control', 1),
+                                                          groupby='country',
+                                                          level_as_reference=True)
+            assert len(difference_df) == (
+                self.data.country.unique().size *
+                ((self.data.variation_name.unique().size - 1)
+                 * self.data.days_since_reg.unique().size +
+                 self.data.days_since_reg.unique().size-1)
+            )
+            n_comp = len(difference_df)
+            assert np.allclose(
+                difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+                difference_df['adjusted p-value'], rtol=0.01)
+        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            difference_df = self.test.multiple_difference(level=('control', 1),
+                                                          groupby='country',
+                                                          level_as_reference=True,
+                                                          non_inferiority_margins=(None, 'increase'))
+            assert len(difference_df) == (
+                    self.data.country.unique().size *
+                    ((self.data.variation_name.unique().size - 1)
+                     * self.data.days_since_reg.unique().size +
+                     self.data.days_since_reg.unique().size - 1)
+            )
+        else:
+            with pytest.raises(ValueError):
+                self.test.multiple_difference(level=('control', 1),
+                                              groupby='country',
+                                              level_as_reference=True)
 
-    def test_multiple_difference_groupby(self):
-        difference_df = self.test.multiple_difference(level='control',
-                                                      groupby=['days_since_reg',
-                                                               'country'],
-                                                      level_as_reference=True)
-        assert len(difference_df) == (
-            (self.data.variation_name.unique().size - 1)
-            * self.data.days_since_reg.unique().size
-            * self.data.country.unique().size
-        )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_multiple_difference_groupby(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+        if BONFERRONI in correction_method:
+            difference_df = self.test.multiple_difference(level='control',
+                                                          groupby=['days_since_reg',
+                                                                   'country'],
+                                                          level_as_reference=True)
+            assert len(difference_df) == (
+                (self.data.variation_name.unique().size - 1)
+                * self.data.days_since_reg.unique().size
+                * self.data.country.unique().size
+            )
 
-    def test_differece_with_nims(self):
+            n_comp = len(difference_df)
+            assert np.allclose(
+                difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+                difference_df['adjusted p-value'], rtol=0.01)
+        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            difference_df = self.test.multiple_difference(level='control',
+                                                          groupby=['days_since_reg',
+                                                                   'country'],
+                                                          level_as_reference=True,
+                                                          non_inferiority_margins=(None, 'increase'))
+            assert len(difference_df) == (
+                    (self.data.variation_name.unique().size - 1)
+                    * self.data.days_since_reg.unique().size
+                    * self.data.country.unique().size
+            )
+        else:
+            with pytest.raises(ValueError):
+                self.test.multiple_difference(level='control',
+                                              groupby=['days_since_reg',
+                                                       'country'],
+                                              level_as_reference=True)
+
+    @pytest.mark.parametrize("correction_method",
+                             [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+                              HOLM, HOMMEL, SIMES_HOCHBERG],
+                             ids=lambda x: f"correction method: {x}")
+    def test_differece_with_nims(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
         df = self.test.difference(level_1=('test', 'us'),
                                   level_2=('control', 'us'),
                                   groupby='days_since_reg',
@@ -706,7 +779,10 @@ class TestOrdinalPlusTwoCategorical(object):
             non_inferiority_margins=nims)
         assert (len(df) == 20)
 
-    def test_differece_with_nims_in_df(self):
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_differece_with_nims_in_df(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+
         df = self.test.difference(level_1=('test', 'us'),
                                   level_2=('control', 'us'),
                                   groupby='days_since_reg',
@@ -1005,7 +1081,9 @@ class TestWithNims(object):
             categorical_group_columns='group',
             interval_size=0.99)
 
-    def test_compare_series_non_inferiority_improve_postitive(self):
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_compare_series_non_inferiority_improve_postitive(self, correction_method):
+
         summary = self.test.summary()
         control_avg = self.data.query("group == '1'").avg.values[0]
         assert np.allclose(control_avg,
@@ -1017,11 +1095,27 @@ class TestWithNims(object):
             non_inferiority_margins=(0.02, 'increase'))
 
         np.testing.assert_almost_equal(diff[DIFFERENCE].values[0], -0.0258, 3)
-        assert diff[CI_UPPER].values[0] == float('inf')
+        assert np.isinf(diff[CI_UPPER].values[0])
         np.testing.assert_almost_equal(diff[CI_LOWER].values[0], -0.0723, 3)
         assert diff[P_VALUE].values[0] > 0.01
 
-    def test_compare_series_non_inferiority_improve_negative(self):
+        self.test._confidence_computer._correction_method = correction_method
+        diff_2 = self.test.difference(
+            level_1='1',
+            level_2='2',
+            non_inferiority_margins=(0.02, 'increase'))
+
+        if correction_method == SPOT_1:
+            assert all(diff[CI_LOWER] == diff_2[CI_LOWER])
+            assert np.isfinite(diff_2[CI_UPPER].values[0])
+
+        if BONFERRONI not in correction_method:
+            assert all(diff[ADJUSTED_LOWER] <= diff_2[ADJUSTED_LOWER])
+            assert all(diff[ADJUSTED_UPPER] >= diff_2[ADJUSTED_UPPER])
+            assert all(diff[ADJUSTED_P] <= diff_2[ADJUSTED_P])
+
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_compare_series_non_inferiority_improve_negative(self, correction_method):
         summary = self.test.summary()
         control_avg = self.data.query("group == '1'").avg.values[0]
         assert np.allclose(control_avg,
@@ -1036,6 +1130,21 @@ class TestWithNims(object):
         assert diff[CI_LOWER].values[0] == -float('inf')
         np.testing.assert_almost_equal(diff[CI_UPPER].values[0], 0.0207, 3)
         assert diff[P_VALUE].values[0] < 0.01
+
+        self.test._confidence_computer._correction_method = correction_method
+        diff_2 = self.test.difference(
+            level_1='1',
+            level_2='2',
+            non_inferiority_margins=(0.02, 'decrease'))
+
+        if correction_method == SPOT_1:
+            assert all(diff[CI_UPPER] == diff_2[CI_UPPER])
+            assert np.isfinite(diff_2[CI_LOWER].values[0])
+
+        if BONFERRONI not in correction_method:
+            assert all(diff[ADJUSTED_LOWER] <= diff_2[ADJUSTED_LOWER])
+            assert all(diff[ADJUSTED_UPPER] >= diff_2[ADJUSTED_UPPER])
+            assert all(diff[ADJUSTED_P] <= diff_2[ADJUSTED_P])
 
     def test_one_sided_ztest_positive(self):
         summary = self.test.summary()
@@ -1212,22 +1321,31 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             categorical_group_columns=['variation_name', 'country', 'metric'],
             ordinal_group_column='date')
 
-    def test_multiple_difference_groupby(self):
-        difference_df = self.test.multiple_difference(
-            level='control',
-            groupby=['date', 'country', 'metric'],
-            level_as_reference=True,
-            final_expected_sample_size_column='final_sample_size')
-        assert len(difference_df) == (
-            (self.data.variation_name.unique().size - 1)
-            * self.data.date.unique().size
-            * self.data.country.unique().size
-            * self.data.metric.unique().size
-        )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
+    def test_multiple_difference_groupby(self, correction_method):
+        self.test._confidence_computer._correction_method = correction_method
+
+        def get_diff() -> pd.DataFrame:
+            return self.test.multiple_difference(
+                level='control',
+                groupby=['date', 'country', 'metric'],
+                level_as_reference=True,
+                final_expected_sample_size_column='final_sample_size')
+
+        if BONFERRONI not in correction_method:
+            with pytest.raises(ValueError):
+                difference_df = get_diff()
+        else:
+            difference_df = get_diff()
+
+            assert len(difference_df) == (
+                (self.data.variation_name.unique().size - 1)
+                * self.data.date.unique().size
+                * self.data.country.unique().size
+                * self.data.metric.unique().size
+            )
+            assert difference_df['p-value'].isnull().all()
+            assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_plot_groupby(self):
         charts = self.test.multiple_difference_plot(
@@ -1250,10 +1368,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_groupby_onesided_increase(self):
         difference_df = self.test.multiple_difference(
@@ -1268,10 +1384,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
     def test_multiple_difference_groupby_mixed_nims(self):
         nims = {(pd.to_datetime('2021-04-01'), 'us', 'm1'): (0.2, 'increase'),
@@ -1307,10 +1421,8 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             * self.data.country.unique().size
             * self.data.metric.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
         difference_df_2 = self.test.multiple_difference(
             level='control',
@@ -1319,7 +1431,9 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             non_inferiority_margins=True,
             final_expected_sample_size_column='final_sample_size')
 
-        assert (difference_df == difference_df_2).all().all()
+        for column in difference_df.columns:
+            assert (difference_df[column] == difference_df_2[column]).all() or \
+                   (difference_df['p-value'].isnull() == difference_df_2['p-value'].isnull()).all()
 
 
 DATE = 'date'
@@ -1935,10 +2049,8 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                 'date == "2020-04-02" and country == "swe" and platform == "ios" and metric=="bananas_per_user_7d"')[
                 ADJUSTED_UPPER].values[0])
 
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01)
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
 
         difference_df_2 = self.test.multiple_difference(
             level='1',
@@ -1947,7 +2059,9 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             final_expected_sample_size_column='final_expected_sample_size',
             non_inferiority_margins=True)
 
-        assert (difference_df == difference_df_2).all().all()
+        for column in difference_df.columns:
+            assert (difference_df[column] == difference_df_2[column]).all() or \
+                   (difference_df['p-value'].isnull() == difference_df_2['p-value'].isnull()).all()
 
 
 class TestSequentialOneSided(object):
@@ -1994,15 +2108,13 @@ class TestSequentialOneSided(object):
             level_as_reference=True,
             final_expected_sample_size_column='final_expected_sample_size',
             non_inferiority_margins=(0.01, 'increase'))
+
         assert len(difference_df) == (
                 (self.data.group.unique().size - 1)
                 * self.data.date.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01
-        )
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
         assert np.isinf(difference_df[CI_UPPER].values[0])
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -4.129515314002298, 3)
         np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -4.001416, 3)
@@ -2056,11 +2168,9 @@ class TestSequentialTwoSided(object):
                 (self.data.group.unique().size - 1)
                 * self.data.date.unique().size
         )
-        n_comp = len(difference_df)
-        assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
-            difference_df['adjusted p-value'], rtol=0.01
-        )
+        assert difference_df['p-value'].isnull().all()
+        assert difference_df['adjusted p-value'].isnull().all()
+
         np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.121, 3)
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.151, 3)
         np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -0.0149, 3)

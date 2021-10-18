@@ -2,6 +2,12 @@
 History
 =======
 
+2.3.0 (2021-10-18)
+------------------
+
+* Added additional multiple correction methods (Holm, Hommel, Simes-Hochberg) for one sided tests.
+* Added verbose mode to summary and difference methods that returns all intermediate columns that are used in the computations
+
 2.2.0 (2021-09-28)
 ------------------
 

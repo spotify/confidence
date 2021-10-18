@@ -19,6 +19,7 @@ from statsmodels.stats.proportion import (
     proportions_chisquare, proportion_confint, confint_proportions_2indep)
 from statsmodels.stats.weightstats import (
     _zstat_generic, _zconfint_generic, _tstat_generic, _tconfint_generic)
+from statsmodels.stats.multitest import multipletests
 from typing import (Union, Iterable, List, Tuple)
 from abc import abstractmethod
 
@@ -27,9 +28,11 @@ from ..abstract_base_classes.confidence_computer_abc import \
 from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
-                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
+                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
-                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED)
+                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
+                         HOLM, HOMMEL, SIMES_HOCHBERG,
+                         BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
                                 power_calculation, add_nim_columns,
@@ -69,21 +72,22 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
-        correction_methods = [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED]
-        if correction_method.lower() not in correction_methods:
+        if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f'Use one of the correction methods ' +
-                             f'in {correction_methods}')
+                             f'in {CORRECTION_METHODS}')
         self._correction_method = correction_method
 
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns, self._ordinal_group_column)
         self._sufficient = None
 
-    def compute_summary(self) -> DataFrame:
-        return self._sufficient_statistics[
-              self._all_group_columns +
-              [self._numerator, self._denominator,
-               POINT_ESTIMATE, CI_LOWER, CI_UPPER]]
+    def compute_summary(self, verbose: bool) -> DataFrame:
+        return (
+            self._sufficient_statistics if verbose else
+            self._sufficient_statistics[
+                    self._all_group_columns + [self._numerator, self._denominator, POINT_ESTIMATE, CI_LOWER, CI_UPPER]
+            ]
+        )
 
     @property
     def _sufficient_statistics(self) -> DataFrame:
@@ -106,10 +110,10 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                            level_1: Union[str, Iterable],
                            level_2: Union[str, Iterable],
                            absolute: bool,
-                           groupby: str,
+                           groupby: Union[str, Iterable],
                            nims: NIM_TYPE,
-                           final_expected_sample_size_column: str
-                           ) -> DataFrame:
+                           final_expected_sample_size_column: str,
+                           verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(level_columns,
                                                   level_1,
@@ -119,12 +123,13 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   level_as_reference=True,
                                                   nims=nims,
                                                   final_expected_sample_size_column=final_expected_sample_size_column)
-        return difference_df[listify(groupby) +
-                             ['level_1', 'level_2', 'absolute_difference',
-                              DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
-                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P] +
-                             ([NIM, NULL_HYPOTHESIS, PREFERENCE]
-                              if nims is not None else [])]
+        return (difference_df if verbose else
+                difference_df[listify(groupby) +
+                              ['level_1', 'level_2', 'absolute_difference',
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
+                              [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
+                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
+                               if nims is not None else [])])
 
     def compute_multiple_difference(self,
                                     level: Union[str, Iterable],
@@ -132,8 +137,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
-                                    final_expected_sample_size_column: str
-                                    ) -> DataFrame:
+                                    final_expected_sample_size_column: str,
+                                    verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [other for other in self._sufficient_statistics
                         .groupby(level_columns).groups.keys() if other != level]
@@ -145,12 +150,13 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                                   level_as_reference,
                                                   nims,
                                                   final_expected_sample_size_column)
-        return difference_df[listify(groupby) +
-                             ['level_1', 'level_2', 'absolute_difference',
-                              DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
-                             [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P] +
-                             ([NIM, NULL_HYPOTHESIS, PREFERENCE]
-                              if nims is not None else [])]
+        return (difference_df if verbose else
+                difference_df[listify(groupby) +
+                              ['level_1', 'level_2', 'absolute_difference',
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
+                              [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
+                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
+                               if nims is not None else [])])
 
     def _compute_differences(self,
                              level_columns: Iterable,
@@ -267,100 +273,88 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                             df: DataFrame,
                             final_expected_sample_size_column: str,
                             filtered_sufficient_statistics: DataFrame) -> DataFrame:
-        df[ALPHA] = 1 - self._interval_size
 
-        if(final_expected_sample_size_column is None):
-            df[ADJUSTED_ALPHA] = (1-self._interval_size)/len(df)
-        else:
-            df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
-                                                                         final_expected_sample_size_column,
-                                                                         filtered_sufficient_statistics)
-
-        ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
-        ci_df = DataFrame(index=ci.index,
-                          columns=[CI_LOWER, CI_UPPER],
-                          data=list(ci.values))
-        adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
-        adjusted_ci_df = DataFrame(index=adjusted_ci.index,
-                                   columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
-                                   data=list(adjusted_ci.values))
-
-        return (
-            df.assign(**{P_VALUE: df.apply(self._p_value, axis=1)})
-              .assign(**{ADJUSTED_P: lambda df:
-                      df[P_VALUE].map(lambda p: min(p * len(df), 1))})
-              .assign(**{CI_LOWER: ci_df[CI_LOWER]})
-              .assign(**{CI_UPPER: ci_df[CI_UPPER]})
-              .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
-              .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
-        )
-
-    def _compute_sequential_adjusted_alpha(self,
-                                           df,
-                                           final_expected_sample_size_column,
-                                           filtered_sufficient_statistics):
-        total_sample_size = (
-            filtered_sufficient_statistics.groupby(df.index.names)
-                                          .agg({self._denominator: sum, final_expected_sample_size_column: np.mean})
-                                          .rename(columns={self._denominator: f'total_{self._denominator}'})
-        )
-        groups_except_ordinal = [
-            column for column in total_sample_size.index.names if column != self._ordinal_group_column]
-        max_sample_size_by_group = (
-            total_sample_size[f'total_{self._denominator}'].max() if len(groups_except_ordinal) == 0
-            else total_sample_size.groupby(groups_except_ordinal)[f'total_{self._denominator}'].max())
-
-        if type(max_sample_size_by_group) is not Series:
-            total_sample_size = total_sample_size.assign(**{f'total_{self._denominator}_max': max_sample_size_by_group})
-        else:
-            total_sample_size = total_sample_size.merge(right=max_sample_size_by_group,
-                                                        left_index=True,
-                                                        right_index=True,
-                                                        suffixes=('', '_max'))
-
-        total_sample_size = (
-            total_sample_size
-            .assign(final_expected_sample_size=lambda df: df[[f'total_{self._denominator}_max',
-                                                              final_expected_sample_size_column]].max(axis=1))
-            .assign(
-                    sample_size_proportions=lambda df: df['total_' + self._denominator]/df['final_expected_sample_size']
-            )
-        )
-
-        def get_num_comparisons_for_correction_method(df: DataFrame, correction_method: str) -> int:
-            def _get_num_comparisons(df: DataFrame) -> int:
-                n_levels_to_compare = 1 if df.empty else df.groupby(df.index.names).count()[DIFFERENCE].values[0]
-                n_groupby_groups = 1 if len(groups_except_ordinal) == 0 else df.groupby(groups_except_ordinal).ngroups
-                return max(1, n_levels_to_compare*n_groupby_groups)
-
-            if correction_method == BONFERRONI:
-                return _get_num_comparisons(df)
-            elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
-                return _get_num_comparisons(df.query(f'{PREFERENCE} == "{TWO_SIDED}"'))
-            else:
-                raise ValueError(f"Unsupported correction method for sequential test: {correction_method}.")
-
-        alpha = (1.0 - self._interval_size) / get_num_comparisons_for_correction_method(df, self._correction_method)
-
-        def adjusted_alphas_for_group(grp) -> Series:
+        def set_alpha_and_adjust_preference(df: DataFrame) -> DataFrame:
+            alpha_0 = 1 - self._interval_size
             return (
-                sequential_bounds(
-                    t=grp['sample_size_proportions'].values,
-                    alpha=alpha,
-                    sides=2 if (grp[PREFERENCE] == TWO_SIDED).all() else 1
-                ).df
-                 .set_index(grp.index)
-                 .assign(adjusted_alpha=lambda df: df.apply(
-                    lambda row: 2 * (1 - st.norm.cdf(row['zb'])) if (grp[PREFERENCE] == TWO_SIDED).all()
-                    else 1 - st.norm.cdf(row['zb']), axis=1))
-            )[['zb', 'adjusted_alpha']]
+                df.assign(**{ALPHA: df.apply(lambda row: 2*alpha_0 if self._correction_method == SPOT_1
+                                             and row[PREFERENCE] != TWO_SIDED
+                                             else alpha_0, axis=1)})
+                  .assign(**{PREFERENCE: df.apply(lambda row: TWO_SIDED if self._correction_method == SPOT_1
+                                                  else row[PREFERENCE], axis=1)})
+            )
+
+        def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
+            if(final_expected_sample_size_column is not None):
+                df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
+                                                                             final_expected_sample_size_column,
+                                                                             filtered_sufficient_statistics)
+                df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+                df[P_VALUE] = None
+                df[ADJUSTED_P] = None
+            elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+                if not all(df[PREFERENCE] != TWO_SIDED):
+                    raise ValueError(f"To use {self._correction_method} all tests have to be one-sided.")
+
+                df[ADJUSTED_ALPHA] = None
+                is_significant, adjusted_p, _, _ = multipletests(pvals=df[P_VALUE],
+                                                                 alpha=df[ALPHA].values[0],
+                                                                 method=self._correction_method)
+                df[ADJUSTED_P] = adjusted_p
+                df[IS_SIGNIFICANT] = is_significant
+            elif BONFERRONI in self._correction_method:
+                groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
+                n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
+                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+                df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
+                df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+            else:
+                raise ValueError("Can't figure out which correction method to use :(")
+
+            return df
+
+        def _add_ci(df: DataFrame) -> DataFrame:
+            ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
+            ci_df = DataFrame(index=ci.index,
+                              columns=[CI_LOWER, CI_UPPER],
+                              data=list(ci.values))
+
+            if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG] and all(df[PREFERENCE] != TWO_SIDED):
+                adjusted_ci = self._ci_for_multiple_comparison_methods(
+                    df,
+                    correction_method=self._correction_method,
+                    alpha=1 - self._interval_size,
+                )
+            else:
+                adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
+
+            adjusted_ci_df = DataFrame(index=adjusted_ci.index,
+                                       columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
+                                       data=list(adjusted_ci.values))
+
+            return (
+                df.assign(**{CI_LOWER: ci_df[CI_LOWER]})
+                  .assign(**{CI_UPPER: ci_df[CI_UPPER]})
+                  .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
+                  .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
+            )
 
         return (
-            df.merge(total_sample_size, left_index=True, right_index=True)
-              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE]]
-              .apply(adjusted_alphas_for_group)
-              .reset_index().set_index(df.index.names)
-        )['adjusted_alpha']
+            df.pipe(set_alpha_and_adjust_preference)
+              .assign(**{P_VALUE: lambda df: df.apply(self._p_value, axis=1)})
+              .pipe(_add_adjusted_p_and_is_significant)
+              .pipe(_add_ci)
+        )
+
+    def _get_num_comparisons(self, df: DataFrame, correction_method: str, groupby: Iterable) -> int:
+        if correction_method == BONFERRONI:
+            return max(1, df.groupby(groupby).ngroups)
+        elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
+            return max(df.query(f'{PREFERENCE} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
+        elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1]:
+            return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
+        else:
+            raise ValueError(f"Unsupported correction method: {correction_method}.")
 
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         """Calculated the achieved power of test of differences between
@@ -399,7 +393,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 .pipe(self._achieved_power, mde=mde, alpha=alpha)
         )
 
-    @staticmethod
+    @abstractmethod
     def _variance(self, df: DataFrame) -> Series:
         pass
 
@@ -421,6 +415,21 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                         mde: float,
                         alpha: float) -> DataFrame:
         pass
+
+    def _compute_sequential_adjusted_alpha(self,
+                                           df: DataFrame,
+                                           final_expected_sample_size_column: str,
+                                           filtered_sufficient_statistics: DataFrame) -> Series:
+        raise NotImplementedError("Sequential tests are only supported for ZTests")
+
+    def _ci_for_multiple_comparison_methods(
+            self,
+            df: DataFrame,
+            correction_method: str,
+            alpha: float,
+            w: float = 1.0,
+    ) -> Tuple[Union[Series, float], Union[Series, float]]:
+        raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
 
 
 class ChiSquaredComputer(StatsmodelsComputer):
@@ -590,3 +599,116 @@ class ZTestComputer(StatsmodelsComputer):
               .loc[:, ['level_1', 'level_2', 'achieved_power']]
               .reset_index()
         )
+
+    def _compute_sequential_adjusted_alpha(self,
+                                           df: DataFrame,
+                                           final_expected_sample_size_column: str,
+                                           filtered_sufficient_statistics: DataFrame):
+        total_sample_size = (
+            filtered_sufficient_statistics.groupby(df.index.names)
+                                          .agg({self._denominator: sum, final_expected_sample_size_column: np.mean})
+                                          .rename(columns={self._denominator: f'total_{self._denominator}'})
+        )
+        groups_except_ordinal = [
+            column for column in df.index.names if column != self._ordinal_group_column]
+        max_sample_size_by_group = (
+            total_sample_size[f'total_{self._denominator}'].max() if len(groups_except_ordinal) == 0
+            else total_sample_size.groupby(groups_except_ordinal)[f'total_{self._denominator}'].max())
+
+        if type(max_sample_size_by_group) is not Series:
+            total_sample_size = total_sample_size.assign(**{f'total_{self._denominator}_max': max_sample_size_by_group})
+        else:
+            total_sample_size = total_sample_size.merge(right=max_sample_size_by_group,
+                                                        left_index=True,
+                                                        right_index=True,
+                                                        suffixes=('', '_max'))
+
+        total_sample_size = (
+            total_sample_size
+            .assign(final_expected_sample_size=lambda df: df[[f'total_{self._denominator}_max',
+                                                              final_expected_sample_size_column]].max(axis=1))
+            .assign(
+                    sample_size_proportions=lambda df: df['total_' + self._denominator]/df['final_expected_sample_size']
+            )
+        )
+
+        groupby = ['level_1', 'level_2'] + groups_except_ordinal
+        alpha = (1.0 - self._interval_size) / self._get_num_comparisons(df, self._correction_method, groupby)
+
+        def adjusted_alphas_for_group(grp) -> Series:
+            return (
+                sequential_bounds(
+                    t=grp['sample_size_proportions'].values,
+                    alpha=alpha,
+                    sides=2 if (grp[PREFERENCE] == TWO_SIDED).all() else 1
+                ).df
+                 .set_index(grp.index)
+                 .assign(adjusted_alpha=lambda df: df.apply(
+                    lambda row: 2 * (1 - st.norm.cdf(row['zb'])) if (grp[PREFERENCE] == TWO_SIDED).all()
+                    else 1 - st.norm.cdf(row['zb']), axis=1))
+            )[['zb', 'adjusted_alpha']]
+
+        return (
+            df.merge(total_sample_size, left_index=True, right_index=True)
+              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE]]
+              .apply(adjusted_alphas_for_group)
+              .reset_index().set_index(df.index.names)
+        )['adjusted_alpha']
+
+    def _ci_for_multiple_comparison_methods(
+            self,
+            df: DataFrame,
+            correction_method: str,
+            alpha: float,
+            w: float = 1.0,
+    ) -> Tuple[Union[Series, float], Union[Series, float]]:
+        if TWO_SIDED in df[PREFERENCE]:
+            raise ValueError(
+                "CIs can only be produced for one-sided tests when other multiple test corrections "
+                "methods than bonferroni are applied"
+            )
+        m_scal = len(df)
+        num_significant = sum(df[IS_SIGNIFICANT])
+        r = m_scal - num_significant
+
+        def _aw(W: float, alpha: float, m_scal: float, r: int):
+            return alpha * (1 - (1 - W) * (m_scal - r) / m_scal)
+
+        def _bw(W: float, alpha: float, m_scal: float, r: int):
+            return 1 - (1 - alpha) / np.power((1 - (1 - W) * (1 - np.power((1 - alpha), (1 / m_scal)))), (m_scal - r))
+
+        if correction_method == HOLM:
+            adjusted_alpha_rej_equal_m = 1 - alpha / m_scal
+            adjusted_alpha_rej_less_m = 1 - (1 - w) * (alpha / m_scal)
+            adjusted_alpha_accept = 1 - _aw(w, alpha, m_scal, r) / r if r != 0 else 0
+        elif correction_method in [HOMMEL, SIMES_HOCHBERG]:
+            adjusted_alpha_rej_equal_m = np.power((1 - alpha), (1 / m_scal))
+            adjusted_alpha_rej_less_m = 1 - (1 - w) * (1 - np.power((1 - alpha), (1 / m_scal)))
+            adjusted_alpha_accept = 1 - _bw(w, alpha, m_scal, r) / r if r != 0 else 0
+        else:
+            raise ValueError("CIs not supported for correction method. "
+                             f"Supported methods: {HOMMEL}, {HOLM}, {SIMES_HOCHBERG}")
+
+        def _compute_ci_for_row(row: Series) -> Tuple[float, float]:
+            if row[IS_SIGNIFICANT] and num_significant == m_scal:
+                alpha_adj = adjusted_alpha_rej_equal_m
+            elif row[IS_SIGNIFICANT] and num_significant < m_scal:
+                alpha_adj = adjusted_alpha_rej_less_m
+            else:
+                alpha_adj = adjusted_alpha_accept
+
+            ci_sign = -1 if row[PREFERENCE] == "larger" else 1
+            bound1 = row[DIFFERENCE] + ci_sign * st.norm.ppf(alpha_adj) * row[STD_ERR]
+            if ci_sign == -1:
+                bound2 = max(row[NULL_HYPOTHESIS], bound1)
+            else:
+                bound2 = min(row[NULL_HYPOTHESIS], bound1)
+
+            bound = bound2 if row[IS_SIGNIFICANT] else bound1
+
+            lower = bound if row[PREFERENCE] == "larger" else -np.inf
+            upper = bound if row[PREFERENCE] == "smaller" else np.inf
+
+            return lower, upper
+
+        return df.apply(_compute_ci_for_row, axis=1)
