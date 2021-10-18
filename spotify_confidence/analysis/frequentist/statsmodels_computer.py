@@ -685,7 +685,7 @@ class ZTestComputer(StatsmodelsComputer):
             raise ValueError("CIs not supported for correction method. "
                              f"Supported methods: {HOMMEL}, {HOLM}, {SIMES_HOCHBERG}")
 
-        def _add_ci_for_row(row: Series):
+        def _compute_ci_for_row(row: Series) -> Tuple[float, float]:
             if row[IS_SIGNIFICANT] and num_significant == m_scal:
                 alpha_adj = adjusted_alpha_rej_equal_m
             elif row[IS_SIGNIFICANT] and num_significant < m_scal:
@@ -707,4 +707,4 @@ class ZTestComputer(StatsmodelsComputer):
 
             return lower, upper
 
-        return df.apply(_add_ci_for_row, axis=1)
+        return df.apply(_compute_ci_for_row, axis=1)
