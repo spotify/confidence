@@ -72,6 +72,7 @@ INCREASE_PREFFERED = "increase"
 DECREASE_PREFFERED = "decrease"
 TWO_SIDED = "two-sided"
 PREFERENCE = "preference"
+PREFERENCE_TEST = "preference_used_in_test"
 PREFERENCE_DICT = {'smaller': DECREASE_PREFFERED,
                    'larger': INCREASE_PREFFERED,
                    TWO_SIDED: TWO_SIDED}
