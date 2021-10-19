@@ -33,6 +33,7 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
                          HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                         SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                          SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                          SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY,
                          BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
@@ -303,6 +304,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 df[ADJUSTED_P] = None
             elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG,
                                              SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                                             SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                              SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                              SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
                 if self._correction_method.startswith('spot-'):
@@ -335,7 +337,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               columns=[CI_LOWER, CI_UPPER],
                               data=list(ci.values))
 
-            if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG] and all(df[PREFERENCE] != TWO_SIDED):
+            if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG,
+                                           SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG] \
+                    and all(df[PREFERENCE] != TWO_SIDED):
                 adjusted_ci = self._ci_for_multiple_comparison_methods(
                     df,
                     correction_method=self._correction_method,
@@ -376,6 +380,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
                                    HOLM, HOMMEL, SIMES_HOCHBERG,
                                    SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                                   SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                    SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
             return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
@@ -703,17 +708,18 @@ class ZTestComputer(StatsmodelsComputer):
         def _bw(W: float, alpha: float, m_scal: float, r: int):
             return 1 - (1 - alpha) / np.power((1 - (1 - W) * (1 - np.power((1 - alpha), (1 / m_scal)))), (m_scal - r))
 
-        if correction_method == HOLM:
+        if correction_method in [HOLM, SPOT_1_HOLM]:
             adjusted_alpha_rej_equal_m = 1 - alpha / m_scal
             adjusted_alpha_rej_less_m = 1 - (1 - w) * (alpha / m_scal)
             adjusted_alpha_accept = 1 - _aw(w, alpha, m_scal, r) / r if r != 0 else 0
-        elif correction_method in [HOMMEL, SIMES_HOCHBERG]:
+        elif correction_method in [HOMMEL, SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG]:
             adjusted_alpha_rej_equal_m = np.power((1 - alpha), (1 / m_scal))
             adjusted_alpha_rej_less_m = 1 - (1 - w) * (1 - np.power((1 - alpha), (1 / m_scal)))
             adjusted_alpha_accept = 1 - _bw(w, alpha, m_scal, r) / r if r != 0 else 0
         else:
             raise ValueError("CIs not supported for correction method. "
-                             f"Supported methods: {HOMMEL}, {HOLM}, {SIMES_HOCHBERG}")
+                             f"Supported methods: {HOMMEL}, {HOLM}, {SIMES_HOCHBERG},"
+                             f"{SPOT_1_HOLM}, {SPOT_1_HOMMEL} and {SPOT_1_SIMES_HOCHBERG}")
 
         def _compute_ci_for_row(row: Series) -> Tuple[float, float]:
             if row[IS_SIGNIFICANT] and num_significant == m_scal:

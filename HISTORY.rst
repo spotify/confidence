@@ -2,6 +2,11 @@
 History
 =======
 
+2.3.3 (2021-10-19)
+------------------
+
+* Added some more multiple correction strategies that use two sided CIs when one sided are not available
+
 2.3.2 (2021-10-19)
 ------------------
 
