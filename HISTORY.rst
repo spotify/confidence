@@ -2,6 +2,11 @@
 History
 =======
 
+2.3.1 (2021-10-18)
+------------------
+
+* Added even more multiple correction strategies
+
 2.3.0 (2021-10-18)
 ------------------
 

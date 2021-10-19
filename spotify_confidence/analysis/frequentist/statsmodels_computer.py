@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from warnings import warn
 from pandas import DataFrame, Series, concat
 import numpy as np
 import scipy.stats as st
@@ -31,7 +32,9 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
-                         HOLM, HOMMEL, SIMES_HOCHBERG,
+                         HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                         SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
+                         SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY,
                          BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
@@ -286,23 +289,38 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
         def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
             if(final_expected_sample_size_column is not None):
+                if self._correction_method not in [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED,
+                                                   BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1]:
+                    raise ValueError(f"{self._correction_method} not supported for sequential tests. Use one of"
+                                     f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
+                                     f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}")
+
                 df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
                                                                              final_expected_sample_size_column,
                                                                              filtered_sufficient_statistics)
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
                 df[P_VALUE] = None
                 df[ADJUSTED_P] = None
-            elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+            elif self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG,
+                                             SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                                             SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
+                                             SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
                 if not all(df[PREFERENCE] != TWO_SIDED):
                     raise ValueError(f"To use {self._correction_method} all tests have to be one-sided.")
+                if self._correction_method.startswith('spot-'):
+                    correction_method = self._correction_method[7:]
+                else:
+                    correction_method = self._correction_method
 
-                df[ADJUSTED_ALPHA] = None
+                groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
+                df[ADJUSTED_ALPHA] = df[ALPHA] / self._get_num_comparisons(df, self._correction_method, groupby)
                 is_significant, adjusted_p, _, _ = multipletests(pvals=df[P_VALUE],
-                                                                 alpha=df[ALPHA].values[0],
-                                                                 method=self._correction_method)
+                                                                 alpha=1 - self._interval_size,
+                                                                 method=correction_method)
                 df[ADJUSTED_P] = adjusted_p
                 df[IS_SIGNIFICANT] = is_significant
-            elif BONFERRONI in self._correction_method:
+            elif self._correction_method in [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED,
+                                             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1]:
                 groupby = ['level_1', 'level_2'] + [column for column in df.index.names if column is not None]
                 n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
                 df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
@@ -325,8 +343,14 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                     correction_method=self._correction_method,
                     alpha=1 - self._interval_size,
                 )
-            else:
+            elif self._correction_method in [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED,
+                                             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
+                                             SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
+                                             SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
                 adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
+            else:
+                warn(f"Confidence intervals not supported for {self._correction_method}")
+                adjusted_ci = Series(index=df.index, data=[(None, None) for i in range(len(df))])
 
             adjusted_ci_df = DataFrame(index=adjusted_ci.index,
                                        columns=[ADJUSTED_LOWER, ADJUSTED_UPPER],
@@ -351,7 +375,11 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             return max(1, df.groupby(groupby).ngroups)
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
             return max(df.query(f'{PREFERENCE} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
-        elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1]:
+        elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
+                                   HOLM, HOMMEL, SIMES_HOCHBERG,
+                                   SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+                                   SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
+                                   SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
             return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")

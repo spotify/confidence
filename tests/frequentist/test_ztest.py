@@ -7,10 +7,10 @@ import numpy as np
 from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
     DECREASE_PREFFERED, POINT_ESTIMATE,
-    CI_LOWER, CI_UPPER, P_VALUE, ADJUSTED_P,
+    CI_LOWER, CI_UPPER, P_VALUE,
     ADJUSTED_LOWER, ADJUSTED_UPPER,
     DIFFERENCE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-    CORRECTION_METHODS, HOLM, HOMMEL, SIMES_HOCHBERG, SPOT_1)
+    CORRECTION_METHODS, HOLM, HOMMEL, SIMES_HOCHBERG, SPOT_1, CORRECTION_METHODS_THAT_SUPPORT_CI)
 
 
 class TestBinary(object):
@@ -1105,14 +1105,13 @@ class TestWithNims(object):
             level_2='2',
             non_inferiority_margins=(0.02, 'increase'))
 
-        if correction_method == SPOT_1:
+        if SPOT_1 in correction_method:
             assert all(diff[CI_LOWER] == diff_2[CI_LOWER])
             assert np.isfinite(diff_2[CI_UPPER].values[0])
 
-        if BONFERRONI not in correction_method:
+        if BONFERRONI not in correction_method and correction_method in CORRECTION_METHODS_THAT_SUPPORT_CI:
             assert all(diff[ADJUSTED_LOWER] <= diff_2[ADJUSTED_LOWER])
             assert all(diff[ADJUSTED_UPPER] >= diff_2[ADJUSTED_UPPER])
-            assert all(diff[ADJUSTED_P] <= diff_2[ADJUSTED_P])
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_compare_series_non_inferiority_improve_negative(self, correction_method):
@@ -1137,14 +1136,13 @@ class TestWithNims(object):
             level_2='2',
             non_inferiority_margins=(0.02, 'decrease'))
 
-        if correction_method == SPOT_1:
+        if SPOT_1 in correction_method:
             assert all(diff[CI_UPPER] == diff_2[CI_UPPER])
             assert np.isfinite(diff_2[CI_LOWER].values[0])
 
-        if BONFERRONI not in correction_method:
+        if BONFERRONI not in correction_method and correction_method in CORRECTION_METHODS_THAT_SUPPORT_CI:
             assert all(diff[ADJUSTED_LOWER] <= diff_2[ADJUSTED_LOWER])
             assert all(diff[ADJUSTED_UPPER] >= diff_2[ADJUSTED_UPPER])
-            assert all(diff[ADJUSTED_P] <= diff_2[ADJUSTED_P])
 
     def test_one_sided_ztest_positive(self):
         summary = self.test.summary()
@@ -1456,7 +1454,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2016.416,
                     SUM_OF_SQUARES: 5082.122,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1468,7 +1466,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2028.478,
                     SUM_OF_SQUARES: 5210.193,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1480,7 +1478,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1991.554,
                     SUM_OF_SQUARES: 4919.282,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1492,7 +1490,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1958.713,
                     SUM_OF_SQUARES: 4818.665,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1504,7 +1502,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 2030.252,
                     SUM_OF_SQUARES: 5129.574,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1516,7 +1514,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1966.138,
                     SUM_OF_SQUARES: 4848.321,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1528,7 +1526,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1995.389,
                     SUM_OF_SQUARES: 4992.710,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1540,7 +1538,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1000,
                     SUM: 1952.098,
                     SUM_OF_SQUARES: 4798.772,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1552,7 +1550,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2986.667,
                     SUM_OF_SQUARES: 7427.582,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1564,7 +1562,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2989.488,
                     SUM_OF_SQUARES: 7421.710,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1576,7 +1574,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3008.681,
                     SUM_OF_SQUARES: 7565.406,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1588,7 +1586,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2933.173,
                     SUM_OF_SQUARES: 7207.038,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1600,7 +1598,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2986.308,
                     SUM_OF_SQUARES: 7584.148,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1612,7 +1610,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 2985.802,
                     SUM_OF_SQUARES: 7446.539,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1624,7 +1622,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3008.190,
                     SUM_OF_SQUARES: 7532.521,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1636,7 +1634,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                     COUNT: 1500,
                     SUM: 3001.494,
                     SUM_OF_SQUARES: 7467.535,
-                    "non_inferiority_margin": 0,
+                    "non_inferiority_margin": None,
                     "preferred_direction": None
                 },
                 {
@@ -1854,7 +1852,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
             categorical_group_columns=[GROUP, 'country', 'platform', 'metric'],
             ordinal_group_column=DATE,
             interval_size=1-0.01,
-            correction_method=BONFERRONI_ONLY_COUNT_TWOSIDED
+            correction_method=BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY
         )
 
     def test_with_manual_correction(self):
@@ -1951,21 +1949,21 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                              'and platform == "ios" and metric=="bananas_per_user_1d"')[
                 POINT_ESTIMATE].values[0], 2.028478, 5)
 
-        nims = {(pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'fin', 'andr',): (0, None),
+        nims = {(pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'fin', 'andr',): (None, None),
                 (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'fin', 'andr',): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'fin', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'fin', 'ios', ): (None, None),
                 (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'fin', 'ios', ): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'swe', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'swe', 'andr',): (None, None),
                 (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'swe', 'andr',): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'swe', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-01'), 'bananas_per_user_1d', 'swe', 'ios', ): (None, None),
                 (pd.to_datetime('2020-04-01'), 'bananas_per_user_7d', 'swe', 'ios', ): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'fin', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'fin', 'andr',): (None, None),
                 (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'fin', 'andr',): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'fin', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'fin', 'ios', ): (None, None),
                 (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'fin', 'ios', ): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'swe', 'andr',): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'swe', 'andr',): (None, None),
                 (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'swe', 'andr',): (0.01, 'increase'),
-                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'swe', 'ios', ): (0, None),
+                (pd.to_datetime('2020-04-02'), 'bananas_per_user_1d', 'swe', 'ios', ): (None, None),
                 (pd.to_datetime('2020-04-02'), 'bananas_per_user_7d', 'swe', 'ios', ): (0.01, 'increase')}
 
         difference_df = self.test.multiple_difference(
