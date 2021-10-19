@@ -321,7 +321,7 @@ def _search_MDE_binary_local_search(
             hypothetical_effect=x,
             control_avg=control_avg,
             control_var=control_var,
-            metric_type=BINARY,
+            binary=True,
             non_inferiority=non_inferiority,
             kappa=kappa,
             proportion_of_total=proportion_of_total,
@@ -409,7 +409,7 @@ def search_MDE_binary(
                     hypothetical_effect=effect,
                     control_avg=control_avg,
                     control_var=control_var,
-                    metric_type=BINARY,
+                    binary=True,
                     non_inferiority=non_inferiority,
                     kappa=kappa,
                     proportion_of_total=proportion_of_total,
@@ -437,12 +437,11 @@ def search_MDE_binary(
             hypothetical_effect: float,
             control_avg: float,
             control_var: float,
-            metric_type: str,
+            binary: bool,
             non_inferiority: bool,
             kappa: float,
             proportion_of_total: float,
             current_number_of_units: float,
-
             power: float = None,
             alpha: float = None,
     ) -> float:
@@ -451,7 +450,7 @@ def search_MDE_binary(
         z_power = norm.ppf(power)
 
         treatment_var = _get_hypothetical_treatment_var(
-            metric_type, non_inferiority, control_avg, control_var, hypothetical_effect
+            binary_metric=binary, non_inferiority=non_inferiority, control_avg=control_avg, control_var=control_var, hypothetical_effect=hypothetical_effect
         )
         n2 = _treatment_group_sample_size(z_alpha, z_power, hypothetical_effect, control_var,
                                           treatment_var, kappa, )

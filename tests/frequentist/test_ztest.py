@@ -516,8 +516,8 @@ class TestOrdinal(object):
             level_1='control',
             level_2='test',
             alpha=0.05,
-        power=0.8,
-        groupby='days_since_reg')
+            power=0.8,
+            groupby='days_since_reg')
         assert powered_effect == 1
 
 
