@@ -305,8 +305,6 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                                              SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
                                              SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                              SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
-                if not all(df[PREFERENCE] != TWO_SIDED):
-                    raise ValueError(f"To use {self._correction_method} all tests have to be one-sided.")
                 if self._correction_method.startswith('spot-'):
                     correction_method = self._correction_method[7:]
                 else:

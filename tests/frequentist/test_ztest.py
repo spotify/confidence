@@ -611,15 +611,11 @@ class TestOrdinalPlusTwoCategorical(object):
             difference_df = self.test.difference(level_1=('control', 'gb', 1),
                                                  level_2=('test', 'us', 2))
             assert len(difference_df) == 1
-        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+        else:
             difference_df = self.test.difference(level_1=('control', 'gb', 1),
                                                  level_2=('test', 'us', 2),
                                                  non_inferiority_margins=(None, 'increase'))
             assert len(difference_df) == 1
-        else:
-            with pytest.raises(ValueError):
-                self.test.difference(level_1=('control', 'gb', 1),
-                                     level_2=('test', 'us', 2))
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_difference_groupby(self, correction_method):
@@ -631,18 +627,12 @@ class TestOrdinalPlusTwoCategorical(object):
                                                           'days_since_reg'])
             assert len(difference_df) == self.data.days_since_reg.unique().size\
                 * self.data.country.unique().size
-        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+        else:
             difference_df = self.test.difference(level_1='control',
                                                  level_2='test',
                                                  groupby=['country', 'days_since_reg'],
                                                  non_inferiority_margins=(None, 'increase'))
             assert len(difference_df) == self.data.days_since_reg.unique().size * self.data.country.unique().size
-        else:
-            with pytest.raises(ValueError):
-                self.test.difference(level_1='control',
-                                     level_2='test',
-                                     groupby=['country',
-                                              'days_since_reg'])
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference(self, correction_method):
@@ -661,7 +651,7 @@ class TestOrdinalPlusTwoCategorical(object):
             assert np.allclose(
                 difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
                 difference_df['adjusted p-value'], rtol=0.01)
-        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+        else:
             difference_df = self.test.multiple_difference(level=('control', 1),
                                                           groupby='country',
                                                           level_as_reference=True,
@@ -672,11 +662,6 @@ class TestOrdinalPlusTwoCategorical(object):
                      * self.data.days_since_reg.unique().size +
                      self.data.days_since_reg.unique().size - 1)
             )
-        else:
-            with pytest.raises(ValueError):
-                self.test.multiple_difference(level=('control', 1),
-                                              groupby='country',
-                                              level_as_reference=True)
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference_groupby(self, correction_method):
@@ -696,7 +681,7 @@ class TestOrdinalPlusTwoCategorical(object):
             assert np.allclose(
                 difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
                 difference_df['adjusted p-value'], rtol=0.01)
-        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG]:
+        else:
             difference_df = self.test.multiple_difference(level='control',
                                                           groupby=['days_since_reg',
                                                                    'country'],
@@ -707,12 +692,6 @@ class TestOrdinalPlusTwoCategorical(object):
                     * self.data.days_since_reg.unique().size
                     * self.data.country.unique().size
             )
-        else:
-            with pytest.raises(ValueError):
-                self.test.multiple_difference(level='control',
-                                              groupby=['days_since_reg',
-                                                       'country'],
-                                              level_as_reference=True)
 
     @pytest.mark.parametrize("correction_method",
                              [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,

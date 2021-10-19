@@ -2,7 +2,12 @@
 History
 =======
 
-2.3.1 (2021-10-18)
+2.3.2 (2021-10-19)
+------------------
+
+* Minor bug-fix: No need to raise error when using alternative correction methods, since we return None CIs and print out warning instead
+
+2.3.1 (2021-10-19)
 ------------------
 
 * Added even more multiple correction strategies
