@@ -459,9 +459,9 @@ def search_MDE_binary(
         return np.power(current_number_of_units - ((n2 + n2 * kappa) / proportion_of_total), 2)
 
 def _get_hypothetical_treatment_var(
-    metric_type: str, non_inferiority: bool, control_avg: float, control_var: float, hypothetical_effect: float,
+    binary_metric: bool, non_inferiority: bool, control_avg: float, control_var: float, hypothetical_effect: float,
 ) -> float:
-    if metric_type == BINARY and not non_inferiority:
+    if binary_metric and not non_inferiority:
         # For binary metrics, the variance can be derived from the average. However, we do *not* do this for
         # non-inferiority tests because for non-inferiority tests, the basic assumption is that the
         # mean of the control group and treatment group are identical.

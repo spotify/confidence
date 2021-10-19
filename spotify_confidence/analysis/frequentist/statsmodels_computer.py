@@ -632,15 +632,18 @@ class ZTestComputer(StatsmodelsComputer):
                                 power: float,
                                 alpha: float) -> DataFrame:
 
+        proportion_of_total = 1 #TODO
         z_alpha = norm.ppf(1 - alpha)
         z_power = norm.ppf(power)
-        control_avg =  df[POINT_ESTIMATE + SFX1]
-
-        if metric_type == BINARY and not non_inferiority:
+        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
+        binary = self._numerator_sumsq == self._numerator
+        kappa = n1/n2
+        current_number_of_units = n1 + n2
+        if binary and df[NIM] is None:
             effect = _search_MDE_binary_local_search(
-                control_avg=control_avg,
-                control_var=control_var,
-                non_inferiority=non_inferiority,
+                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_var=df[VARIANCE + SFX1],
+                non_inferiority=df[NIM],
                 kappa=kappa,
                 proportion_of_total=proportion_of_total,
                 current_number_of_units=current_number_of_units,
@@ -649,9 +652,9 @@ class ZTestComputer(StatsmodelsComputer):
             )[0]
         else:
             treatment_var = _get_hypothetical_treatment_var(
-                metric_type, non_inferiority, control_avg, control_var, hypothetical_effect=0
+                binary_metric=binary, non_inferiority = df[NIM] is not None, control_avg = df[POINT_ESTIMATE + SFX1], control_var = df[VARIANCE + SFX1], hypothetical_effect=0
             )
-            n2_partial = np.power((z_alpha + z_power), 2) * (control_var / kappa + treatment_var)
+            n2_partial = np.power((z_alpha + z_power), 2) * (df[VARIANCE + SFX1] / kappa + treatment_var)
             effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (
                         n2_partial + kappa * n2_partial))
 
