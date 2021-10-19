@@ -30,7 +30,7 @@ from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
                          ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
-                         NULL_HYPOTHESIS, NIM, PREFERENCE, TWO_SIDED,
+                         NULL_HYPOTHESIS, NIM, PREFERENCE, PREFERENCE_TEST, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
                          HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
                          SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
@@ -284,8 +284,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 df.assign(**{ALPHA: df.apply(lambda row: 2*alpha_0 if self._correction_method == SPOT_1
                                              and row[PREFERENCE] != TWO_SIDED
                                              else alpha_0, axis=1)})
-                  .assign(**{PREFERENCE: df.apply(lambda row: TWO_SIDED if self._correction_method == SPOT_1
-                                                  else row[PREFERENCE], axis=1)})
+                  .assign(**{PREFERENCE_TEST: df.apply(lambda row: TWO_SIDED if self._correction_method == SPOT_1
+                                                       else row[PREFERENCE], axis=1)})
             )
 
         def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
@@ -339,7 +339,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
 
             if self._correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG,
                                            SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG] \
-                    and all(df[PREFERENCE] != TWO_SIDED):
+                    and all(df[PREFERENCE_TEST] != TWO_SIDED):
                 adjusted_ci = self._ci_for_multiple_comparison_methods(
                     df,
                     correction_method=self._correction_method,
@@ -377,7 +377,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         if correction_method == BONFERRONI:
             return max(1, df.groupby(groupby).ngroups)
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
-            return max(df.query(f'{PREFERENCE} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
+            return max(df.query(f'{PREFERENCE_TEST} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
         elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
                                    HOLM, HOMMEL, SIMES_HOCHBERG,
                                    SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
@@ -551,7 +551,7 @@ class TTestComputer(StatsmodelsComputer):
                                     value2=row[POINT_ESTIMATE + SFX1],
                                     std_diff=row[STD_ERR],
                                     dof=self._dof(row),
-                                    alternative=row[PREFERENCE],
+                                    alternative=row[PREFERENCE_TEST],
                                     diff=row[NULL_HYPOTHESIS])
         return p_value
 
@@ -561,7 +561,7 @@ class TTestComputer(StatsmodelsComputer):
             std_mean=row[STD_ERR],
             dof=self._dof(row),
             alpha=row[alpha_column],
-            alternative=row[PREFERENCE])
+            alternative=row[PREFERENCE_TEST])
 
     def _achieved_power(self,
                         df: DataFrame,
@@ -604,7 +604,7 @@ class ZTestComputer(StatsmodelsComputer):
         _, p_value = _zstat_generic(value1=row[POINT_ESTIMATE + SFX2],
                                     value2=row[POINT_ESTIMATE + SFX1],
                                     std_diff=row[STD_ERR],
-                                    alternative=row[PREFERENCE],
+                                    alternative=row[PREFERENCE_TEST],
                                     diff=row[NULL_HYPOTHESIS])
         return p_value
 
@@ -613,7 +613,7 @@ class ZTestComputer(StatsmodelsComputer):
             mean=row[DIFFERENCE],
             std_mean=row[STD_ERR],
             alpha=row[alpha_column],
-            alternative=row[PREFERENCE])
+            alternative=row[PREFERENCE_TEST])
 
     def _achieved_power(self,
                         df: DataFrame,
@@ -672,17 +672,17 @@ class ZTestComputer(StatsmodelsComputer):
                 sequential_bounds(
                     t=grp['sample_size_proportions'].values,
                     alpha=alpha,
-                    sides=2 if (grp[PREFERENCE] == TWO_SIDED).all() else 1
+                    sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1
                 ).df
                  .set_index(grp.index)
                  .assign(adjusted_alpha=lambda df: df.apply(
-                    lambda row: 2 * (1 - st.norm.cdf(row['zb'])) if (grp[PREFERENCE] == TWO_SIDED).all()
+                    lambda row: 2 * (1 - st.norm.cdf(row['zb'])) if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
                     else 1 - st.norm.cdf(row['zb']), axis=1))
             )[['zb', 'adjusted_alpha']]
 
         return (
             df.merge(total_sample_size, left_index=True, right_index=True)
-              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE]]
+              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE_TEST]]
               .apply(adjusted_alphas_for_group)
               .reset_index().set_index(df.index.names)
         )['adjusted_alpha']
@@ -694,7 +694,7 @@ class ZTestComputer(StatsmodelsComputer):
             alpha: float,
             w: float = 1.0,
     ) -> Tuple[Union[Series, float], Union[Series, float]]:
-        if TWO_SIDED in df[PREFERENCE]:
+        if TWO_SIDED in df[PREFERENCE_TEST]:
             raise ValueError(
                 "CIs can only be produced for one-sided tests when other multiple test corrections "
                 "methods than bonferroni are applied"
@@ -730,7 +730,7 @@ class ZTestComputer(StatsmodelsComputer):
             else:
                 alpha_adj = adjusted_alpha_accept
 
-            ci_sign = -1 if row[PREFERENCE] == "larger" else 1
+            ci_sign = -1 if row[PREFERENCE_TEST] == "larger" else 1
             bound1 = row[DIFFERENCE] + ci_sign * st.norm.ppf(alpha_adj) * row[STD_ERR]
             if ci_sign == -1:
                 bound2 = max(row[NULL_HYPOTHESIS], bound1)
@@ -739,8 +739,8 @@ class ZTestComputer(StatsmodelsComputer):
 
             bound = bound2 if row[IS_SIGNIFICANT] else bound1
 
-            lower = bound if row[PREFERENCE] == "larger" else -np.inf
-            upper = bound if row[PREFERENCE] == "smaller" else np.inf
+            lower = bound if row[PREFERENCE_TEST] == "larger" else -np.inf
+            upper = bound if row[PREFERENCE_TEST] == "smaller" else np.inf
 
             return lower, upper
 
