@@ -1,16 +1,15 @@
+import numpy as np
+import pandas as pd
 import pytest
 
 import spotify_confidence
-import pandas as pd
-import numpy as np
-
 from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
     DECREASE_PREFFERED, POINT_ESTIMATE,
     CI_LOWER, CI_UPPER, P_VALUE,
     ADJUSTED_LOWER, ADJUSTED_UPPER,
-    DIFFERENCE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-    CORRECTION_METHODS, HOLM, HOMMEL, SIMES_HOCHBERG, SPOT_1, CORRECTION_METHODS_THAT_SUPPORT_CI)
+    DIFFERENCE, BONFERRONI, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+    CORRECTION_METHODS, SPOT_1, CORRECTION_METHODS_THAT_SUPPORT_CI)
 
 
 class TestBinary(object):
@@ -692,11 +691,10 @@ class TestOrdinalPlusTwoCategorical(object):
                     * self.data.days_since_reg.unique().size
                     * self.data.country.unique().size
             )
+            if correction_method in CORRECTION_METHODS_THAT_SUPPORT_CI:
+                assert not any(difference_df[ADJUSTED_LOWER].isna())
 
-    @pytest.mark.parametrize("correction_method",
-                             [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-                              HOLM, HOMMEL, SIMES_HOCHBERG],
-                             ids=lambda x: f"correction method: {x}")
+    @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_differece_with_nims(self, correction_method):
         self.test._confidence_computer._correction_method = correction_method
         df = self.test.difference(level_1=('test', 'us'),

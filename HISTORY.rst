@@ -2,6 +2,11 @@
 History
 =======
 
+2.3.4 (2021-10-19)
+------------------
+
+* Changed CI behaviour of some correction methods
+
 2.3.3 (2021-10-19)
 ------------------
 

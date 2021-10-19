@@ -347,6 +347,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                 )
             elif self._correction_method in [BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED,
                                              BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
+                                             SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                              SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                              SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
                 adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
