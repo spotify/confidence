@@ -40,12 +40,24 @@ FDR_TSBKY = "fdr_tsbky"
 
 BONFERRONI_ONLY_COUNT_TWOSIDED = "bonferroni-only-count-twosided"
 BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY = "bonferroni-do-not-count-non-inferiority"
-SPOT_1 = "bonferroni-spot-1"
+SPOT_1 = "spot-1-bonferroni"
+
+SPOT_1_SIDAK = 'spot-1-sidak'
+SPOT_1_HOLM_SIDAK = 'spot-1-holm-sidak'
+SPOT_1_FDR_BH = 'spot-1-fdr_bh'
+SPOT_1_FDR_BY = 'spot-1-fdr_by'
+SPOT_1_FDR_TSBH = 'spot-1-fdr_tsbh'
+SPOT_1_FDR_TSBKY = 'spot-1-fdr_tsbky'
 
 CORRECTION_METHODS = [
-    BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG,  # SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
+    BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
     BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-    SPOT_1]
+    SPOT_1, SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH, SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]
+
+CORRECTION_METHODS_THAT_SUPPORT_CI = [BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG,
+                                      BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
+                                      SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
+                                      SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]
 
 NULL_HYPOTHESIS = "null_hypothesis"
 NIM = "non-inferiority margin"
