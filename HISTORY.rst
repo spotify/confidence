@@ -2,6 +2,11 @@
 History
 =======
 
+2.3.5 (2021-10-19)
+------------------
+
+* Keep initial preference even when it it is not used in tests
+
 2.3.4 (2021-10-19)
 ------------------
 
