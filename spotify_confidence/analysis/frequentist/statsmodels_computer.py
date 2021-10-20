@@ -666,6 +666,7 @@ class ZTestComputer(StatsmodelsComputer):
 
         groupby = ['level_1', 'level_2'] + groups_except_ordinal
         num_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
+
         def adjusted_alphas_for_group(grp) -> Series:
             return (
                 sequential_bounds(

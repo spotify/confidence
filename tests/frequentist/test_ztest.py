@@ -1815,7 +1815,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
                 .groupby([GROUP, 'country', 'platform', 'metric']).cumsum()
                 .reset_index()
                 .assign(non_inferiority_margin=lambda df: df['metric'].map(
-                    {'bananas_per_user_1d': 0, 'bananas_per_user_7d': 0.01}))
+                    {'bananas_per_user_1d': None, 'bananas_per_user_7d': 0.01}))
                 .assign(preferred_direction=lambda df: df['metric'].map(
                     {'bananas_per_user_1d': None, 'bananas_per_user_7d': 'increase'}))
                 .assign(final_expected_sample_size=5000)
