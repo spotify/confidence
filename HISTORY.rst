@@ -2,6 +2,11 @@
 History
 =======
 
+2.3.6 (2021-10-20)
+------------------
+
+* Use alpha column rather than 1 - interval_size in sequential tests to allow for different alphas for different dimensions
+
 2.3.5 (2021-10-19)
 ------------------
 

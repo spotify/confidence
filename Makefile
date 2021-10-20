@@ -83,7 +83,7 @@ dist: clean ## builds source and wheel packagels
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
-	pip install .
+	pip install -e .
 
 install-test: clean
 	pip3 install --index-url https://test.pypi.org/simple/ confidence-spotify
