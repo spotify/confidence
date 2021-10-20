@@ -665,13 +665,12 @@ class ZTestComputer(StatsmodelsComputer):
         )
 
         groupby = ['level_1', 'level_2'] + groups_except_ordinal
-        alpha = (1.0 - self._interval_size) / self._get_num_comparisons(df, self._correction_method, groupby)
-
+        num_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
         def adjusted_alphas_for_group(grp) -> Series:
             return (
                 sequential_bounds(
                     t=grp['sample_size_proportions'].values,
-                    alpha=alpha,
+                    alpha=grp[ALPHA].values[0]/num_comparisons,
                     sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1
                 ).df
                  .set_index(grp.index)
@@ -682,7 +681,9 @@ class ZTestComputer(StatsmodelsComputer):
 
         return (
             df.merge(total_sample_size, left_index=True, right_index=True)
-              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions', PREFERENCE_TEST]]
+              .groupby(groups_except_ordinal + ['level_1', 'level_2'])[['sample_size_proportions',
+                                                                        PREFERENCE_TEST,
+                                                                        ALPHA]]
               .apply(adjusted_alphas_for_group)
               .reset_index().set_index(df.index.names)
         )['adjusted_alpha']
