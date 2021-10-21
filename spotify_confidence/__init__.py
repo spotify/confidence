@@ -14,9 +14,9 @@
 
 from pkg_resources import require as _require
 from .analysis.bayesian.bayesian_models import BetaBinomial
-from .analysis.frequentist.chi_squared import ChiSquared
-from .analysis.frequentist.t_test import StudentsTTest
-from .analysis.frequentist.z_test import ZTest
+from spotify_confidence.analysis.frequentist.test_classes.chi_squared import ChiSquared
+from spotify_confidence.analysis.frequentist.test_classes.t_test import StudentsTTest
+from spotify_confidence.analysis.frequentist.test_classes.z_test import ZTest
 from .samplesize.sample_size_calculator import SampleSize
 
 from . import examples
