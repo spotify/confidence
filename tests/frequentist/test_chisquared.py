@@ -5,8 +5,7 @@ import spotify_confidence
 import pandas as pd
 import numpy as np
 from scipy.stats import chisquare
-from spotify_confidence.analysis.frequentist.statsmodels_computer \
-    import ChiSquaredComputer
+from spotify_confidence.analysis.frequentist.test_classes.chi_squared_computer import ChiSquaredComputer
 from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE,
                                                    SFX1, SFX2)
 from spotify_confidence.analysis.confidence_utils import power_calculation

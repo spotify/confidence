@@ -16,16 +16,16 @@ from typing import (Union, Iterable)
 
 from pandas import DataFrame
 
-from .statsmodels_computer import ZTestComputer
-from ..abstract_base_classes.confidence_computer_abc import \
+from spotify_confidence.analysis.frequentist.test_classes.t_test_computer import TTestComputer
+from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
-from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from .generic_test import GenericTest
-from ..confidence_utils import listify
-from ..constants import BONFERRONI
+from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
+from spotify_confidence.analysis.frequentist.generic_test import GenericTest
+from spotify_confidence.analysis.confidence_utils import listify
+from spotify_confidence.analysis.constants import BONFERRONI
 
 
-class ZTest(GenericTest):
+class StudentsTTest(GenericTest):
 
     def __init__(self,
                  data_frame: DataFrame,
@@ -39,7 +39,7 @@ class ZTest(GenericTest):
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None):
 
-        computer = ZTestComputer(
+        computer = TTestComputer(
             data_frame=data_frame,
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,
@@ -49,7 +49,7 @@ class ZTest(GenericTest):
             interval_size=interval_size,
             correction_method=correction_method.lower())
 
-        super(ZTest, self).__init__(
+        super(StudentsTTest, self).__init__(
             data_frame,
             numerator_column,
             numerator_sum_squares_column,
