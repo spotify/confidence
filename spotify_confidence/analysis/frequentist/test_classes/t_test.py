@@ -16,13 +16,13 @@ from typing import (Union, Iterable)
 
 from pandas import DataFrame
 
-from .statsmodels_computer import TTestComputer
-from ..abstract_base_classes.confidence_computer_abc import \
+from spotify_confidence.analysis.frequentist.test_classes.t_test_computer import TTestComputer
+from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
-from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from .generic_test import GenericTest
-from ..confidence_utils import listify
-from ..constants import BONFERRONI
+from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
+from spotify_confidence.analysis.frequentist.generic_test import GenericTest
+from spotify_confidence.analysis.confidence_utils import listify
+from spotify_confidence.analysis.constants import BONFERRONI
 
 
 class StudentsTTest(GenericTest):

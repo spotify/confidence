@@ -14,12 +14,7 @@
 
 from pandas import DataFrame, Series, concat
 import numpy as np
-from scipy.stats import norm
 import scipy.stats as st
-from statsmodels.stats.proportion import (
-    proportions_chisquare, proportion_confint, confint_proportions_2indep)
-from statsmodels.stats.weightstats import (
-    _zstat_generic, _zconfint_generic, _tstat_generic, _tconfint_generic)
 from typing import (Union, Iterable, List, Tuple)
 from abc import abstractmethod
 
@@ -33,18 +28,16 @@ from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, BONFERRONI_ONLY_COUNT_TWOSIDED)
 from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
-                                power_calculation, add_nim_columns,
+                                add_nim_columns,
                                 validate_and_rename_nims,
-                                validate_and_rename_final_expected_sample_sizes,
-                                _get_hypothetical_treatment_var,
-                                _search_MDE_binary_local_search)
+                                validate_and_rename_final_expected_sample_sizes)
 
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
 
 
-class StatsmodelsComputer(ConfidenceComputerABC):
+class GenericComputer(ConfidenceComputerABC):
 
     def __init__(self, data_frame: DataFrame, numerator_column: str,
                  numerator_sum_squares_column: str, denominator_column: str,
@@ -451,215 +444,3 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         pass
 
 
-    def _achieved_power(self,
-                        df: DataFrame,
-                        mde: float,
-                        alpha: float) -> DataFrame:
-        pass
-
-
-
-class ChiSquaredComputer(StatsmodelsComputer):
-    def _variance(self, df: DataFrame) -> Series:
-        variance = df[POINT_ESTIMATE] * (1 - df[POINT_ESTIMATE])
-        if (variance < 0).any():
-            raise ValueError('Computed variance is negative. '
-                             'Please check your inputs.')
-        return variance
-
-    def _add_point_estimate_ci(self, df: DataFrame):
-        df[CI_LOWER], df[CI_UPPER] = proportion_confint(
-            count=df[self._numerator],
-            nobs=df[self._denominator],
-            alpha=1-self._interval_size,
-        )
-        return df
-
-    def _p_value(self, row):
-        _, p_value, _ = (
-            proportions_chisquare(count=[row[self._numerator + SFX1],
-                                         row[self._numerator + SFX2]],
-                                  nobs=[row[self._denominator + SFX1],
-                                        row[self._denominator + SFX2]])
-        )
-        return p_value
-
-    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
-        return confint_proportions_2indep(
-            count1=row[self._numerator + SFX2],
-            nobs1=row[self._denominator + SFX2],
-            count2=row[self._numerator + SFX1],
-            nobs2=row[self._denominator + SFX1],
-            alpha=row[alpha_column],
-            compare='diff',
-            method='wald'
-        )
-
-    def _achieved_power(self,
-                        df: DataFrame,
-                        mde: float,
-                        alpha: float) -> DataFrame:
-        s1, s2 = df[self._numerator + SFX1], df[self._numerator + SFX2]
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
-
-        pooled_prop = (s1 + s2) / (n1 + n2)
-        var_pooled = pooled_prop * (1 - pooled_prop)
-
-        power = power_calculation(mde, var_pooled, alpha, n1, n2)
-
-        return (
-            df.assign(achieved_power=power)
-              .loc[:, ['level_1', 'level_2', 'achieved_power']]
-              .reset_index()
-        )
-
-
-class TTestComputer(StatsmodelsComputer):
-    def _variance(self, df: DataFrame) -> Series:
-        variance = (
-                df[self._numerator_sumsq] / df[self._denominator] -
-                df[POINT_ESTIMATE] ** 2)
-        if (variance < 0).any():
-            raise ValueError('Computed variance is negative. '
-                             'Please check your inputs.')
-        return variance
-
-    def _add_point_estimate_ci(self, df: DataFrame):
-        df[CI_LOWER], df[CI_UPPER] = _tconfint_generic(
-            mean=df[POINT_ESTIMATE],
-            std_mean=np.sqrt(df[VARIANCE] / df[self._denominator]),
-            dof=df[self._denominator] - 1,
-            alpha=1-self._interval_size,
-            alternative=TWO_SIDED
-        )
-        return df
-
-    def _dof(self, row):
-        v1, v2 = row[VARIANCE + SFX1], row[VARIANCE + SFX2]
-        n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
-        return ((v1 / n1 + v2 / n2) ** 2 /
-                ((v1 / n1) ** 2 / (n1 - 1) +
-                 (v2 / n2) ** 2 / (n2 - 1)))
-
-    def _p_value(self, row) -> float:
-        _, p_value = _tstat_generic(value1=row[POINT_ESTIMATE + SFX2],
-                                    value2=row[POINT_ESTIMATE + SFX1],
-                                    std_diff=row[STD_ERR],
-                                    dof=self._dof(row),
-                                    alternative=row[PREFERENCE],
-                                    diff=row[NULL_HYPOTHESIS])
-        return p_value
-
-    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
-        return _tconfint_generic(
-            mean=row[DIFFERENCE],
-            std_mean=row[STD_ERR],
-            dof=self._dof(row),
-            alpha=row[alpha_column],
-            alternative=row[PREFERENCE])
-
-    def _achieved_power(self,
-                        df: DataFrame,
-                        mde: float,
-                        alpha: float) -> DataFrame:
-        v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
-
-        var_pooled = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2)
-
-        power = power_calculation(mde, var_pooled, alpha, n1, n2)
-
-        return (
-            df.assign(achieved_power=power)
-              .loc[:, ['level_1', 'level_2', 'achieved_power']]
-              .reset_index()
-        )
-
-
-class ZTestComputer(StatsmodelsComputer):
-    def _variance(self, df: DataFrame) -> Series:
-        variance = (
-                df[self._numerator_sumsq] / df[self._denominator] -
-                df[POINT_ESTIMATE] ** 2)
-        if (variance < 0).any():
-            raise ValueError('Computed variance is negative. '
-                             'Please check your inputs.')
-        return variance
-
-    def _add_point_estimate_ci(self, df: DataFrame):
-        df[CI_LOWER], df[CI_UPPER] = _zconfint_generic(
-            mean=df[POINT_ESTIMATE],
-            std_mean=np.sqrt(df[VARIANCE] / df[self._denominator]),
-            alpha=1-self._interval_size,
-            alternative=TWO_SIDED
-        )
-        return df
-
-    def _p_value(self, row) -> float:
-        _, p_value = _zstat_generic(value1=row[POINT_ESTIMATE + SFX2],
-                                    value2=row[POINT_ESTIMATE + SFX1],
-                                    std_diff=row[STD_ERR],
-                                    alternative=row[PREFERENCE],
-                                    diff=row[NULL_HYPOTHESIS])
-        return p_value
-
-    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
-        return _zconfint_generic(
-            mean=row[DIFFERENCE],
-            std_mean=row[STD_ERR],
-            alpha=row[alpha_column],
-            alternative=row[PREFERENCE])
-
-    def _achieved_power(self,
-                        df: DataFrame,
-                        mde: float,
-                        alpha: float) -> DataFrame:
-        v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
-
-        var_pooled = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2)
-
-        power = power_calculation(mde, var_pooled, alpha, n1, n2)
-
-        return (
-            df.assign(achieved_power=power)
-              .loc[:, ['level_1', 'level_2', 'achieved_power']]
-              .reset_index()
-        )
-
-    def _powered_effect(self,
-                                df: DataFrame,
-                                power: float,
-                                alpha: float) -> DataFrame:
-
-        proportion_of_total = 1 #TODO
-        z_alpha = norm.ppf(1 - alpha)
-        z_power = norm.ppf(power)
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
-        binary = self._numerator_sumsq == self._numerator
-        kappa = n1/n2
-        current_number_of_units = n1 + n2
-        if binary and df[NIM] is None:
-            effect = _search_MDE_binary_local_search(
-                control_avg=df[POINT_ESTIMATE + SFX1],
-                control_var=df[VARIANCE + SFX1],
-                non_inferiority=df[NIM],
-                kappa=kappa,
-                proportion_of_total=proportion_of_total,
-                current_number_of_units=current_number_of_units,
-                z_alpha=z_alpha,
-                z_power=z_power,
-            )[0]
-        else:
-            treatment_var = _get_hypothetical_treatment_var(
-                binary_metric=binary, non_inferiority = df[NIM] is not None, control_avg = df[POINT_ESTIMATE + SFX1], control_var = df[VARIANCE + SFX1], hypothetical_effect=0
-            )
-            n2_partial = np.power((z_alpha + z_power), 2) * (df[VARIANCE + SFX1] / kappa + treatment_var)
-            effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (
-                        n2_partial + kappa * n2_partial))
-
-        return (
-            df.assign(powered_effect=effect)
-              .loc[:, ['level_1', 'level_2', 'powered_effect']]
-              .reset_index()
-        )

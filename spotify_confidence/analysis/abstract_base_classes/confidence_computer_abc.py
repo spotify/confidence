@@ -67,19 +67,3 @@ class ConfidenceComputerABC(ABC):
         is greater than all other groups.
         """
         pass
-
-    def achieved_power(self,
-                       level_1: Union[str, Iterable],
-                       level_2: Union[str, Iterable],
-                       mde: float,
-                       alpha: float,
-                       groupby: Union[str, Iterable]) -> DataFrame:
-        pass
-
-    def powered_effect(self,
-                       level_1: Union[str, Iterable],
-                       level_2: Union[str, Iterable],
-                       alpha: float,
-                       power: float,
-                       groupby: Union[str, Iterable]) -> DataFrame:
-        pass
