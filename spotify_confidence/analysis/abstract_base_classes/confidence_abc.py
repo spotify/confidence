@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import (Union, Iterable, Tuple)
+from typing import (Union, Iterable, Tuple, List)
 
 from pandas import DataFrame
 
@@ -73,6 +73,47 @@ class ConfidenceABC(ABC):
                    verbose: bool
                    ) -> DataFrame:
         """Args:
+            groupby (str): Name of column.
+                If specified, will plot a separate chart for each level of the
+                grouping.
+            non_inferiority_margins (Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]):
+                Pass tuple(non_inferiority_margin, preferred direction) to use the same NIM for all
+                comparisons, e.g. (0.01, 'increase'), which means that we want
+                level_2 to be grater than the average of level_1 times (1-0.01),
+                or (0.05, 'decrease') which means that we want
+                level_2 to be smaller than the average
+                of level_1 times (1+0.01).
+                Pass dictionary {{group:tuple(non_inferiority_margin, preferred direction}} to use
+                different non-inferiority margins for different values of
+                groupby column.
+                To performe a one-sided test without nim, use
+                (None, preffered direction).
+                Alternatively, pass True to use the "non_inferiority_margin" and "preferred_direction"
+                columns of dataframe that was passed to the contructor, as source of nims.
+            final_expected_sample_size_column (str): Column in source data frame containing expected number of
+                    observations at end of experiment.
+                Use in combination with ordinal groupby to perform a
+                sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
+            verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+
+        Returns:
+            Dataframe containing the difference in means between
+            group 1 and 2, p-values and confidence intervals for each value
+            in the groupby column
+        """
+        pass
+
+    @abstractmethod
+    def differences(self,
+                    levels: List[Tuple],
+                    absolute: bool,
+                    groupby: Union[str, Iterable],
+                    non_inferiority_margins: NIM_TYPE,
+                    final_expected_sample_size_column: str,
+                    verbose: bool
+                    ) -> DataFrame:
+        """Args:
+            levels: (list(tuple(str,str))): list of levels to compare
             groupby (str): Name of column.
                 If specified, will plot a separate chart for each level of the
                 grouping.

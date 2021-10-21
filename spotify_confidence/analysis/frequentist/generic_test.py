@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable, Tuple, Dict)
+from typing import (Union, Iterable, Tuple, Dict, List)
 
 from pandas import DataFrame
 
@@ -91,6 +91,23 @@ class GenericTest(ConfidenceABC):
         return self._confidence_computer.compute_difference(
             level_1,
             level_2,
+            absolute,
+            groupby,
+            non_inferiority_margins,
+            final_expected_sample_size_column,
+            verbose)
+
+    def differences(self,
+                    levels: List[Tuple],
+                    absolute: bool,
+                    groupby: Union[str, Iterable],
+                    non_inferiority_margins: NIM_TYPE,
+                    final_expected_sample_size_column: str,
+                    verbose: bool
+                    ) -> DataFrame:
+        self._validate_sequential(final_expected_sample_size_column, groupby)
+        return self._confidence_computer.compute_differences(
+            levels,
             absolute,
             groupby,
             non_inferiority_margins,
