@@ -994,7 +994,7 @@ class TestCategoricalBinomialData(object):
 
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
-            self.test.multiple_difference(('bad_value', 'bad_value'))
+            self.test.multiple_difference(('bad_value', 'bad_value'), level_as_reference=False)
 
         diff = self.test.multiple_difference(('us', 'control'))
         assert (np.allclose(
@@ -1016,7 +1016,7 @@ class TestCategoricalBinomialData(object):
                 [0.42169415, 0.08258247, -0.10411038, 0.03870244,
                  -0.13744367])))
 
-        diff = self.test.multiple_difference('test', groupby='country')
+        diff = self.test.multiple_difference('test', groupby='country', level_as_reference=False)
         assert (np.allclose(
             diff['adjusted p-value'],
             np.array([1.00000000e+00, 3.30302805e-02, 2.80372953e-01, 0.0])))

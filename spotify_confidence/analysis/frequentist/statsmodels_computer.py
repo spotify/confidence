@@ -165,19 +165,26 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                             levels: List[Tuple],
                             absolute: bool,
                             groupby: Union[str, Iterable],
-                            level_as_reference: bool,
                             nims: NIM_TYPE,
                             final_expected_sample_size_column: str,
                             verbose: bool
                             ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
-        self._compute_differences(level_columns,
-                                  levels,
-                                  absolute,
-                                  groupby,
-                                  level_as_reference=True,
-                                  nims=nims,
-                                  final_expected_sample_size_column=final_expected_sample_size_column)
+        difference_df = self._compute_differences(
+            level_columns,
+            levels,
+            absolute,
+            groupby,
+            level_as_reference=True,
+            nims=nims,
+            final_expected_sample_size_column=final_expected_sample_size_column)
+        return (difference_df if verbose else
+                difference_df[listify(groupby) +
+                              ['level_1', 'level_2', 'absolute_difference',
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
+                              [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
+                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
+                               if nims is not None else [])])
 
     def _compute_differences(self,
                              level_columns: Iterable,
@@ -187,6 +194,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                              level_as_reference: bool,
                              nims: NIM_TYPE,
                              final_expected_sample_size_column: str):
+        if type(level_as_reference) is not bool:
+            raise ValueError(f'level_is_reference must be either True or False, but is {level_as_reference}.')
         groupby = listify(groupby)
         unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
         validate_levels(self._sufficient_statistics,
@@ -431,7 +440,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         return (
             self._compute_differences(level_columns,
-                                      (level_1, level_2),
+                                      [(level_1, level_2)],
                                       True,
                                       groupby,
                                       level_as_reference=True,

@@ -174,9 +174,9 @@ class TestCategorical(object):
 
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
-            self.test.multiple_difference(('bad_value', 'bad_value'))
+            self.test.multiple_difference(('bad_value', 'bad_value'), level_as_reference=False)
 
-        diff = self.test.multiple_difference(('us', 'control'))
+        diff = self.test.multiple_difference(('us', 'control'), level_as_reference=False)
         assert (np.allclose(
             diff['adjusted p-value'],
             np.array([
@@ -238,12 +238,13 @@ class TestCategorical(object):
     def test_multiple_difference_plot(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference_plot(('bad_value', 'bad_value'),
-                                               ('bad_value', 'bad_value'))
+                                               ('bad_value', 'bad_value'),
+                                               level_as_reference=False)
 
-        ch = self.test.multiple_difference_plot(('us', 'control'))
+        ch = self.test.multiple_difference_plot(('us', 'control'), level_as_reference=False)
         assert (len(ch.charts) == 1)
 
-        ch = self.test.multiple_difference_plot('test', groupby='country')
+        ch = self.test.multiple_difference_plot('test', groupby='country', level_as_reference=False)
         assert (len(ch.charts) == 1)
 
     def test_sample_ratio_test(self):
@@ -593,21 +594,24 @@ class TestOrdinalPlusTwoCategorical(object):
 
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
-            self.test.multiple_difference(level='non_existingg_level')
+            self.test.multiple_difference(level='non_existingg_level', level_as_reference=False)
 
         df = self.test.multiple_difference(
             level='control',
-            groupby=['country', 'days_since_reg'])
+            groupby=['country', 'days_since_reg'],
+            level_as_reference=False)
         assert (len(df) == 20)
 
         df = self.test.multiple_difference(
             level='us',
-            groupby=['variation_name', 'days_since_reg'])
+            groupby=['variation_name', 'days_since_reg'],
+            level_as_reference=False)
         assert (len(df) == 15)
 
         df = self.test.multiple_difference(
             level=1,
-            groupby=['country', 'variation_name'])
+            groupby=['country', 'variation_name'],
+            level_as_reference=False)
         assert (len(df) == 24)
 
     def test_difference_plot(self):
