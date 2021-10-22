@@ -162,13 +162,13 @@ class GenericTest(ConfidenceABC):
         return chartgrid
 
     def differences_plot(self,
-                        levels: List[Tuple],
-                        absolute: bool = True,
-                        groupby: Union[str, Iterable] = None,
-                        non_inferiority_margins: NIM_TYPE = None,
-                        use_adjusted_intervals: bool = False,
-                        final_expected_sample_size_column: str = None
-                        ) -> ChartGrid:
+                         levels: List[Tuple],
+                         absolute: bool = True,
+                         groupby: Union[str, Iterable] = None,
+                         non_inferiority_margins: NIM_TYPE = None,
+                         use_adjusted_intervals: bool = False,
+                         final_expected_sample_size_column: str = None
+                         ) -> ChartGrid:
         difference_df = self.differences(levels,
                                          absolute,
                                          groupby,
