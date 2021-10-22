@@ -212,23 +212,26 @@ class TestCategorical(object):
 
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
-            self.test.multiple_difference(('bad_value', 'bad_value'))
+            self.test.multiple_difference(('bad_value', 'bad_value'), level_as_reference=False)
 
-        diff = self.test.multiple_difference(('us', 'control'))
+        diff = self.test.multiple_difference(('us', 'control'), level_as_reference=False)
         assert (len(diff) > 0)
 
-        diff = self.test.multiple_difference('test', groupby='country')
+        diff = self.test.multiple_difference('test', groupby='country', level_as_reference=False)
         assert (len(diff) > 0)
 
     def test_multiple_difference_plot(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference_plot(('bad_value', 'bad_value'),
-                                               ('bad_value', 'bad_value'))
+                                               ('bad_value', 'bad_value'),
+                                               level_as_reference=False)
 
-        ch = self.test.multiple_difference_plot(('us', 'control'))
+        ch = self.test.multiple_difference_plot(('us', 'control'),
+                                                level_as_reference=False)
         assert (len(ch.charts) == 1)
 
-        ch = self.test.multiple_difference_plot('test', groupby='country')
+        ch = self.test.multiple_difference_plot('test', groupby='country',
+                                                level_as_reference=False)
         assert (len(ch.charts) == 1)
 
     def test_achieved_power(self):
@@ -351,24 +354,27 @@ class TestOrdinal(object):
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference(('bad_value', 'bad_value'),
-                                          ('bad_value', 'bad_value'))
+                                          ('bad_value', 'bad_value'),
+                                          level_as_reference=False)
 
-        diff = self.test.multiple_difference(('control', 1))
+        diff = self.test.multiple_difference(('control', 1), level_as_reference=False)
         assert (len(diff) > 0)
 
-        diff = self.test.multiple_difference('test', groupby='days_since_reg')
+        diff = self.test.multiple_difference('test', groupby='days_since_reg', level_as_reference=False)
         assert (len(diff) > 0)
 
     def test_multiple_difference_plot(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference_plot(('bad_value', 'bad_value'),
-                                               ('bad_value', 'bad_value'))
+                                               ('bad_value', 'bad_value'),
+                                               level_as_reference=False)
 
-        ch = self.test.multiple_difference_plot(('control', 1))
+        ch = self.test.multiple_difference_plot(('control', 1), level_as_reference=False)
         assert (len(ch.charts) == 1)
 
         ch = self.test.multiple_difference_plot('test',
-                                                groupby='days_since_reg')
+                                                groupby='days_since_reg',
+                                                level_as_reference=False)
         assert (len(ch.charts) == 1)
 
     def test_achieved_power(self):
@@ -698,9 +704,9 @@ class TestCategoricalBinomialData(object):
 
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
-            self.test.multiple_difference(('bad_value', 'bad_value'))
+            self.test.multiple_difference(('bad_value', 'bad_value'), level_as_reference=False)
 
-        diff = self.test.multiple_difference(('us', 'control'))
+        diff = self.test.multiple_difference(('us', 'control'), level_as_reference=False)
         assert (np.allclose(
             diff['adjusted p-value'],
             np.array([1e+00, 8.36850129e-01, 1.49172324e-04,
@@ -718,7 +724,7 @@ class TestCategoricalBinomialData(object):
             np.array([
                  0.509440, 0.084292, -0.102695, 0.040705, -0.135317])))
 
-        diff = self.test.multiple_difference('test', groupby='country')
+        diff = self.test.multiple_difference('test', groupby='country', level_as_reference=False)
         assert (np.allclose(
             diff['adjusted p-value'],
             np.array([1, 0.035594, 0.289895, 0.0])))

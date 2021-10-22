@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable, Tuple, Dict)
+from typing import (Union, Iterable, Tuple, Dict, List)
 
 from pandas import DataFrame
 
@@ -97,6 +97,23 @@ class GenericTest(ConfidenceABC):
             final_expected_sample_size_column,
             verbose)
 
+    def differences(self,
+                    levels: Union[Tuple, List[Tuple]],
+                    absolute: bool = True,
+                    groupby: Union[str, Iterable] = None,
+                    non_inferiority_margins: NIM_TYPE = None,
+                    final_expected_sample_size_column: str = None,
+                    verbose: bool = False
+                    ) -> DataFrame:
+        self._validate_sequential(final_expected_sample_size_column, groupby)
+        return self._confidence_computer.compute_differences(
+            levels,
+            absolute,
+            groupby,
+            non_inferiority_margins,
+            final_expected_sample_size_column,
+            verbose)
+
     def multiple_difference(self, level: Union[str, Tuple],
                             absolute: bool = True,
                             groupby: Union[str, Iterable] = None,
@@ -137,6 +154,27 @@ class GenericTest(ConfidenceABC):
                                         non_inferiority_margins,
                                         final_expected_sample_size_column)
         chartgrid = self._confidence_grapher.plot_difference(
+            difference_df,
+            absolute,
+            groupby,
+            non_inferiority_margins,
+            use_adjusted_intervals)
+        return chartgrid
+
+    def differences_plot(self,
+                         levels: List[Tuple],
+                         absolute: bool = True,
+                         groupby: Union[str, Iterable] = None,
+                         non_inferiority_margins: NIM_TYPE = None,
+                         use_adjusted_intervals: bool = False,
+                         final_expected_sample_size_column: str = None
+                         ) -> ChartGrid:
+        difference_df = self.differences(levels,
+                                         absolute,
+                                         groupby,
+                                         non_inferiority_margins,
+                                         final_expected_sample_size_column)
+        chartgrid = self._confidence_grapher.plot_differences(
             difference_df,
             absolute,
             groupby,

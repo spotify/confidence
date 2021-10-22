@@ -86,6 +86,32 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 use_adjusted_intervals)
         return chart_grid
 
+    def plot_differences(self,
+                         difference_df,
+                         absolute,
+                         groupby,
+                         nims: NIM_TYPE,
+                         use_adjusted_intervals: bool
+                         ) -> ChartGrid:
+
+        remaining_groups = get_remaning_groups(groupby,
+                                               self._ordinal_group_column)
+        groupby_columns = self._add_level_columns(remaining_groups)
+
+        if self._ordinal_group_column in listify(groupby):
+            ch = self._ordinal_difference_plot(difference_df,
+                                               absolute,
+                                               groupby_columns,
+                                               use_adjusted_intervals)
+            chart_grid = ChartGrid([ch])
+        else:
+            chart_grid = self._categorical_difference_plot(
+                difference_df,
+                absolute,
+                groupby_columns,
+                use_adjusted_intervals)
+        return chart_grid
+
     def plot_multiple_difference(self,
                                  difference_df,
                                  absolute,
@@ -118,8 +144,13 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                                  use_adjusted_intervals: bool) -> Chart:
         remaining_groups = get_remaning_groups(groupby,
                                                self._ordinal_group_column)
-        title = "Change from {} to {}".format(difference_df['level_1'].any(),
-                                              difference_df['level_2'].any())
+
+        if 'level_1' in groupby and 'level_2' in groupby:
+            title = "Change from level_1 to level_2"
+        else:
+            title = "Change from {} to {}".format(difference_df['level_1'].any(),
+                                                  difference_df['level_2'].any())
+
         y_axis_label = self._get_difference_plot_label(absolute)
         ch = self._ordinal_plot('difference', difference_df, groupby=None,
                                 level_name="",
@@ -145,8 +176,11 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             groupby = 'dummy_groupby'
             difference_df[groupby] = 'Difference'
 
-        title = "Change from {} to {}".format(difference_df['level_1'].any(),
-                                              difference_df['level_2'].any())
+        if 'level_1' in groupby and 'level_2' in groupby:
+            title = "Change from level_1 to level_2"
+        else:
+            title = "Change from {} to {}".format(difference_df['level_1'].any(),
+                                                  difference_df['level_2'].any())
         x_label = "" if groupby is None else "{}".format(groupby)
 
         chart_grid = self._categorical_difference_chart(absolute,
@@ -467,6 +501,17 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 groupby_columns = [groupby, level_column]
             else:
                 groupby_columns = groupby + [level_column]
+        return groupby_columns
+
+    def _add_level_columns(self, groupby):
+        levels = ['level_1', 'level_2']
+        if groupby is None:
+            groupby_columns = levels
+        else:
+            if isinstance(groupby, str):
+                groupby_columns = [groupby] + levels
+            else:
+                groupby_columns = groupby + levels
         return groupby_columns
 
     def add_ci_to_chart_datasources(self,

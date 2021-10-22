@@ -120,8 +120,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                            verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(level_columns,
-                                                  level_1,
-                                                  [level_2],
+                                                  [(level_1, level_2)],
                                                   absolute,
                                                   groupby,
                                                   level_as_reference=True,
@@ -146,9 +145,9 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [other for other in self._sufficient_statistics
                         .groupby(level_columns).groups.keys() if other != level]
+        levels = [(level, other) for other in other_levels]
         difference_df = self._compute_differences(level_columns,
-                                                  level,
-                                                  other_levels,
+                                                  levels,
                                                   absolute,
                                                   groupby,
                                                   level_as_reference,
@@ -162,26 +161,53 @@ class StatsmodelsComputer(ConfidenceComputerABC):
                               ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                                if nims is not None else [])])
 
+    def compute_differences(self,
+                            levels: List[Tuple],
+                            absolute: bool,
+                            groupby: Union[str, Iterable],
+                            nims: NIM_TYPE,
+                            final_expected_sample_size_column: str,
+                            verbose: bool
+                            ) -> DataFrame:
+        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        difference_df = self._compute_differences(
+            level_columns,
+            [levels] if type(levels) == tuple else levels,
+            absolute,
+            groupby,
+            level_as_reference=True,
+            nims=nims,
+            final_expected_sample_size_column=final_expected_sample_size_column)
+        return (difference_df if verbose else
+                difference_df[listify(groupby) +
+                              ['level_1', 'level_2', 'absolute_difference',
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
+                              [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
+                              ([NIM, NULL_HYPOTHESIS, PREFERENCE]
+                               if nims is not None else [])])
+
     def _compute_differences(self,
                              level_columns: Iterable,
-                             level: Union[str, Iterable],
-                             other_levels: Iterable,
+                             levels: Union[str, Iterable],
                              absolute: bool,
                              groupby: Union[str, Iterable],
                              level_as_reference: bool,
                              nims: NIM_TYPE,
                              final_expected_sample_size_column: str):
+        if type(level_as_reference) is not bool:
+            raise ValueError(f'level_is_reference must be either True or False, but is {level_as_reference}.')
         groupby = listify(groupby)
+        unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
         validate_levels(self._sufficient_statistics,
                         level_columns,
-                        [level] + other_levels)
-        levels = [(level2str(level), level2str(other))
-                  if level_as_reference
-                  else (level2str(other), level2str(level))
-                  for other in other_levels]
-        str2level = {level2str(lv): lv for lv in [level] + other_levels}
+                        unique_levels)
+        str2level = {level2str(lv): lv for lv in unique_levels}
         filtered_sufficient_statistics = concat(
-            [self._sufficient_statistics.groupby(level_columns).get_group(group) for group in [level] + other_levels])
+            [self._sufficient_statistics.groupby(level_columns).get_group(group) for group in unique_levels])
+        levels = [(level2str(l[0]), level2str(l[1]))
+                  if level_as_reference
+                  else (level2str(l[1]), level2str(l[0]))
+                  for l in levels]
         return (
             self._sufficient_statistics
                 .assign(level=self._sufficient_statistics[level_columns]
@@ -233,7 +259,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             df.pipe(add_nim_columns, nims=nims)
               .pipe(join)
               .query(f'level_1 in {[l1 for l1,l2 in groups_to_compare]} and ' +
-                     f'level_2 in {[l2 for l1,l2 in groups_to_compare]}')
+                     f'level_2 in {[l2 for l1,l2 in groups_to_compare]}' +
+                     'and level_1 != level_2')
               .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] -
                       df[POINT_ESTIMATE + SFX1]})
               .assign(**{STD_ERR: self._std_err})
@@ -414,8 +441,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         return (
             self._compute_differences(level_columns,
-                                      level_1,
-                                      [level_2],
+                                      [(level_1, level_2)],
                                       True,
                                       groupby,
                                       level_as_reference=True,

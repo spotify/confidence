@@ -58,9 +58,28 @@ class ConfidenceGrapherABC(ABC):
                         absolute: bool,
                         groupby: Union[str, Iterable],
                         nims: NIM_TYPE,
-                        use_adjusted_intervals: bool,
-                        final_expected_sample_size_column: str
+                        use_adjusted_intervals: bool
                         ) -> ChartGrid:
+        """Plot representing the difference between group 1 and 2 with
+        confidence intervals.
+
+        Args:
+            difference_df (DataFrame): A dataframe produced by a
+            ConfidenceComputer's difference method
+
+        Returns:
+            Chartify Chart object.
+            :param groupby:
+        """
+
+    @abstractmethod
+    def plot_differences(self,
+                         difference_df: DataFrame,
+                         absolute: bool,
+                         groupby: Union[str, Iterable],
+                         nims: NIM_TYPE,
+                         use_adjusted_intervals: bool
+                         ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2 with
         confidence intervals.
 
@@ -80,8 +99,7 @@ class ConfidenceGrapherABC(ABC):
                                  groupby: Union[str, Iterable],
                                  level_as_reference: bool,
                                  nims: NIM_TYPE,
-                                 use_adjusted_intervals: bool,
-                                 final_expected_sample_size_column: str
+                                 use_adjusted_intervals: bool
                                  ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
