@@ -2,6 +2,11 @@
 History
 =======
 
+2.3.7 (2021-10-22)
+------------------
+
+* Added differences method that takes a list of tuples of pairs of levels to compare, so that one can for example do all-vs-all comparisons.
+
 2.3.6 (2021-10-20)
 ------------------
 
