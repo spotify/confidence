@@ -98,12 +98,12 @@ class GenericTest(ConfidenceABC):
             verbose)
 
     def differences(self,
-                    levels: List[Tuple],
-                    absolute: bool,
-                    groupby: Union[str, Iterable],
-                    non_inferiority_margins: NIM_TYPE,
-                    final_expected_sample_size_column: str,
-                    verbose: bool
+                    levels: Union[Tuple, List[Tuple]],
+                    absolute: bool = True,
+                    groupby: Union[str, Iterable] = None,
+                    non_inferiority_margins: NIM_TYPE = None,
+                    final_expected_sample_size_column: str = None,
+                    verbose: bool = False
                     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(

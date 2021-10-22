@@ -218,6 +218,57 @@ class TestCategorical(object):
             diff['adjusted ci_upper'],
             np.array([0.274839, -0.00906399, 0.21813554, -0.12391703])))
 
+    def test_differences(self):
+        with pytest.raises(ValueError):
+            self.test.differences(('bad_value', 'bad_value'))
+
+        diff = self.test.differences([(('gb', 'control'), ('us', 'control')),
+                                      (('gb', 'test'), ('us', 'control')),
+                                      (('gb', 'test2'), ('us', 'control')),
+                                      (('us', 'test'), ('us', 'control')),
+                                      (('us', 'test2'), ('us', 'control'))])
+        assert (np.allclose(
+            diff['adjusted p-value'],
+            np.array([
+                1.00000000e+00, 8.38342202e-01, 1.67371350e-04, 3.74330946e-01,
+                1.98857657e-07
+            ])))
+        assert (np.allclose(
+            diff['p-value'],
+            np.array([
+                9.553332e-01, 1.67668440e-01, 3.34742700e-05, 7.48661891e-02,
+                3.97715314e-08
+            ])))
+        assert (np.allclose(
+            diff['adjusted ci_lower'],
+            np.array([
+                -0.173024, -0.27489017, -0.42153065, -0.22209041, -0.39307973
+            ])))
+        assert (np.allclose(
+            diff['adjusted ci_upper'],
+            np.array(
+                [0.180717, 0.08258247, -0.10411038, 0.03870244,
+                 -0.13744367])))
+
+        diff = self.test.differences([('control', 'test'), ('test2', 'test')],
+                                     groupby='country')
+        assert (np.allclose(
+            diff['adjusted p-value'],
+            np.array([
+                6.208740e-01, 3.36319783e-02, 2.99464756e-01, 1.30744685e-17
+            ])))
+        assert (np.allclose(
+            diff['p-value'],
+            np.array([
+                1.552185e-01, 8.40799458e-03, 7.48661891e-02, 3.26861713e-18
+            ])))
+        assert (np.allclose(
+            diff['adjusted ci_lower'],
+            np.array([-0.074839, -0.32426934, -0.03474758, -0.2232184])))
+        assert (np.allclose(
+            diff['adjusted ci_upper'],
+            np.array([0.274839, -0.00906399, 0.21813554, -0.12391703])))
+
     def test_multiple_difference_level_as_reference(self):
         diff = self.test.multiple_difference('test',
                                              groupby='country',

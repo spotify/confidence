@@ -172,7 +172,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
             level_columns,
-            levels,
+            [levels] if type(levels) == tuple else levels,
             absolute,
             groupby,
             level_as_reference=True,
@@ -259,7 +259,8 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             df.pipe(add_nim_columns, nims=nims)
               .pipe(join)
               .query(f'level_1 in {[l1 for l1,l2 in groups_to_compare]} and ' +
-                     f'level_2 in {[l2 for l1,l2 in groups_to_compare]}')
+                     f'level_2 in {[l2 for l1,l2 in groups_to_compare]}' +
+                     'and level_1 != level_2')
               .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] -
                       df[POINT_ESTIMATE + SFX1]})
               .assign(**{STD_ERR: self._std_err})
