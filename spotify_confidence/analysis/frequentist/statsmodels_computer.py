@@ -206,7 +206,7 @@ class StatsmodelsComputer(ConfidenceComputerABC):
             [self._sufficient_statistics.groupby(level_columns).get_group(group) for group in unique_levels])
         levels = [(level2str(l[0]), level2str(l[1]))
                   if level_as_reference
-                  else (level2str(l[0]), level2str(l[1]))
+                  else (level2str(l[1]), level2str(l[0]))
                   for l in levels]
         return (
             self._sufficient_statistics

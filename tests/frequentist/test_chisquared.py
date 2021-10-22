@@ -200,7 +200,7 @@ class TestCategorical(object):
                 [0.180717, 0.08258247, -0.10411038, 0.03870244,
                  -0.13744367])))
 
-        diff = self.test.multiple_difference('test', groupby='country')
+        diff = self.test.multiple_difference('test', groupby='country', level_as_reference=False)
         assert (np.allclose(
             diff['adjusted p-value'],
             np.array([

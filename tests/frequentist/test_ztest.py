@@ -996,7 +996,7 @@ class TestCategoricalBinomialData(object):
         with pytest.raises(ValueError):
             self.test.multiple_difference(('bad_value', 'bad_value'), level_as_reference=False)
 
-        diff = self.test.multiple_difference(('us', 'control'))
+        diff = self.test.multiple_difference(('us', 'control'), level_as_reference=False)
         assert (np.allclose(
             diff['adjusted p-value'],
             np.array([1e+00, 8.291843e-01, 9.971992e-05,
