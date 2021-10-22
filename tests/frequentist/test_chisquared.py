@@ -277,13 +277,15 @@ class TestCategorical(object):
             diff['adjusted ci_lower'],
             np.array([-0.274839, 0.00906399, -0.21813554, 0.12391703])))
 
-    def test_multiple_difference_plot_level_as_reference(self):
-        ch = self.test.multiple_difference_plot(('us', 'control'),
-                                                level_as_reference=True)
+    def test_differences_plot(self):
+        ch = self.test.differences_plot([(('gb', 'control'), ('us', 'control')),
+                                         (('gb', 'test'), ('us', 'control')),
+                                         (('gb', 'test2'), ('us', 'control')),
+                                         (('us', 'test'), ('us', 'control')),
+                                         (('us', 'test2'), ('us', 'control'))])
         assert (len(ch.charts) == 1)
 
-        ch = self.test.multiple_difference_plot('test', groupby='country',
-                                                level_as_reference=True)
+        ch = self.test.differences_plot([('control', 'test'), ('test2', 'test')], groupby='country')
         assert (len(ch.charts) == 1)
 
     def test_multiple_difference_plot(self):

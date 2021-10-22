@@ -113,7 +113,7 @@ class ConfidenceABC(ABC):
                     verbose: bool
                     ) -> DataFrame:
         """Args:
-            levels: (list(tuple(str,str))): list of levels to compare
+            levels: (list(tuple)): list of levels to compare
             groupby (str): Name of column.
                 If specified, will plot a separate chart for each level of the
                 grouping.
@@ -229,6 +229,56 @@ class ConfidenceABC(ABC):
         Args:
             level_1 (str, tuple of str): Name of first level.
             level_2 (str, tuple of str): Name of second level.
+            absolute (bool): If True then return the absolute
+                difference (level2 - level1)
+                otherwise return the relative difference (level2 / level1 - 1)
+            groupby (str): Name of column, or list of columns.
+                If specified, will return an interval for each level
+                of the grouped dimension, or a confidence band if the
+                grouped dimension is ordinal
+            non_inferiority_margins (Union[Tuple[float, str],
+                    Dict[str, Tuple[float, str]]]):
+                Pass tuple(nim, preferred direction) to use the same NIM for all
+                comparisons, e.g. (0.01, 'increase'), which means that we want
+                level_2 to be grater than the average of level_1 times (1-0.01),
+                or (0.05, 'decrease') which means that we want
+                level_2 to be smaller than the average
+                of level_1 times (1+0.01).
+                Pass dictionary {{group:tuple(nim, preferred direction}} to use
+                different non-inferiority margins for different values of
+                groupby column.
+                To performe a one-sided test without nim, use
+                (None, preffered direction).
+            use_adjusted_intervals (bool):
+                If true, use e.g. bon-ferroni corrected
+                (or other method provided) confidence intervals
+            final_expected_sample_size_column (str): Column in source data frame containing expected number of
+                    observations at end of experiment.
+                Use in combination with ordinal groupby to perform a
+                sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
+
+        Returns:
+            Chartify Chart object and a DataFrame with numerical results.
+        """
+
+    @abstractmethod
+    def differences_plot(self,
+                         levels: List[Tuple],
+                         absolute: bool,
+                         groupby: Union[str, Iterable],
+                         non_inferiority_margins: NIM_TYPE,
+                         use_adjusted_intervals: bool,
+                         final_expected_sample_size_column: str
+                         ) -> ChartGrid:
+        """Plot representing the difference between group 1 and 2.
+        - Difference in means or proportions, depending
+            on the response variable type.
+
+        - Plot interval plot with confidence interval of the
+            difference between groups
+
+        Args:
+            levels: (list(tuple)): list of levels to compare
             absolute (bool): If True then return the absolute
                 difference (level2 - level1)
                 otherwise return the relative difference (level2 / level1 - 1)
