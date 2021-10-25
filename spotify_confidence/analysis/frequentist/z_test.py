@@ -16,7 +16,7 @@ from typing import (Union, Iterable)
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.test_classes.t_test_computer import TTestComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
@@ -25,7 +25,7 @@ from spotify_confidence.analysis.confidence_utils import listify
 from spotify_confidence.analysis.constants import BONFERRONI
 
 
-class StudentsTTest(GenericTest):
+class ZTest(GenericTest):
 
     def __init__(self,
                  data_frame: DataFrame,
@@ -39,7 +39,7 @@ class StudentsTTest(GenericTest):
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None):
 
-        computer = TTestComputer(
+        computer = ZTestComputer(
             data_frame=data_frame,
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,
@@ -49,7 +49,7 @@ class StudentsTTest(GenericTest):
             interval_size=interval_size,
             correction_method=correction_method.lower())
 
-        super(StudentsTTest, self).__init__(
+        super(ZTest, self).__init__(
             data_frame,
             numerator_column,
             numerator_sum_squares_column,

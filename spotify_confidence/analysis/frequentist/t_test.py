@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable, Tuple)
+from typing import (Union, Iterable)
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.test_classes.chi_squared_computer import ChiSquaredComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 from spotify_confidence.analysis.confidence_utils import listify
-from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE
+from spotify_confidence.analysis.constants import BONFERRONI
 
 
-class ChiSquared(GenericTest):
+class StudentsTTest(GenericTest):
 
     def __init__(self,
                  data_frame: DataFrame,
                  numerator_column: str,
+                 numerator_sum_squares_column: Union[str, None],
                  denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None] = None,
@@ -38,20 +39,20 @@ class ChiSquared(GenericTest):
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None):
 
-        computer = ChiSquaredComputer(
+        computer = TTestComputer(
             data_frame=data_frame,
             numerator_column=numerator_column,
-            numerator_sum_squares_column=numerator_column,
+            numerator_sum_squares_column=numerator_sum_squares_column,
             denominator_column=denominator_column,
             categorical_group_columns=listify(categorical_group_columns),
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
             correction_method=correction_method.lower())
 
-        super(ChiSquared, self).__init__(
+        super(StudentsTTest, self).__init__(
             data_frame,
             numerator_column,
-            numerator_column,
+            numerator_sum_squares_column,
             denominator_column,
             categorical_group_columns,
             ordinal_group_column,
@@ -59,40 +60,3 @@ class ChiSquared(GenericTest):
             correction_method,
             computer,
             confidence_grapher)
-
-    def difference(self,
-                   level_1: Union[str, Tuple],
-                   level_2: Union[str, Tuple],
-                   absolute: bool = True,
-                   groupby: Union[str, Iterable] = None,
-                   non_inferiority_margins: NIM_TYPE = None,
-                   final_expected_sample_size_column: str = None
-                   ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError('Non-inferiority margins not supported in '
-                             'ChiSquared. Use StudentsTTest or ZTest instead.')
-        return super(ChiSquared, self).difference(
-            level_1,
-            level_2,
-            absolute,
-            groupby,
-            None,
-            final_expected_sample_size_column)
-
-    def multiple_difference(self, level: Union[str, Tuple],
-                            absolute: bool = True,
-                            groupby: Union[str, Iterable] = None,
-                            level_as_reference: bool = None,
-                            non_inferiority_margins: NIM_TYPE = None,
-                            final_expected_sample_size_column: str = None
-                            ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError('Non-inferiority margins not supported in '
-                             'ChiSquared. Use StudentsTTest or ZTest instead.')
-        return super(ChiSquared, self).multiple_difference(
-            level,
-            absolute,
-            groupby,
-            level_as_reference,
-            None,
-            final_expected_sample_size_column)
