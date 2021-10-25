@@ -4,8 +4,7 @@ import pytest
 import spotify_confidence
 import pandas as pd
 import numpy as np
-from spotify_confidence.analysis.frequentist.statsmodels_computer import (
-    TTestComputer)
+from spotify_confidence.analysis.frequentist.test_classes.t_test_computer import TTestComputer
 from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE, VARIANCE,
     SFX1, SFX2,
