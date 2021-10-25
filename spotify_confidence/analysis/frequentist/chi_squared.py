@@ -16,13 +16,13 @@ from typing import (Union, Iterable, Tuple)
 
 from pandas import DataFrame
 
-from .statsmodels_computer import ChiSquaredComputer
-from ..abstract_base_classes.confidence_computer_abc import \
+from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
+from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
-from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from .generic_test import GenericTest
-from ..confidence_utils import listify
-from ..constants import BONFERRONI, NIM_TYPE
+from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
+from spotify_confidence.analysis.frequentist.generic_test import GenericTest
+from spotify_confidence.analysis.confidence_utils import listify
+from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE
 
 
 class ChiSquared(GenericTest):
