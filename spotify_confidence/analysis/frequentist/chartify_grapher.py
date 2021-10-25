@@ -218,7 +218,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             .assign(level_1=difference_df.level_1.map(level2str))
             .assign(level_2=difference_df.level_2.map(level2str))
             .set_index(groupby_columns)
-            .assign(categorical_x=lambda df: df.index)
+            .assign(categorical_x=lambda df: df.index.to_numpy())
             .reset_index()
         )
 
@@ -268,7 +268,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
         self.add_tools(chart=ch,
                        df=(difference_df.set_index(groupby_columns)
-                           .assign(categorical_x=lambda df: df.index)
+                           .assign(categorical_x=lambda df: df.index.to_numpy())
                            .reset_index()),
                        center_name=DIFFERENCE,
                        absolute=absolute,
@@ -389,7 +389,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         df = (
             summary_df
             .set_index(remaining_groups)
-            .assign(categorical_x=lambda df: df.index)
+            .assign(categorical_x=lambda df: df.index.to_numpy())
             .reset_index()
         )
 
