@@ -25,10 +25,10 @@ from spotify_confidence.analysis.constants import (
 
 
 def get_all_group_columns(categorical_columns: Iterable,
-                          ordinal_column: str) -> Iterable:
-    all_columns = categorical_columns + [ordinal_column]
+                          additional_column: str) -> Iterable:
+    all_columns = categorical_columns + [] if additional_column is None else [additional_column]
     all_columns = [col for col in all_columns if col is not None]
-    return all_columns
+    return list(set(all_columns))
 
 
 def validate_categorical_columns(

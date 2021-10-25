@@ -23,7 +23,7 @@ class TestOrdinal_whatever(object):
                                  ],
             'users': [1010, 22, 150,
                       ],
-            'preferred_direction': [INCREASE_PREFFERED, INCREASE_PREFFERED, INCREASE_PREFFERED]
+            #'metric_name': ["metricA","metricA","metricA","metricB","metricB","metricB"],
         })
 
         self.test = spotify_confidence.ZTest(
@@ -31,16 +31,96 @@ class TestOrdinal_whatever(object):
             numerator_column='nr_of_items',
             numerator_sum_squares_column='nr_of_items_sumsq',
             denominator_column='users',
-            categorical_group_columns='variation_name',
+            categorical_group_columns=['variation_name'],
             ordinal_group_column=None,
-            power = 0.8)
+            power = 0.8,
+            interval_size=0.95)
 
     def test_powered_effect(self):
         powered_effect = self.test.difference(
             level_1='control',
             level_2='test'
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=3)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
+
+
+class TestOrdinal_whatever2(object):
+    def setup(self):
+
+        self.data = pd.DataFrame({
+            'variation_name': ['test', 'control', 'test2','test', 'control', 'test2'
+                               ],
+            'nr_of_items': [500, 8, 100, 500, 8, 100,
+                            ],
+            'nr_of_items_sumsq': [2500, 12, 150,2500, 12, 150,
+                                 ],
+            'users': [1010, 22, 150, 1010, 22, 150,
+                      ],
+            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB']
+        })
+
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='nr_of_items',
+            numerator_sum_squares_column='nr_of_items_sumsq',
+            denominator_column='users',
+            categorical_group_columns=['variation_name', 'metric_name'],
+            ordinal_group_column=None,
+            power = 0.8,
+            interval_size=0.95)
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby='metric_name',
+            level_as_reference = True
+           )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
+
+class TestOrdinal_whatever3(object):
+    def setup(self):
+
+        self.data = pd.DataFrame({
+            'variation_name': ['test', 'control', 'test2','test', 'control', 'test2'
+                               ],
+            'nr_of_items': [500, 8, 100, 500, 8, 100,
+                            ],
+            'nr_of_items_sumsq': [2500, 12, 150,2500, 12, 150,
+                                 ],
+            'users': [1010, 22, 150, 1010, 22, 150,
+                      ],
+            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB'],
+            'non_inferiority_margin': [
+                None, None, None,
+                0.01, 0.01, 0.01],
+            'preferred_direction': [None, None, None, "increase", "increase", "increase"]
+        })
+
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='nr_of_items',
+            numerator_sum_squares_column='nr_of_items_sumsq',
+            denominator_column='users',
+            categorical_group_columns=['variation_name', 'metric_name'],
+            ordinal_group_column=None,
+            metric_column='metric_name',
+            power = 0.8,
+            interval_size=0.95,
+            correction_method='spot-1-bonferroni')
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby='metric_name',
+            level_as_reference = True,
+            non_inferiority_margins=True
+           )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
+
+
+
 
 
 class TestBinary(object):

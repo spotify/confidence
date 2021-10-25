@@ -37,6 +37,7 @@ class GenericTest(ConfidenceABC):
                  denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None] = None,
+                 metric_column = None,
                  interval_size: float = 0.95,
                  power: float = 0.8,
                  correction_method: str = BONFERRONI,
@@ -48,8 +49,9 @@ class GenericTest(ConfidenceABC):
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         self._denominator = denominator_column
-        self._categorical_group_columns = listify(categorical_group_columns)
+        self._categorical_group_columns = listify(get_all_group_columns(categorical_group_columns, metric_column))
         self._ordinal_group_column = ordinal_group_column
+        self._metric_column = metric_column
 
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns,

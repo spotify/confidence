@@ -26,6 +26,7 @@ Z_CRIT = "z_crit"
 ALPHA = 'alpha'
 ADJUSTED_ALPHA = 'adjusted_alpha'
 POWER = "power"
+POWERED_EFFECT = "powered_effect"
 ADJUSTED_POWER = "adjusted_power"
 IS_SIGNIFICANT = "is_significant"
 

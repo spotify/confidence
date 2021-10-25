@@ -215,8 +215,6 @@ class ZTestComputer(GenericComputer):
 
         return (
             df.assign(powered_effect=effect)
-                .loc[:, ['level_1', 'level_2', 'powered_effect']]
-                .reset_index()
         )
 
     def _currently_powered_effect(self,

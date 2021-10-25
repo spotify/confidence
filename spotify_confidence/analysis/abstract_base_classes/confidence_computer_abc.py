@@ -30,6 +30,7 @@ class ConfidenceComputerABC(ABC):
                  denominator_column: str,
                  categorical_group_columns: str,
                  ordinal_group_column: str,
+                 metric_column: str,
                  interval_size: float,
                  power: float,
                  correction_method: str):
