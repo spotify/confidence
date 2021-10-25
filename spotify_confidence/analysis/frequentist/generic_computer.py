@@ -24,7 +24,7 @@ from ..abstract_base_classes.confidence_computer_abc import \
 from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
-                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
+                         ADJUSTED_ALPHA, POWER, ADJUSTED_POWER, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, PREFERENCE_TEST, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
                          HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
@@ -48,7 +48,7 @@ class GenericComputer(ConfidenceComputerABC):
                  numerator_sum_squares_column: str, denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: str, interval_size: float,
-                 correction_method: str):
+                 power: float, correction_method: str):
 
         self._df = data_frame
         self._numerator = numerator_column
@@ -70,6 +70,7 @@ class GenericComputer(ConfidenceComputerABC):
         self._categorical_group_columns = categorical_group_columns
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
+        self._power = power
 
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f'Use one of the correction methods ' +
@@ -264,7 +265,9 @@ class GenericComputer(ConfidenceComputerABC):
               .pipe(self._add_p_value_and_ci,
                     final_expected_sample_size_column=final_expected_sample_size_column,
                     filtered_sufficient_statistics=filtered_sufficient_statistics)
+
               .pipe(self._adjust_if_absolute, absolute=absolute)
+              .pipe(self._powered_effect)
               .assign(**{PREFERENCE: lambda df:
                          df[PREFERENCE].map(PREFERENCE_DICT)})
         )
@@ -306,9 +309,12 @@ class GenericComputer(ConfidenceComputerABC):
                 df.assign(**{ALPHA: df.apply(lambda row: 2*alpha_0 if self._correction_method == SPOT_1
                                              and row[PREFERENCE] != TWO_SIDED
                                              else alpha_0, axis=1)})
+                  .assign(**{POWER: df.apply(lambda x: self._power)})
                   .assign(**{PREFERENCE_TEST: df.apply(lambda row: TWO_SIDED if self._correction_method == SPOT_1
                                                        else row[PREFERENCE], axis=1)})
             )
+
+
 
         def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
             if(final_expected_sample_size_column is not None):
@@ -483,3 +489,9 @@ class GenericComputer(ConfidenceComputerABC):
             w: float = 1.0,
     ) -> Tuple[Union[Series, float], Union[Series, float]]:
         raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
+
+    def _powered_effect(self,
+                        df: DataFrame,
+                        ) -> DataFrame:
+        pass
+

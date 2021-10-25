@@ -50,6 +50,7 @@ class ConfidenceABC(ABC):
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None],
                  interval_size: float,
+                 power: float,
                  correction_method: str):
         pass
 

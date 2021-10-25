@@ -35,6 +35,7 @@ class ZTest(GenericTest):
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None] = None,
                  interval_size: float = 0.95,
+                 power: float = 0.8,
                  correction_method: str = BONFERRONI,
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None):
@@ -47,6 +48,7 @@ class ZTest(GenericTest):
             categorical_group_columns=listify(categorical_group_columns),
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
+            power=power,
             correction_method=correction_method.lower())
 
         super(ZTest, self).__init__(
@@ -57,6 +59,7 @@ class ZTest(GenericTest):
             categorical_group_columns,
             ordinal_group_column,
             interval_size,
+            power,
             correction_method,
             computer,
             confidence_grapher)

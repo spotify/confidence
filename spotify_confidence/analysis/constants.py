@@ -25,6 +25,8 @@ STD_ERR = 'std_err'
 Z_CRIT = "z_crit"
 ALPHA = 'alpha'
 ADJUSTED_ALPHA = 'adjusted_alpha'
+POWER = "power"
+ADJUSTED_POWER = "adjusted_power"
 IS_SIGNIFICANT = "is_significant"
 
 BONFERRONI = "bonferroni"

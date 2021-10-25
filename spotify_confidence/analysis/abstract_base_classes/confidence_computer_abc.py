@@ -31,6 +31,7 @@ class ConfidenceComputerABC(ABC):
                  categorical_group_columns: str,
                  ordinal_group_column: str,
                  interval_size: float,
+                 power: float,
                  correction_method: str):
         pass
 
@@ -77,3 +78,4 @@ class ConfidenceComputerABC(ABC):
                        alpha: float,
                        groupby: Union[str, Iterable]) -> DataFrame:
         pass
+
