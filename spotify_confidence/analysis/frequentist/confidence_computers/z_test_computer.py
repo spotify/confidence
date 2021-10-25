@@ -9,27 +9,38 @@ from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import POINT_ESTIMATE, CI_LOWER, CI_UPPER, VARIANCE, TWO_SIDED, SFX2, SFX1, \
     STD_ERR, PREFERENCE_TEST, NULL_HYPOTHESIS, DIFFERENCE, ALPHA, IS_SIGNIFICANT, HOLM, SPOT_1_HOLM, HOMMEL, \
     SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG
-from spotify_confidence.analysis.frequentist.generic_computer import GenericComputer, sequential_bounds
+from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
 
-class ZTestComputer(GenericComputer):
-    def _variance(self, df: DataFrame) -> Series:
+def sequential_bounds(t: np.array, alpha: float, sides: int):
+    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
+
+
+class ZTestComputer(object):
+    def __init__(self, numerator, numerator_sumsq, denominator, ordinal_group_column, interval_size):
+        self._numerator = numerator
+        self._numerator_sumsq = numerator_sumsq
+        self._denominator = denominator
+        self._ordinal_group_column = ordinal_group_column
+        self._interval_size = interval_size
+
+    def _variance(self, row: DataFrame) -> Series:
         variance = (
-                df[self._numerator_sumsq] / df[self._denominator] -
-                df[POINT_ESTIMATE] ** 2)
-        if (variance < 0).any():
+                row[self._numerator_sumsq] / row[self._denominator] -
+                row[POINT_ESTIMATE] ** 2)
+        if variance < 0:
             raise ValueError('Computed variance is negative. '
                              'Please check your inputs.')
         return variance
 
-    def _add_point_estimate_ci(self, df: DataFrame):
-        df[CI_LOWER], df[CI_UPPER] = _zconfint_generic(
-            mean=df[POINT_ESTIMATE],
-            std_mean=np.sqrt(df[VARIANCE] / df[self._denominator]),
+    def _add_point_estimate_ci(self, row: DataFrame):
+        row[CI_LOWER], row[CI_UPPER] = _zconfint_generic(
+            mean=row[POINT_ESTIMATE],
+            std_mean=np.sqrt(row[VARIANCE] / row[self._denominator]),
             alpha=1-self._interval_size,
             alternative=TWO_SIDED
         )
-        return df
+        return row
 
     def _p_value(self, row) -> float:
         _, p_value = _zstat_generic(value1=row[POINT_ESTIMATE + SFX2],
@@ -55,18 +66,13 @@ class ZTestComputer(GenericComputer):
 
         var_pooled = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2)
 
-        power = power_calculation(mde, var_pooled, alpha, n1, n2)
-
-        return (
-            df.assign(achieved_power=power)
-              .loc[:, ['level_1', 'level_2', 'achieved_power']]
-              .reset_index()
-        )
+        return power_calculation(mde, var_pooled, alpha, n1, n2)
 
     def _compute_sequential_adjusted_alpha(self,
                                            df: DataFrame,
                                            final_expected_sample_size_column: str,
-                                           filtered_sufficient_statistics: DataFrame):
+                                           filtered_sufficient_statistics: DataFrame,
+                                           num_comparisons: int):
         total_sample_size = (
             filtered_sufficient_statistics.groupby(df.index.names)
                                           .agg({self._denominator: sum, final_expected_sample_size_column: np.mean})
@@ -94,9 +100,6 @@ class ZTestComputer(GenericComputer):
                     sample_size_proportions=lambda df: df['total_' + self._denominator]/df['final_expected_sample_size']
             )
         )
-
-        groupby = ['level_1', 'level_2'] + groups_except_ordinal
-        num_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
 
         def adjusted_alphas_for_group(grp) -> Series:
             return (

@@ -25,7 +25,7 @@ from spotify_confidence.analysis.confidence_utils import listify
 from spotify_confidence.analysis.constants import BONFERRONI
 
 
-class StudentsTTest(GenericTest):
+class Experiment(GenericTest):
 
     def __init__(self,
                  data_frame: DataFrame,
@@ -37,10 +37,11 @@ class StudentsTTest(GenericTest):
                  interval_size: float = 0.95,
                  correction_method: str = BONFERRONI,
                  confidence_computer: ConfidenceComputerABC = None,
-                 confidence_grapher: ConfidenceGrapherABC = None):
+                 confidence_grapher: ConfidenceGrapherABC = None,
+                 method_column: str = None):
 
         computer = GenericComputer(
-            data_frame=data_frame.assign(method='t-test'),
+            data_frame=data_frame,
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,
             denominator_column=denominator_column,
@@ -48,9 +49,10 @@ class StudentsTTest(GenericTest):
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
             correction_method=correction_method.lower(),
-            method_column='method')
+            method_column=method_column
+        )
 
-        super(StudentsTTest, self).__init__(
+        super(Experiment, self).__init__(
             data_frame,
             numerator_column,
             numerator_sum_squares_column,

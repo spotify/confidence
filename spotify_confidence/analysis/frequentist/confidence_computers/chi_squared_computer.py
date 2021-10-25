@@ -5,24 +5,30 @@ from statsmodels.stats.proportion import proportion_confint, proportions_chisqua
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import POINT_ESTIMATE, CI_LOWER, CI_UPPER, SFX1, SFX2
-from spotify_confidence.analysis.frequentist.generic_computer import GenericComputer
 
 
-class ChiSquaredComputer(GenericComputer):
-    def _variance(self, df: DataFrame) -> Series:
-        variance = df[POINT_ESTIMATE] * (1 - df[POINT_ESTIMATE])
-        if (variance < 0).any():
+class ChiSquaredComputer(object):
+    def __init__(self, numerator, numerator_sumsq, denominator, ordinal_group_column, interval_size):
+        self._numerator = numerator
+        self._numerator_sumsq = numerator_sumsq
+        self._denominator = denominator
+        self._ordinal_group_column = ordinal_group_column
+        self._interval_size = interval_size
+
+    def _variance(self, row: DataFrame) -> Series:
+        variance = row[POINT_ESTIMATE] * (1 - row[POINT_ESTIMATE])
+        if variance < 0:
             raise ValueError('Computed variance is negative. '
                              'Please check your inputs.')
         return variance
 
-    def _add_point_estimate_ci(self, df: DataFrame):
-        df[CI_LOWER], df[CI_UPPER] = proportion_confint(
-            count=df[self._numerator],
-            nobs=df[self._denominator],
+    def _add_point_estimate_ci(self, row: DataFrame):
+        row[CI_LOWER], row[CI_UPPER] = proportion_confint(
+            count=row[self._numerator],
+            nobs=row[self._denominator],
             alpha=1-self._interval_size,
         )
-        return df
+        return row
 
     def _p_value(self, row):
         _, p_value, _ = (
@@ -54,10 +60,4 @@ class ChiSquaredComputer(GenericComputer):
         pooled_prop = (s1 + s2) / (n1 + n2)
         var_pooled = pooled_prop * (1 - pooled_prop)
 
-        power = power_calculation(mde, var_pooled, alpha, n1, n2)
-
-        return (
-            df.assign(achieved_power=power)
-              .loc[:, ['level_1', 'level_2', 'achieved_power']]
-              .reset_index()
-        )
+        return power_calculation(mde, var_pooled, alpha, n1, n2)

@@ -152,7 +152,7 @@ def validate_and_rename_nims(df: DataFrame) -> DataFrame:
     raise ValueError("Non-inferiority margins do not agree across levels")
 
 
-def validate_and_rename_final_expected_sample_sizes(df: DataFrame, column: str) -> DataFrame:
+def validate_and_rename_column(df: DataFrame, column: str) -> DataFrame:
     if column is None:
         return df
 
@@ -162,7 +162,7 @@ def validate_and_rename_final_expected_sample_sizes(df: DataFrame, column: str) 
               .drop(columns=[column + SFX2])
         )
 
-    raise ValueError("Final expected sample sizes do not agree across levels")
+    raise ValueError(f"Values of {column} do not agree across levels")
 
 
 def select_levels(df: DataFrame,

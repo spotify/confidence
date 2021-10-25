@@ -16,7 +16,7 @@ from typing import (Union, Iterable)
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
@@ -39,15 +39,16 @@ class ZTest(GenericTest):
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None):
 
-        computer = ZTestComputer(
-            data_frame=data_frame,
+        computer = GenericComputer(
+            data_frame=data_frame.assign(method='z-test'),
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,
             denominator_column=denominator_column,
             categorical_group_columns=listify(categorical_group_columns),
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
-            correction_method=correction_method.lower())
+            correction_method=correction_method.lower(),
+            method_column='method')
 
         super(ZTest, self).__init__(
             data_frame,

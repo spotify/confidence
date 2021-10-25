@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import chisquare
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE,
                                                    SFX1, SFX2)
 from spotify_confidence.analysis.confidence_utils import power_calculation
@@ -57,8 +58,9 @@ class TestCategorical(object):
         x = np.random.binomial(n, p, sample_size) / n
         se = x.var()
 
-        se_to_verify = ChiSquaredComputer._variance(
-            df=pd.DataFrame({POINT_ESTIMATE: [p]}), self=None) / n
+        computer = ChiSquaredComputer(numerator=None, numerator_sumsq=None, denominator=None,
+                                      ordinal_group_column=None, interval_size=None)
+        se_to_verify = pd.DataFrame({POINT_ESTIMATE: [p]}).apply(computer._variance, axis=1) / n
 
         assert (np.allclose(se_to_verify, se, atol=1e-6))
 
@@ -76,15 +78,15 @@ class TestCategorical(object):
         diff = x2 - x1
         std_diff = diff.std()
 
-        comp = ChiSquaredComputer(data_frame=pd.DataFrame({'success': [1],
-                                                           'n': [2]}),
-                                  numerator_column='success',
-                                  numerator_sum_squares_column=None,
-                                  denominator_column='n',
-                                  categorical_group_columns=[],
-                                  ordinal_group_column=None,
-                                  interval_size=None,
-                                  correction_method='Bonferroni')
+        comp = GenericComputer(data_frame=pd.DataFrame({'success': [1], 'n': [2]}),
+                               numerator_column='success',
+                               numerator_sum_squares_column=None,
+                               denominator_column='n',
+                               categorical_group_columns=[],
+                               ordinal_group_column=None,
+                               interval_size=None,
+                               correction_method='Bonferroni',
+                               method_column=None)
         diff_se = comp._std_err(pd.DataFrame({VARIANCE + SFX1: [p1*(1-p1)],
                                               VARIANCE + SFX2: [p2*(1-p2)],
                                               'n' + SFX1: [n1],
