@@ -204,7 +204,7 @@ class ZTestComputer(GenericComputer):
             )[0]
         else:
             treatment_var = self._get_hypothetical_treatment_var(
-                binary_metric=binary, non_inferiority=not np.isnan(df[NIM]),
+                binary_metric=binary, non_inferiority=df[NIM] is not None,
                 control_avg=df[POINT_ESTIMATE + SFX1], control_var=df[VARIANCE + SFX1],
                 hypothetical_effect=0
             )
