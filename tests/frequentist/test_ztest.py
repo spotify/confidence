@@ -23,7 +23,7 @@ class TestPoweredEffectContinuousSingleMetric(object):
                                  ],
             'users': [1010, 22, 150,
                       ],
-            #'metric_name': ["metricA","metricA","metricA","metricB","metricB","metricB"],
+            'metric_name': ["metricA","metricA","metricA"],
         })
 
         self.test = spotify_confidence.ZTest(
@@ -33,6 +33,8 @@ class TestPoweredEffectContinuousSingleMetric(object):
             denominator_column='users',
             categorical_group_columns=['variation_name'],
             ordinal_group_column=None,
+            metric_column='metric_name',
+            treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95)
 
@@ -74,6 +76,8 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
             denominator_column='users',
             categorical_group_columns=['variation_name', 'metric_name'],
             ordinal_group_column=None,
+            metric_column='metric_name',
+            treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95)
 
@@ -83,10 +87,10 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
             groupby='metric_name',
             level_as_reference = True
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.42710, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][1], 0.4524, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][2], 0.42710, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][3], 0.4524, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.4626, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.4900, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.4626, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.4900, atol=0.001)
 
 class TestPoweredEffectContinuousMultipleMetricTypes(object):
     def setup(self):
@@ -116,6 +120,7 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
             categorical_group_columns=['variation_name', 'metric_name'],
             ordinal_group_column=None,
             metric_column='metric_name',
+            treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95,
             correction_method='spot-1-bonferroni')
@@ -127,10 +132,10 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
             level_as_reference = True,
             non_inferiority_margins=True
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][1], 0.4757, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][2], 0.4054, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][3], 0.4294, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.4880, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.4490, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.4757, atol=0.001)
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments(object):
@@ -167,6 +172,7 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
             categorical_group_columns=['variation_name', 'metric_name', 'segment'],
             ordinal_group_column=None,
             metric_column='metric_name',
+            treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95,
             correction_method='spot-1-bonferroni')
@@ -178,17 +184,17 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
             level_as_reference = True,
             non_inferiority_margins=True
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][4], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][5], 0.4757, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][6], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][7], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.5235, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.5546, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.5235, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.5546, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.4880, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.4880, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.5170, atol=0.001)
 
 
-class TestPoweredEffectContinuousMultipleMetricsSegments(object):
+class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
     def setup(self):
 
         self.data = pd.DataFrame({
@@ -222,6 +228,7 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
             categorical_group_columns=['variation_name', 'metric_name', 'segment'],
             ordinal_group_column=None,
             metric_column='metric_name',
+            treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95,
             correction_method='spot-1-bonferroni')
@@ -237,10 +244,10 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
         assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][4], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][5], 0.4757, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][6], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][7], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.5170, atol=0.001)
 
 
 class TestPoweredEffectBinary(object):
@@ -248,16 +255,14 @@ class TestPoweredEffectBinary(object):
         np.random.seed(123)
 
         self.data = pd.DataFrame({'variation_name':
-                                 ['test', 'test', 'control',
-                                  'control', 'test2', 'test2',
-                                  'test3', 'test3',
-                                  'test', 'test', 'control',
-                                  'control', 'test2', 'test2',
-                                  'test3', 'test3'],
-                                  'success': [50, 60, 40, 140, 10, 20, 20, 20,
-                                              50, 60, 40, 140, 10, 20, 20, 20],
-                                  'total': [100, 100, 100, 200, 50, 50, 60, 60,
-                                            100, 100, 100, 200, 50, 50, 60, 60],
+                                 ['test', 'test', 'control','control',
+                                  'test2', 'test2','test3', 'test3',
+                                  'test', 'test', 'control','control',
+                                  'test2', 'test2','test3', 'test3'],
+                                  'success': [50, 60, 140, 140, 10, 20, 20, 20,
+                                              50, 60, 140, 140, 10, 20, 20, 20],
+                                  'total': [100, 100, 200, 200, 50, 50, 60, 60,
+                                            100, 100, 200, 200, 50, 50, 60, 60],
                                   'country':
                                       ['us', 'ca', 'us', 'ca',
                                        'us', 'ca', 'us', 'ca',
@@ -287,7 +292,12 @@ class TestPoweredEffectBinary(object):
             numerator_sum_squares_column=None,
             denominator_column='total',
             categorical_group_columns=['country', 'variation_name'],
-            metric_column='metric_name')
+            metric_column='metric_name',
+            treatment_column='variation_name',
+            power=0.8,
+            interval_size=0.95,
+            correction_method='spot-1-bonferroni'
+            )
 
     def test_powered_effect(self):
         powered_effect = self.test.multiple_difference(
@@ -296,14 +306,18 @@ class TestPoweredEffectBinary(object):
             level_as_reference=True,
             non_inferiority_margins=True
         )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][4], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][5], 0.4757, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][6], 0.449, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][7], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.1984, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.2599, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.2411, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.1984, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.2599, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.2411, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.2062, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.2663, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][8], 0.2479, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][9], 0.2062, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][10], 0.2663, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][11], 0.2479, atol=0.001)
 
 class TestPoweredEffectBinaryOnlyGuardrail(object):
     def setup(self):
@@ -313,8 +327,8 @@ class TestPoweredEffectBinaryOnlyGuardrail(object):
                                  ['test', 'test', 'control',
                                   'control', 'test2', 'test2',
                                   'test3', 'test3'],
-                                  'success': [50, 60, 40, 140, 10, 20, 20, 20],
-                                  'total': [100, 100, 100, 200, 50, 50, 60, 60],
+                                  'success': [50, 60, 140, 140, 20, 20, 20, 20],
+                                  'total': [100, 100, 200, 200, 50, 50, 60, 60],
                                   'country':
                                       ['us', 'ca', 'us', 'ca',
                                        'us', 'ca', 'us', 'ca'],
@@ -335,7 +349,12 @@ class TestPoweredEffectBinaryOnlyGuardrail(object):
             numerator_sum_squares_column=None,
             denominator_column='total',
             categorical_group_columns=['country', 'variation_name'],
-            metric_column='metric_name')
+            metric_column='metric_name',
+            treatment_column='variation_name',
+            power=0.8,
+            interval_size=0.95,
+            correction_method='spot-1-bonferroni'
+        )
 
     def test_powered_effect(self):
         powered_effect = self.test.multiple_difference(
@@ -344,10 +363,13 @@ class TestPoweredEffectBinaryOnlyGuardrail(object):
             level_as_reference=True,
             non_inferiority_margins=True
         )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
-        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.1816, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.2344, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.2182, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.1816, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.2344, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.2182, atol=0.001)
+
 
 class TestBinary(object):
     def setup(self):

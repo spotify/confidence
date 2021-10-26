@@ -35,6 +35,7 @@ class ZTest(GenericTest):
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None] = None,
                  metric_column = None,
+                 treatment_column = None,
                  interval_size: float = 0.95,
                  power: float = 0.8,
                  correction_method: str = BONFERRONI,
@@ -49,6 +50,7 @@ class ZTest(GenericTest):
             categorical_group_columns=listify(categorical_group_columns),
             ordinal_group_column=ordinal_group_column,
             metric_column=metric_column,
+            treatment_column=treatment_column,
             interval_size=interval_size,
             power=power,
             correction_method=correction_method.lower())
@@ -61,6 +63,7 @@ class ZTest(GenericTest):
             categorical_group_columns,
             ordinal_group_column,
             metric_column,
+            treatment_column,
             interval_size,
             power,
             correction_method,

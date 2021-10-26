@@ -52,7 +52,9 @@ class GenericComputer(ConfidenceComputerABC):
                  numerator_sum_squares_column: str, denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  metric_column: Union[str, None],
-                 ordinal_group_column: str, interval_size: float,
+                 treatment_column: Union[str, None],
+                 ordinal_group_column: str,
+                 interval_size: float,
                  power: float, correction_method: str):
 
         self._df = data_frame
@@ -74,10 +76,14 @@ class GenericComputer(ConfidenceComputerABC):
         self._denominator = denominator_column
         self._categorical_group_columns = get_all_group_columns(categorical_group_columns,
                                                                 metric_column)
+        self._categorical_group_columns = get_all_group_columns(self._categorical_group_columns,
+                                                                treatment_column)
+        self._segments = list(set(self._categorical_group_columns) - set([metric_column]) - set([treatment_column]))
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
         self._interval_size = interval_size
         self._power = power
+        self._treatment_column = treatment_column
 
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f'Use one of the correction methods ' +
@@ -138,6 +144,7 @@ class GenericComputer(ConfidenceComputerABC):
                                POWERED_EFFECT] +
                               ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                                if nims is not None else [])])
+
 
     def compute_multiple_difference(self,
                                     level: Union[str, Iterable],
@@ -284,7 +291,9 @@ class GenericComputer(ConfidenceComputerABC):
                 .assign(**{PREFERENCE: lambda df:
             df[PREFERENCE].map(PREFERENCE_DICT)})
         )
+
         return comparison_df
+
 
     @staticmethod
     def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
@@ -326,12 +335,13 @@ class GenericComputer(ConfidenceComputerABC):
                                        SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                        SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                        SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
-            number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+            self._number_success_metrics = df[df[NIM].isnull()].groupby(
+                self._metric_column).ngroups
             number_guardrail_metrics = df.groupby(
-                self._metric_column).ngroups - number_success_metrics
+                self._metric_column).ngroups - self._number_success_metrics
             power_correction = self._corrections_power(
                 number_of_guardrail_metrics=number_guardrail_metrics,
-                number_of_success_metrics=number_success_metrics)
+                number_of_success_metrics=self._number_success_metrics)
 
         return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
 
@@ -395,7 +405,7 @@ class GenericComputer(ConfidenceComputerABC):
                 groupby = ['level_1', 'level_2'] + [column for column in df.index.names if
                                                     column is not None]
                 n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
-                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons / (1 + (df[PREFERENCE_TEST]=='two-sided').astype(int))
                 df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
             else:
@@ -457,7 +467,14 @@ class GenericComputer(ConfidenceComputerABC):
                                    SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                    SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
-            return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
+            self._number_success_metrics = df[df[NIM].isnull()].groupby(
+                self._metric_column).ngroups
+            number_comparions = len((df[self._treatment_column+SFX1]+df[self._treatment_column+SFX2] ).unique())
+            number_segments = (1 if len(self._segments) is 0 else df.groupby(self._segments).ngroups)
+
+
+
+            return max(1, number_comparions * max(1, self._number_success_metrics)* number_segments)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
 

@@ -189,13 +189,13 @@ class ZTestComputer(GenericComputer):
         z_power = st.norm.ppf(df[ADJUSTED_POWER])
         n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
         binary = df[self._numerator_sumsq + SFX1] == df[self._numerator + SFX1]
-        kappa = n1 / n2
+        kappa = n2 / n1
         current_number_of_units = n1 + n2
-        if binary and df[NIM] is not None:
+        if binary and np.isnan(df[NIM]):
             effect = self._search_MDE_binary_local_search(
                 control_avg=df[POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
-                non_inferiority=df[NIM],
+                non_inferiority=False,
                 kappa=kappa,
                 proportion_of_total=proportion_of_total,
                 current_number_of_units=current_number_of_units,
@@ -204,7 +204,7 @@ class ZTestComputer(GenericComputer):
             )[0]
         else:
             treatment_var = self._get_hypothetical_treatment_var(
-                binary_metric=binary, non_inferiority=df[NIM] is not None,
+                binary_metric=binary, non_inferiority=not np.isnan(df[NIM]),
                 control_avg=df[POINT_ESTIMATE + SFX1], control_var=df[VARIANCE + SFX1],
                 hypothetical_effect=0
             )

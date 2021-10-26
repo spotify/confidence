@@ -38,6 +38,7 @@ class GenericTest(ConfidenceABC):
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None] = None,
                  metric_column = None,
+                 treatment_column = None,
                  interval_size: float = 0.95,
                  power: float = 0.8,
                  correction_method: str = BONFERRONI,
