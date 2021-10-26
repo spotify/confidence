@@ -9,7 +9,7 @@ from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import POINT_ESTIMATE, CI_LOWER, CI_UPPER, VARIANCE, TWO_SIDED, SFX2, SFX1, \
     STD_ERR, PREFERENCE_TEST, NULL_HYPOTHESIS, DIFFERENCE, ALPHA, IS_SIGNIFICANT, HOLM, SPOT_1_HOLM, HOMMEL, \
-    SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG, NIM, ADJUSTED_ALPHA, POWER
+    SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG, NIM, ADJUSTED_ALPHA, POWER, ADJUSTED_POWER
 from spotify_confidence.analysis.frequentist.generic_computer import GenericComputer, sequential_bounds
 
 
@@ -181,17 +181,17 @@ class ZTestComputer(GenericComputer):
         return df.apply(_compute_ci_for_row, axis=1)
 
     def _powered_effect(self,
-                        df: DataFrame,
-                        ) -> DataFrame:
+                        df: Series,
+                        ) -> Series:
 
         proportion_of_total = 1  # TODO
         z_alpha = st.norm.ppf(1 - df[ADJUSTED_ALPHA])
-        z_power = st.norm.ppf(df[POWER])
+        z_power = st.norm.ppf(df[ADJUSTED_POWER])
         n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
-        binary = self._numerator_sumsq == self._numerator
+        binary = df[self._numerator_sumsq + SFX1] == df[self._numerator + SFX1]
         kappa = n1 / n2
         current_number_of_units = n1 + n2
-        if binary and df[NIM] is None:
+        if binary and df[NIM] is not None:
             effect = self._search_MDE_binary_local_search(
                 control_avg=df[POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
@@ -213,8 +213,9 @@ class ZTestComputer(GenericComputer):
             effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (
                     n2_partial + kappa * n2_partial))
 
+        df['powered_effect'] = effect
         return (
-            df.assign(powered_effect=effect)
+            df
         )
 
     def _currently_powered_effect(self,
@@ -404,12 +405,9 @@ class ZTestComputer(GenericComputer):
             kappa: float,
             proportion_of_total: float,
             current_number_of_units: float,
-            power: float = None,
-            alpha: float = None,
+            z_power: float = None,
+            z_alpha: float = None,
     ) -> float:
-
-        z_alpha = st.norm.ppf(1 - alpha)
-        z_power = st.norm.ppf(power)
 
         treatment_var = self._get_hypothetical_treatment_var(
             binary_metric=binary, non_inferiority=non_inferiority, control_avg=control_avg,

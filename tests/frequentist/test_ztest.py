@@ -11,7 +11,7 @@ from spotify_confidence.analysis.constants import (
     DIFFERENCE, BONFERRONI, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
     CORRECTION_METHODS, SPOT_1, CORRECTION_METHODS_THAT_SUPPORT_CI)
 
-class TestOrdinal_whatever(object):
+class TestPoweredEffectContinuousSingleMetric(object):
     def setup(self):
 
         self.data = pd.DataFrame({
@@ -36,15 +36,22 @@ class TestOrdinal_whatever(object):
             power = 0.8,
             interval_size=0.95)
 
-    def test_powered_effect(self):
+    def test_powered_effect1(self):
         powered_effect = self.test.difference(
             level_1='control',
             level_2='test'
            )
         assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
 
+    def test_powered_effect2(self):
+        powered_effect = self.test.difference(
+            level_1='control',
+            level_2='test2'
+        )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.3649, atol=0.001)
 
-class TestOrdinal_whatever2(object):
+
+class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
     def setup(self):
 
         self.data = pd.DataFrame({
@@ -70,15 +77,18 @@ class TestOrdinal_whatever2(object):
             power = 0.8,
             interval_size=0.95)
 
-    def test_powered_effect(self):
+    def test_powered_effect1(self):
         powered_effect = self.test.multiple_difference(
             level='control',
             groupby='metric_name',
             level_as_reference = True
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.42710, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.4524, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.42710, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.4524, atol=0.001)
 
-class TestOrdinal_whatever3(object):
+class TestPoweredEffectContinuousMultipleMetricTypes(object):
     def setup(self):
 
         self.data = pd.DataFrame({
@@ -117,11 +127,227 @@ class TestOrdinal_whatever3(object):
             level_as_reference = True,
             non_inferiority_margins=True
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.4054, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.4294, atol=0.001)
 
 
+class TestPoweredEffectContinuousMultipleMetricsSegments(object):
+    def setup(self):
+
+        self.data = pd.DataFrame({
+            'variation_name': ['test', 'control', 'test2','test', 'control', 'test2',
+                               'test', 'control', 'test2','test', 'control', 'test2'],
+            'nr_of_items': [500, 8, 100, 500, 8, 100,
+                            500, 8, 100, 500, 8, 100,],
+            'nr_of_items_sumsq': [2500, 12, 150,2500, 12, 150,
+                                  2500, 12, 150,2500, 12, 150,],
+            'users': [1010, 22, 150, 1010, 22, 150,
+                      1010, 22, 150, 1010, 22, 150,],
+            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB',
+                            'metricA','metricA','metricA','metricB','metricB','metricB'],
+            'non_inferiority_margin': [
+                None, None, None,
+                0.01, 0.01, 0.01,
+                None, None, None,
+                0.01, 0.01, 0.01
+            ],
+            'preferred_direction': [None, None, None, "increase", "increase", "increase",
+                                    None, None, None, "increase", "increase", "increase"],
+            'segment': ['us','us','us','us','us','us','se','se','se','se','se','se']
+        })
 
 
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='nr_of_items',
+            numerator_sum_squares_column='nr_of_items_sumsq',
+            denominator_column='users',
+            categorical_group_columns=['variation_name', 'metric_name', 'segment'],
+            ordinal_group_column=None,
+            metric_column='metric_name',
+            power = 0.8,
+            interval_size=0.95,
+            correction_method='spot-1-bonferroni')
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby=['metric_name', 'segment'],
+            level_as_reference = True,
+            non_inferiority_margins=True
+           )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.4757, atol=0.001)
+
+
+class TestPoweredEffectContinuousMultipleMetricsSegments(object):
+    def setup(self):
+
+        self.data = pd.DataFrame({
+            'variation_name': ['test', 'control', 'test2','test', 'control', 'test2',
+                               'test', 'control', 'test2','test', 'control', 'test2'],
+            'nr_of_items': [500, 8, 100, 500, 8, 100,
+                            500, 8, 100, 500, 8, 100,],
+            'nr_of_items_sumsq': [2500, 12, 150,2500, 12, 150,
+                                  2500, 12, 150,2500, 12, 150,],
+            'users': [1010, 22, 150, 1010, 22, 150,
+                      1010, 22, 150, 1010, 22, 150,],
+            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB',
+                            'metricA','metricA','metricA','metricB','metricB','metricB'],
+            'non_inferiority_margin': [
+                0.01, 0.01, 0.01,
+                0.01, 0.01, 0.01,
+                0.01, 0.01, 0.01,
+                0.01, 0.01, 0.01
+            ],
+            'preferred_direction': ["increase", "increase", "increase", "increase", "increase", "increase",
+                                    "increase", "increase", "increase", "increase", "increase", "increase"],
+            'segment': ['us','us','us','us','us','us','se','se','se','se','se','se']
+        })
+
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='nr_of_items',
+            numerator_sum_squares_column='nr_of_items_sumsq',
+            denominator_column='users',
+            categorical_group_columns=['variation_name', 'metric_name', 'segment'],
+            ordinal_group_column=None,
+            metric_column='metric_name',
+            power = 0.8,
+            interval_size=0.95,
+            correction_method='spot-1-bonferroni')
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby=['metric_name', 'segment'],
+            level_as_reference = True,
+            non_inferiority_margins=True
+           )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.4757, atol=0.001)
+
+
+class TestPoweredEffectBinary(object):
+    def setup(self):
+        np.random.seed(123)
+
+        self.data = pd.DataFrame({'variation_name':
+                                 ['test', 'test', 'control',
+                                  'control', 'test2', 'test2',
+                                  'test3', 'test3',
+                                  'test', 'test', 'control',
+                                  'control', 'test2', 'test2',
+                                  'test3', 'test3'],
+                                  'success': [50, 60, 40, 140, 10, 20, 20, 20,
+                                              50, 60, 40, 140, 10, 20, 20, 20],
+                                  'total': [100, 100, 100, 200, 50, 50, 60, 60,
+                                            100, 100, 100, 200, 50, 50, 60, 60],
+                                  'country':
+                                      ['us', 'ca', 'us', 'ca',
+                                       'us', 'ca', 'us', 'ca',
+                                       'us', 'ca', 'us', 'ca',
+                                       'us', 'ca', 'us', 'ca'],
+                                  'metric_name': ['metricA','metricA','metricA','metricA',
+                                                  'metricA','metricA','metricA','metricA',
+                                                  'metricB','metricB','metricB','metricB',
+                                                  'metricB','metricB','metricB','metricB'],
+                                  'preferred_direction': [None, None, None, None,
+                                                          None, None, None, None,
+                                                          "increase", "increase",
+                                                          "increase", "increase",
+                                                          "increase", "increase",
+                                                          "increase", "increase"],
+                                  'non_inferiority_margin': [
+                                        None, None, None, None,
+                                        None, None, None, None,
+                                        0.01, 0.01, 0.01, 0.01,
+                                        0.01, 0.01, 0.01, 0.01
+                                    ]
+                                  })
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='success',
+            numerator_sum_squares_column=None,
+            denominator_column='total',
+            categorical_group_columns=['country', 'variation_name'],
+            metric_column='metric_name')
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby=['metric_name', 'country'],
+            level_as_reference=True,
+            non_inferiority_margins=True
+        )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.449, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.4757, atol=0.001)
+
+class TestPoweredEffectBinaryOnlyGuardrail(object):
+    def setup(self):
+        np.random.seed(123)
+
+        self.data = pd.DataFrame({'variation_name':
+                                 ['test', 'test', 'control',
+                                  'control', 'test2', 'test2',
+                                  'test3', 'test3'],
+                                  'success': [50, 60, 40, 140, 10, 20, 20, 20],
+                                  'total': [100, 100, 100, 200, 50, 50, 60, 60],
+                                  'country':
+                                      ['us', 'ca', 'us', 'ca',
+                                       'us', 'ca', 'us', 'ca'],
+                                  'metric_name': ['metricB','metricB','metricB','metricB',
+                                                  'metricB','metricB','metricB','metricB'],
+                                  'preferred_direction': ["increase", "increase",
+                                                          "increase", "increase",
+                                                          "increase", "increase",
+                                                          "increase", "increase"],
+                                  'non_inferiority_margin': [0.01, 0.01, 0.01, 0.01,
+                                        0.01, 0.01, 0.01, 0.01
+                                    ]
+                                  })
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='success',
+            numerator_sum_squares_column=None,
+            denominator_column='total',
+            categorical_group_columns=['country', 'variation_name'],
+            metric_column='metric_name')
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby=['metric_name', 'country'],
+            level_as_reference=True,
+            non_inferiority_margins=True
+        )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.488, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.5170, atol=0.001)
 
 class TestBinary(object):
     def setup(self):

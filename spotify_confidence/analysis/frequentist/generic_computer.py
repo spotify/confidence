@@ -280,7 +280,7 @@ class GenericComputer(ConfidenceComputerABC):
                       filtered_sufficient_statistics=filtered_sufficient_statistics)
                 .pipe(self._adjust_if_absolute, absolute=absolute)
                 .pipe(self._add_adjusted_power)
-                .pipe(self._powered_effect)
+                .apply(self._powered_effect, axis=1)
                 .assign(**{PREFERENCE: lambda df:
             df[PREFERENCE].map(PREFERENCE_DICT)})
         )
