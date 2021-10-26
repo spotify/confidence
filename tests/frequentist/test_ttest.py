@@ -5,6 +5,7 @@ import spotify_confidence
 import pandas as pd
 import numpy as np
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE, VARIANCE,
     SFX1, SFX2,
@@ -61,19 +62,12 @@ class TestCategorical(object):
 
         sum_squared = np.sum(x * x)
 
-        comp = TTestComputer(data_frame=pd.DataFrame({'success': [1],
-                                                      'n': [2]}),
-                             numerator_column='success',
-                             numerator_sum_squares_column='sumsq',
-                             denominator_column='n',
-                             categorical_group_columns=[],
-                             ordinal_group_column=None,
-                             interval_size=None,
-                             correction_method='Bonferroni')
-        var_to_verify = comp._variance(
-            pd.DataFrame({'sumsq': [sum_squared],
-                          POINT_ESTIMATE: [x.mean()],
-                          'n': [n]}))
+        comp = TTestComputer(numerator=None, numerator_sumsq='sumsq', denominator='n',
+                             ordinal_group_column=None, interval_size=None)
+        var_to_verify = (
+            pd.DataFrame({'sumsq': [sum_squared], POINT_ESTIMATE: [x.mean()], 'n': [n]})
+              .apply(lambda row: comp._variance(row), axis=1)
+        )
 
         assert (np.allclose(var_to_verify, var))
 
@@ -90,15 +84,15 @@ class TestCategorical(object):
 
         std_diff = np.sqrt(sigma1**2 / n1 + sigma2**2 / n2)
 
-        comp = TTestComputer(data_frame=pd.DataFrame({'success': [1],
-                                                      'n': [2]}),
-                             numerator_column='success',
-                             numerator_sum_squares_column='sumsq',
-                             denominator_column='n',
-                             categorical_group_columns=[],
-                             ordinal_group_column=None,
-                             interval_size=None,
-                             correction_method='Bonferroni')
+        comp = GenericComputer(data_frame=pd.DataFrame({'success': [1], 'n': [2]}),
+                               numerator_column='success',
+                               numerator_sum_squares_column='sumsq',
+                               denominator_column='n',
+                               categorical_group_columns=[],
+                               ordinal_group_column=None,
+                               interval_size=None,
+                               correction_method='Bonferroni',
+                               method_column=None)
         diff_se = comp._std_err(pd.DataFrame({VARIANCE + SFX1: [x1.var()],
                                               VARIANCE + SFX2: [x2.var()],
                                               'n' + SFX1: [n1],

@@ -12,43 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from warnings import warn
-from pandas import DataFrame, Series, concat
-import numpy as np
-from statsmodels.stats.multitest import multipletests
 from typing import (Union, Iterable, List, Tuple)
-from abc import abstractmethod
+from warnings import warn
 
-from ..abstract_base_classes.confidence_computer_abc import \
+import numpy as np
+from pandas import DataFrame, Series, concat
+from statsmodels.stats.multitest import multipletests
+
+from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
-from .sequential_bound_solver import bounds
-from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
-                         DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
-                         ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
-                         NULL_HYPOTHESIS, NIM, PREFERENCE, PREFERENCE_TEST, TWO_SIDED,
-                         PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
-                         HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
-                         SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
-                         SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
-                         SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY,
-                         BONFERRONI_ONLY_COUNT_TWOSIDED, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
-from ..confidence_utils import (get_remaning_groups, validate_levels,
-                                level2str, listify, get_all_group_columns,
-                                add_nim_columns,
-                                validate_and_rename_nims, validate_and_rename_final_expected_sample_sizes)
-
-
-def sequential_bounds(t: np.array, alpha: float, sides: int):
-    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
+from spotify_confidence.analysis.confidence_utils import (get_remaning_groups, validate_levels,
+                                                          level2str, listify, get_all_group_columns,
+                                                          add_nim_columns,
+                                                          validate_and_rename_nims, validate_and_rename_column)
+from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
+                                                   DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
+                                                   ADJUSTED_ALPHA, ADJUSTED_P, ADJUSTED_LOWER, ADJUSTED_UPPER,
+                                                   IS_SIGNIFICANT,
+                                                   NULL_HYPOTHESIS, NIM, PREFERENCE, PREFERENCE_TEST, TWO_SIDED,
+                                                   PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
+                                                   HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY,
+                                                   FDR_TSBH, FDR_TSBKY,
+                                                   SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
+                                                   SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
+                                                   SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY,
+                                                   BONFERRONI_ONLY_COUNT_TWOSIDED,
+                                                   BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
+from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
 
 
 class GenericComputer(ConfidenceComputerABC):
-
     def __init__(self, data_frame: DataFrame, numerator_column: str,
                  numerator_sum_squares_column: str, denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: str, interval_size: float,
-                 correction_method: str):
+                 correction_method: str, method_column: str):
 
         self._df = data_frame
         self._numerator = numerator_column
@@ -75,10 +75,24 @@ class GenericComputer(ConfidenceComputerABC):
             raise ValueError(f'Use one of the correction methods ' +
                              f'in {CORRECTION_METHODS}')
         self._correction_method = correction_method
+        self._method_column = method_column
 
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns, self._ordinal_group_column)
         self._sufficient = None
+
+        self._computers = {
+            'chi-squared': ChiSquaredComputer(self._numerator, self._numerator_sumsq, self._denominator,
+                                              self._ordinal_group_column, self._interval_size),
+            't-test': TTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
+                                    self._ordinal_group_column, self._interval_size),
+            'z-test': ZTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
+                                    self._ordinal_group_column, self._interval_size),
+        }
+
+    @property
+    def _confidence_computers(self):
+        return self._computers
 
     def compute_summary(self, verbose: bool) -> DataFrame:
         return (
@@ -98,12 +112,6 @@ class GenericComputer(ConfidenceComputerABC):
                     .pipe(self._add_point_estimate_ci)
             )
         return self._sufficient
-
-    def _point_estimate(self, df: DataFrame) -> Series:
-        if (df[self._denominator] == 0).any():
-            raise ValueError('''Can't compute point estimate:
-                                denominator is 0''')
-        return df[self._numerator] / df[self._denominator]
 
     def compute_difference(self,
                            level_1: Union[str, Iterable],
@@ -260,7 +268,8 @@ class GenericComputer(ConfidenceComputerABC):
                       df[POINT_ESTIMATE + SFX1]})
               .assign(**{STD_ERR: self._std_err})
               .pipe(validate_and_rename_nims)
-              .pipe(validate_and_rename_final_expected_sample_sizes, final_expected_sample_size_column)
+              .pipe(validate_and_rename_column, final_expected_sample_size_column)
+              .pipe(validate_and_rename_column, self._method_column)
               .pipe(self._add_p_value_and_ci,
                     final_expected_sample_size_column=final_expected_sample_size_column,
                     filtered_sufficient_statistics=filtered_sufficient_statistics)
@@ -318,9 +327,15 @@ class GenericComputer(ConfidenceComputerABC):
                                      f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
                                      f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}")
 
+                groups_except_ordinal = [
+                    column for column in df.index.names if column != self._ordinal_group_column]
+                n_comparisons = self._get_num_comparisons(df, self._correction_method,
+                                                          ['level_1', 'level_2'] + groups_except_ordinal)
+
                 df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(df,
                                                                              final_expected_sample_size_column,
-                                                                             filtered_sufficient_statistics)
+                                                                             filtered_sufficient_statistics,
+                                                                             n_comparisons)
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
                 df[P_VALUE] = None
                 df[ADJUSTED_P] = None
@@ -443,37 +458,44 @@ class GenericComputer(ConfidenceComputerABC):
                                       nims=None,  # TODO: IS this right?
                                       final_expected_sample_size_column=None)  # TODO: IS this right?
                 .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
-                .pipe(self._achieved_power, mde=mde, alpha=alpha)
-        )
+                .assign(achieved_power=lambda df: df.apply(self._achieved_power, mde=mde, alpha=alpha, axis=1))
+        )[['level_1', 'level_2', 'achieved_power']]
 
-    @abstractmethod
+    def _point_estimate(self, df: DataFrame) -> Series:
+        if (df[self._denominator] == 0).any():
+            raise ValueError('''Can't compute point estimate:
+                                denominator is 0''')
+        return df[self._numerator] / df[self._denominator]
+
     def _variance(self, df: DataFrame) -> Series:
-        pass
+        return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._variance(row), axis=1)
 
-    @abstractmethod
     def _add_point_estimate_ci(self, df: DataFrame) -> DataFrame:
-        pass
+        return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._add_point_estimate_ci(row),
+                        axis=1)
 
-    @abstractmethod
     def _p_value(self, row) -> float:
-        pass
+        return self._confidence_computers[row[self._method_column]]._p_value(row)
 
-    @abstractmethod
     def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
-        pass
+        return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
-    @abstractmethod
     def _achieved_power(self,
-                        df: DataFrame,
+                        row: Series,
                         mde: float,
                         alpha: float) -> DataFrame:
-        pass
+        return self._confidence_computers[row[self._method_column]]._achieved_power(row, mde, alpha)
 
     def _compute_sequential_adjusted_alpha(self,
                                            df: DataFrame,
                                            final_expected_sample_size_column: str,
-                                           filtered_sufficient_statistics: DataFrame) -> Series:
-        raise NotImplementedError("Sequential tests are only supported for ZTests")
+                                           filtered_sufficient_statistics: DataFrame,
+                                           n_comparisons: int) -> Series:
+        if all(df[self._method_column] == 'z-test'):
+            return self._confidence_computers['z-test']._compute_sequential_adjusted_alpha(
+                df, final_expected_sample_size_column, filtered_sufficient_statistics, n_comparisons)
+        else:
+            raise NotImplementedError("Sequential testing is only supported for z-tests")
 
     def _ci_for_multiple_comparison_methods(
             self,
@@ -482,4 +504,8 @@ class GenericComputer(ConfidenceComputerABC):
             alpha: float,
             w: float = 1.0,
     ) -> Tuple[Union[Series, float], Union[Series, float]]:
-        raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
+        if all(df[self._method_column] == 'z-test'):
+            return self._confidence_computers['z-test']._ci_for_multiple_comparison_methods(
+                df, correction_method, alpha, w)
+        else:
+            raise NotImplementedError("Sequential testing is only supported for z-tests")
