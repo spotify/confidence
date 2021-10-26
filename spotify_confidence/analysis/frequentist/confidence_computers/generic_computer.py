@@ -41,6 +41,7 @@ from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE, CI_
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 
 
 class GenericComputer(ConfidenceComputerABC):
@@ -88,6 +89,7 @@ class GenericComputer(ConfidenceComputerABC):
                                     self._ordinal_group_column, self._interval_size),
             'z-test': ZTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
                                     self._ordinal_group_column, self._interval_size),
+            'bootstrap': BootstrapComputer('bootstrap_samples', self._interval_size),
         }
 
     @property
@@ -462,10 +464,7 @@ class GenericComputer(ConfidenceComputerABC):
         )[['level_1', 'level_2', 'achieved_power']]
 
     def _point_estimate(self, df: DataFrame) -> Series:
-        if (df[self._denominator] == 0).any():
-            raise ValueError('''Can't compute point estimate:
-                                denominator is 0''')
-        return df[self._numerator] / df[self._denominator]
+        return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._point_estimate(row), axis=1)
 
     def _variance(self, df: DataFrame) -> Series:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._variance(row), axis=1)

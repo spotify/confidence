@@ -17,7 +17,12 @@ class TTestComputer(object):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
-    def _variance(self, row: DataFrame) -> Series:
+    def _point_estimate(self, row: Series) -> float:
+        if row[self._denominator] == 0:
+            raise ValueError('''Can't compute point estimate: denominator is 0''')
+        return row[self._numerator] / row[self._denominator]
+
+    def _variance(self, row: Series) -> float:
         variance = (
                 row[self._numerator_sumsq] / row[self._denominator] -
                 row[POINT_ESTIMATE] ** 2)
@@ -26,7 +31,7 @@ class TTestComputer(object):
                              'Please check your inputs.')
         return variance
 
-    def _add_point_estimate_ci(self, row: DataFrame):
+    def _add_point_estimate_ci(self, row: DataFrame) -> Series:
         row[CI_LOWER], row[CI_UPPER] = _tconfint_generic(
             mean=row[POINT_ESTIMATE],
             std_mean=np.sqrt(row[VARIANCE] / row[self._denominator]),
@@ -36,14 +41,14 @@ class TTestComputer(object):
         )
         return row
 
-    def _dof(self, row):
+    def _dof(self, row: Series) -> float:
         v1, v2 = row[VARIANCE + SFX1], row[VARIANCE + SFX2]
         n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
         return ((v1 / n1 + v2 / n2) ** 2 /
                 ((v1 / n1) ** 2 / (n1 - 1) +
                  (v2 / n2) ** 2 / (n2 - 1)))
 
-    def _p_value(self, row) -> float:
+    def _p_value(self, row: Series) -> float:
         _, p_value = _tstat_generic(value1=row[POINT_ESTIMATE + SFX2],
                                     value2=row[POINT_ESTIMATE + SFX1],
                                     std_diff=row[STD_ERR],
@@ -52,7 +57,7 @@ class TTestComputer(object):
                                     diff=row[NULL_HYPOTHESIS])
         return p_value
 
-    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
+    def _ci(self, row: Series, alpha_column: str) -> Tuple[float, float]:
         return _tconfint_generic(
             mean=row[DIFFERENCE],
             std_mean=row[STD_ERR],
