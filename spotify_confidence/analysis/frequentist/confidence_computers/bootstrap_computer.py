@@ -10,13 +10,10 @@ class BootstrapComputer(object):
     def __init__(self, bootstrap_samples_column, interval_size):
         self._bootstrap_samples = bootstrap_samples_column
 
-    def _point_estimate(self, df: DataFrame) -> Series:
-        if (df[self._denominator] == 0).any():
-            raise ValueError('''Can't compute point estimate:
-                                denominator is 0''')
-        df[self._numerator] / df[self._denominator]
+    def _point_estimate(self, row: Series) -> float:
+        return row[self._bootstrap_samples].mean()
 
-    def _variance(self, row: DataFrame) -> Series:
+    def _variance(self, row: Series) -> float:
         variance = row[self._bootstrap_samples].variance()
 
         if variance < 0:
@@ -24,7 +21,7 @@ class BootstrapComputer(object):
                              'Please check your inputs.')
         return variance
 
-    def _add_point_estimate_ci(self, row: DataFrame):
+    def _add_point_estimate_ci(self, row: DataFrame) -> Series:
 
         row[CI_LOWER] = np.percentile(row[self._bootstrap_samples], (1 - self._interval_size) / 2)
         row[CI_LOWER] = np.percentile(row[self._bootstrap_samples], 1 - (1-self._interval_size) / 2)
