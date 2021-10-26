@@ -22,7 +22,7 @@ from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc i
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 from spotify_confidence.analysis.confidence_utils import listify
-from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE
+from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE, METHOD_COLUMN_NAME
 
 
 class ChiSquared(GenericTest):
@@ -39,7 +39,7 @@ class ChiSquared(GenericTest):
                  confidence_grapher: ConfidenceGrapherABC = None):
 
         computer = GenericComputer(
-            data_frame=data_frame.assign(method='chi-squared'),
+            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: 'chi-squared'}),
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_column,
             denominator_column=denominator_column,
@@ -47,7 +47,7 @@ class ChiSquared(GenericTest):
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
             correction_method=correction_method.lower(),
-            method_column='method')
+            method_column=METHOD_COLUMN_NAME)
 
         super(ChiSquared, self).__init__(
             data_frame,

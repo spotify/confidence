@@ -77,3 +77,4 @@ PREFERENCE_DICT = {'smaller': DECREASE_PREFFERED,
                    'larger': INCREASE_PREFFERED,
                    TWO_SIDED: TWO_SIDED}
 NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]
+METHOD_COLUMN_NAME = "_method"

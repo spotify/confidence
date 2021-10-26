@@ -22,7 +22,7 @@ from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc i
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 from spotify_confidence.analysis.confidence_utils import listify
-from spotify_confidence.analysis.constants import BONFERRONI
+from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
 
 
 class StudentsTTest(GenericTest):
@@ -40,7 +40,7 @@ class StudentsTTest(GenericTest):
                  confidence_grapher: ConfidenceGrapherABC = None):
 
         computer = GenericComputer(
-            data_frame=data_frame.assign(method='t-test'),
+            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: 't-test'}),
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,
             denominator_column=denominator_column,
@@ -48,7 +48,7 @@ class StudentsTTest(GenericTest):
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
             correction_method=correction_method.lower(),
-            method_column='method')
+            method_column=METHOD_COLUMN_NAME)
 
         super(StudentsTTest, self).__init__(
             data_frame,
