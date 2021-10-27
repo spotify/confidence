@@ -23,8 +23,11 @@ from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (validate_categorical_columns, listify,
-                                get_all_group_columns)
+                                get_all_group_columns, validate_data,
+                                get_all_categorical_group_columns,
+                                validate_metric_and_treatment)
 from ..constants import BONFERRONI, NIM_TYPE, METHODS
+from ...chartgrid import ChartGrid
 from ..frequentist.sample_ratio_test import sample_ratio_test
 from ...chartgrid import ChartGrid
 
@@ -38,7 +41,10 @@ class GenericTest(ConfidenceABC):
                  denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: Union[str, None] = None,
+                 metric_column = None,
+                 treatment_column = None,
                  interval_size: float = 0.95,
+                 power: float = 0.8,
                  correction_method: str = BONFERRONI,
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None,
@@ -50,9 +56,12 @@ class GenericTest(ConfidenceABC):
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         self._denominator = denominator_column
-        self._categorical_group_columns = listify(categorical_group_columns)
+        self._categorical_group_columns = get_all_categorical_group_columns(
+                                            categorical_group_columns, metric_column,
+                                            treatment_column)
         self._ordinal_group_column = ordinal_group_column
-
+        self._metric_column = metric_column
+        self._treatment_column = treatment_column
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns,
             self._ordinal_group_column)
@@ -61,6 +70,16 @@ class GenericTest(ConfidenceABC):
             raise ValueError("method column cannot be None")
         if not all(self._df[method_column].map(lambda m: m in METHODS)):
             raise ValueError(f"Values of method column must be in {METHODS}")
+
+        # validate_data(self._df,
+        #               self._numerator,
+        #               self._numerator_sumsq,
+        #               self._denominator,
+        #               self._all_group_columns,
+        #               self._ordinal_group_column)
+        validate_metric_and_treatment(self._metric_column,
+                                      self._treatment_column,
+                                      correction_method)
 
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
@@ -96,16 +115,21 @@ class GenericTest(ConfidenceABC):
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
                    non_inferiority_margins: NIM_TYPE = None,
+                   minimum_detectable_effects: bool = False,
                    final_expected_sample_size_column: str = None,
                    verbose: bool = False
                    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
+        validate_metric_and_treatment(self._metric_column,
+                                      self._treatment_column,
+                                      self._confidence_computer._correction_method)
         return self._confidence_computer.compute_difference(
             level_1,
             level_2,
             absolute,
             groupby,
             non_inferiority_margins,
+            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose)
 
@@ -131,16 +155,21 @@ class GenericTest(ConfidenceABC):
                             groupby: Union[str, Iterable] = None,
                             level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
+                            minimum_detectable_effects: bool = None,
                             final_expected_sample_size_column: str = None,
                             verbose: bool = False
                             ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
+        validate_metric_and_treatment(self._metric_column,
+                                      self._treatment_column,
+                                      self._confidence_computer._correction_method)
         return self._confidence_computer.compute_multiple_difference(
             level,
             absolute,
             groupby,
             level_as_reference,
             non_inferiority_margins,
+            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose)
 

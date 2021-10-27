@@ -21,6 +21,7 @@ from ..constants import NIM_TYPE
 
 
 class ConfidenceComputerABC(ABC):
+
     @abstractmethod
     def compute_summary(self, verbose: bool) -> DataFrame:
         """Return Pandas DataFrame with summary statistics.
@@ -49,6 +50,7 @@ class ConfidenceComputerABC(ABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
+                                    mdes: bool,
                                     final_expected_sample_size_column: str,
                                     verbose: bool
                                     ) -> DataFrame:
@@ -64,3 +66,4 @@ class ConfidenceComputerABC(ABC):
                        alpha: float,
                        groupby: Union[str, Iterable]) -> DataFrame:
         pass
+

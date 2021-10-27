@@ -16,19 +16,21 @@ from typing import (Union, Iterable, Tuple, List)
 from pandas import (DataFrame, concat, Series)
 import numpy as np
 from scipy.stats import norm
+from collections import OrderedDict
 
 from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED, DECREASE_PREFFERED, TWO_SIDED,
     NIM_TYPE, NIM_INPUT_COLUMN_NAME, PREFERRED_DIRECTION_INPUT_NAME,
-    NIM, NULL_HYPOTHESIS, PREFERENCE,
-    SFX1, SFX2, POINT_ESTIMATE)
+    NIM, NULL_HYPOTHESIS, PREFERENCE,MDE,ALTERNATIVE_HYPOTHESIS,
+    SFX1, SFX2, POINT_ESTIMATE,MDE_INPUT_COLUMN_NAME,
+    BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY)
 
 
 def get_all_group_columns(categorical_columns: Iterable,
-                          ordinal_column: str) -> Iterable:
-    all_columns = categorical_columns + [ordinal_column]
+                          additional_column: str) -> Iterable:
+    all_columns = categorical_columns + [None if additional_column is None else additional_column]
     all_columns = [col for col in all_columns if col is not None]
-    return all_columns
+    return list(OrderedDict.fromkeys(all_columns))
 
 
 def validate_categorical_columns(
@@ -63,6 +65,12 @@ def get_remaning_groups(all_groups: Iterable,
         ]
     return remaining_groups
 
+def get_all_categorical_group_columns(categorical_columns: Union[str, Iterable, None],
+                                      metric_column: Union[str, None],
+                                      treatment_column: Union[str, None]) -> Iterable:
+    all_columns = listify(treatment_column) + listify(categorical_columns) + listify(metric_column)
+    return list(OrderedDict.fromkeys(all_columns))
+
 
 def validate_levels(df: DataFrame,
                     level_columns: Union[str, Iterable],
@@ -79,6 +87,33 @@ def validate_levels(df: DataFrame,
                     """.format(
                 level, level_columns,
                 list(df.groupby(level_columns).groups.keys())))
+
+
+def add_mde_columns(df:DataFrame, mdes:bool) -> DataFrame:
+
+    def _mde_2_signed_mde(mde: Tuple[float, str]) -> Tuple[float, float, str]:
+        mde_value = None if (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
+        if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
+            return (mde[0], mde_value, TWO_SIDED)
+        elif mde[1].lower() == INCREASE_PREFFERED:
+            return (mde[0], -mde_value, 'larger')
+        elif mde[1].lower() == DECREASE_PREFFERED:
+            return (mde[0], mde_value, 'smaller')
+    if mdes:
+        return (
+            df.assign(**{MDE: lambda df: df[MDE_INPUT_COLUMN_NAME]})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
+                lambda row: row[POINT_ESTIMATE] * _mde_2_signed_mde((row[MDE],
+                                (row[PREFERRED_DIRECTION_INPUT_NAME] if PREFERRED_DIRECTION_INPUT_NAME in row else np.nan)
+                                                                     ))[1],
+                axis=1)})
+              .assign(**{PREFERENCE: lambda df: df.apply(lambda row: _mde_2_signed_mde(
+                (row[MDE],
+                 (row[PREFERRED_DIRECTION_INPUT_NAME] if PREFERRED_DIRECTION_INPUT_NAME in row else np.nan)
+                 ))[2], axis=1)})
+              .assign(**{NULL_HYPOTHESIS: 0}))
+    else:
+        return df
 
 
 def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
@@ -105,6 +140,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             df.assign(**{NIM: _nim_2_signed_nim((nims[0], nims[1]))[0]})
               .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * _nim_2_signed_nim((nims[0], nims[1]))[1]})
               .assign(**{PREFERENCE: _nim_2_signed_nim((nims[0], nims[1]))[2]})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     elif type(nims) is dict:
         sgnd_nims = {group: _nim_2_signed_nim(nim) for group, nim in nims.items()}
@@ -117,6 +153,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             df.assign(**{NIM: nim_df[NIM]})
               .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * nim_df[NULL_HYPOTHESIS]})
               .assign(**{PREFERENCE: nim_df[PREFERENCE]})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     elif type(nims) is bool:
         return (
@@ -126,6 +163,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
                 axis=1)})
               .assign(**{PREFERENCE: lambda df: df.apply(lambda row: _nim_2_signed_nim(
                 (row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[2], axis=1)})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     else:
         raise ValueError(f'non_inferiority_margins must be None, tuple, dict,'
@@ -217,6 +255,12 @@ def _validate_column(df: DataFrame, col: str):
     if col not in df.columns:
         raise ValueError(f"""Column {col} is not in dataframe""")
 
+def validate_metric_and_treatment(metric_column, treatment_column, correction_method):
+    if correction_method.startswith('spot-1') or correction_method == BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY:
+        if metric_column is None:
+            raise ValueError(f"metric_column must be specified for correction method: {correction_method}.")
+        if treatment_column is None:
+            raise ValueError(f"treatment_column must be specified for correction method: {correction_method}.")
 
 def _get_finite_bounds(numbers: Series) -> Tuple[float, float]:
     finite_numbers = numbers[numbers.abs() != float("inf")]
