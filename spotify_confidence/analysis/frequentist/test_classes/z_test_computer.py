@@ -268,22 +268,25 @@ class ZTestComputer(GenericComputer):
         else:
             raise ValueError('NIM has to be type float or None.')
 
-        if isinstance(df[MDE], float):
-            mde_exists = not np.isnan(df[MDE])
-        elif type(df[MDE]) is type(None):
-            mde_exists = df[MDE] is not None
-        else:
-            raise ValueError('MDE has to be type float or None.')
+        # if isinstance(df[MDE], float):
+        #     mde_exists = not np.isnan(df[MDE])
+        # elif type(df[MDE]) is type(None):
+        #     mde_exists = df[MDE] is not None
+        # else:
+        #     raise ValueError('MDE has to be type float or None.')
+
+        mde_exists = False
 
         if mde_exists and non_inferiority:
             raise ValueError('Both MDE and NIM are specified, only one can be given.')
 
-        if (not mde_exists) and (non_inferiority):
-            raise ValueError('Neither MDE and NIM are specified, one must be given.')
+        if non_inferiority:
+            hypothetical_effect = 0
+            null_hypothesis = df[NIM]
+        elif mde_exists:
+            hypothetical_effect = df[MDE]
+            null_hypothesis = 0
 
-
-        hypothetical_effect = (0 if non_inferiority else df[MDE])
-        null_hypothesis = (0 if not non_inferiority else df[NIM])
 
         df['powered_effect'] = self._powered_effect(df=df,
                                                     kappa=kappa,
@@ -295,9 +298,8 @@ class ZTestComputer(GenericComputer):
                         non_inferiority=non_inferiority)
 
 
-        if not non_inferiority:
-            if df[MDE] is not None:
-                df['required_sample_size'] = self._required_sample_size(proportion_of_total=proportion_of_total,
+        if mde_exists or non_inferiority:
+            df['required_sample_size'] = self._required_sample_size(proportion_of_total=proportion_of_total,
                                 z_alpha=z_alpha,
                                 z_power=z_power,
                                 binary=binary,
@@ -305,7 +307,11 @@ class ZTestComputer(GenericComputer):
                                 hypothetical_effect = hypothetical_effect - null_hypothesis,
                                 control_avg=df[POINT_ESTIMATE + SFX1],
                                 control_var=df[VARIANCE + SFX1],
+                                kappa=kappa
                                 )
+        else:
+            df['required_sample_size'] = None
+
         return df
 
 
