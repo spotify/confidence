@@ -90,10 +90,14 @@ class GenericComputer(ConfidenceComputerABC):
             raise ValueError(f'Use one of the correction methods ' +
                              f'in {CORRECTION_METHODS}')
         self._correction_method = correction_method
+
+        self._single_metric = True
         if self._metric_column is not None:
             if data_frame.groupby(self._metric_column).ngroups == 1:
                 self._categorical_group_columns = list(
                     set(self._categorical_group_columns) - set([self._metric_column]))
+            else:
+                self._single_metric = False
 
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns, self._ordinal_group_column)
@@ -349,15 +353,21 @@ class GenericComputer(ConfidenceComputerABC):
                                        SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                        SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
 
-
-            if self._metric_column is None:
-                raise ValueError(f"metric_column must be specified for correction method: {self._correction_method}.")
-            self._number_success_metrics = df[df[NIM].isnull()].groupby(
+            self._number_total_metrics = 1 if self._single_metric else df.groupby(
                 self._metric_column).ngroups
-            number_guardrail_metrics = df.groupby(
-                self._metric_column).ngroups - self._number_success_metrics
+            if self._single_metric:
+                if df[df[NIM].isnull()].shape[0] > 0:
+                    self._number_success_metrics = 1
+                else:
+                    self._number_success_metrics = 0
+            else:
+                self._number_success_metrics = df[df[NIM].isnull()].groupby(
+                    self._metric_column).ngroups
+
+            self._number_guardrail_metrics = self._number_total_metrics - \
+                                             self._number_success_metrics
             power_correction = self._corrections_power(
-                number_of_guardrail_metrics=number_guardrail_metrics,
+                number_of_guardrail_metrics=self._number_guardrail_metrics,
                 number_of_success_metrics=self._number_success_metrics)
 
         return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
@@ -423,7 +433,8 @@ class GenericComputer(ConfidenceComputerABC):
                                                     column is not None]
                 n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
                 df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons / (1 + (df[PREFERENCE_TEST]=='two-sided').astype(int))
-                df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
+                df[ADJUSTED_P] = df.apply(lambda row: min(row[P_VALUE] * n_comparisons * (1 + (row[PREFERENCE_TEST]=='two-sided')), 1), axis=1)
+                #df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons , 1))
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
             else:
                 raise ValueError("Can't figure out which correction method to use :(")
@@ -478,19 +489,23 @@ class GenericComputer(ConfidenceComputerABC):
             return max(1, df.groupby(groupby).ngroups)
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
             return max(df.query(f'{PREFERENCE_TEST} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
+        elif correction_method in [HOLM, HOMMEL, SIMES_HOCHBERG,
+                                       SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY]:
+            return 1
         elif correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
-                                   HOLM, HOMMEL, SIMES_HOCHBERG,
-                                   SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
                                    SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                    SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
 
-            if self._metric_column is None:
-                raise ValueError(f"metric_column must be specified for correction method: {correction_method}.")
-            self._number_success_metrics = df[df[NIM].isnull()].groupby(
-                self._metric_column).ngroups
-            if self._treatment_column is None:
-                raise ValueError(f"treatment_column must be specified for correction method: {correction_method}.")
+            if self._single_metric:
+                if df[df[NIM].isnull()].shape[0] > 0:
+                    self._number_success_metrics = 1
+                else:
+                    self._number_success_metrics = 0
+            else:
+                self._number_success_metrics = df[df[NIM].isnull()].groupby(
+                    self._metric_column).ngroups
+
             number_comparions = len((df[self._treatment_column+SFX1]+df[self._treatment_column+SFX2] ).unique())
             number_segments = (1 if len(self._segments) is 0 else df.groupby(self._segments).ngroups)
 
