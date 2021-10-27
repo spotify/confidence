@@ -39,19 +39,21 @@ class ZTest(GenericTest):
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None):
 
-        computer = GenericComputer(
-            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: 'z-test'}),
-            numerator_column=numerator_column,
-            numerator_sum_squares_column=numerator_sum_squares_column,
-            denominator_column=denominator_column,
-            categorical_group_columns=listify(categorical_group_columns),
-            ordinal_group_column=ordinal_group_column,
-            interval_size=interval_size,
-            correction_method=correction_method.lower(),
-            method_column=METHOD_COLUMN_NAME)
+        if(confidence_computer is None):
+            confidence_computer = GenericComputer(
+                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: 'z-test'}),
+                numerator_column=numerator_column,
+                numerator_sum_squares_column=numerator_sum_squares_column,
+                denominator_column=denominator_column,
+                categorical_group_columns=listify(categorical_group_columns),
+                ordinal_group_column=ordinal_group_column,
+                interval_size=interval_size,
+                correction_method=correction_method.lower(),
+                method_column=METHOD_COLUMN_NAME,
+                bootstrap_samples_column=None)
 
         super(ZTest, self).__init__(
-            data_frame,
+            data_frame.assign(**{METHOD_COLUMN_NAME: 'z-test'}),
             numerator_column,
             numerator_sum_squares_column,
             denominator_column,
@@ -59,5 +61,6 @@ class ZTest(GenericTest):
             ordinal_group_column,
             interval_size,
             correction_method,
-            computer,
-            confidence_grapher)
+            confidence_computer,
+            confidence_grapher,
+            METHOD_COLUMN_NAME)

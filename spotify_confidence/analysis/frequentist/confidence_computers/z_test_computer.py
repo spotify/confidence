@@ -24,7 +24,12 @@ class ZTestComputer(object):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
-    def _variance(self, row: DataFrame) -> Series:
+    def _point_estimate(self, row: Series) -> float:
+        if row[self._denominator] == 0:
+            raise ValueError('''Can't compute point estimate: denominator is 0''')
+        return row[self._numerator] / row[self._denominator]
+
+    def _variance(self, row: Series) -> float:
         variance = (
                 row[self._numerator_sumsq] / row[self._denominator] -
                 row[POINT_ESTIMATE] ** 2)
@@ -33,7 +38,11 @@ class ZTestComputer(object):
                              'Please check your inputs.')
         return variance
 
-    def _add_point_estimate_ci(self, row: DataFrame):
+    def _std_err(self, row: Series) -> float:
+        return np.sqrt(row[VARIANCE + SFX1] / row[self._denominator + SFX1] +
+                       row[VARIANCE + SFX2] / row[self._denominator + SFX2])
+
+    def _add_point_estimate_ci(self, row: Series) -> Series:
         row[CI_LOWER], row[CI_UPPER] = _zconfint_generic(
             mean=row[POINT_ESTIMATE],
             std_mean=np.sqrt(row[VARIANCE] / row[self._denominator]),
@@ -42,7 +51,7 @@ class ZTestComputer(object):
         )
         return row
 
-    def _p_value(self, row) -> float:
+    def _p_value(self, row: Series) -> float:
         _, p_value = _zstat_generic(value1=row[POINT_ESTIMATE + SFX2],
                                     value2=row[POINT_ESTIMATE + SFX1],
                                     std_diff=row[STD_ERR],
@@ -50,7 +59,7 @@ class ZTestComputer(object):
                                     diff=row[NULL_HYPOTHESIS])
         return p_value
 
-    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
+    def _ci(self, row: Series, alpha_column: str) -> Tuple[float, float]:
         return _zconfint_generic(
             mean=row[DIFFERENCE],
             std_mean=row[STD_ERR],
@@ -101,7 +110,7 @@ class ZTestComputer(object):
             )
         )
 
-        def adjusted_alphas_for_group(grp) -> Series:
+        def adjusted_alphas_for_group(grp: DataFrame) -> Series:
             return (
                 sequential_bounds(
                     t=grp['sample_size_proportions'].values,

@@ -84,19 +84,24 @@ class TestCategorical(object):
 
         std_diff = np.sqrt(sigma1**2 / n1 + sigma2**2 / n2)
 
-        comp = GenericComputer(data_frame=pd.DataFrame({'success': [1], 'n': [2]}),
+        comp = GenericComputer(data_frame=pd.DataFrame({'group': ['control'],
+                                                        'success': [1],
+                                                        'n': [2],
+                                                        'method': ['t-test']}),
                                numerator_column='success',
                                numerator_sum_squares_column='sumsq',
                                denominator_column='n',
-                               categorical_group_columns=[],
+                               categorical_group_columns=['group'],
                                ordinal_group_column=None,
                                interval_size=None,
                                correction_method='Bonferroni',
-                               method_column=None)
+                               method_column='method',
+                               bootstrap_samples_column=None)
         diff_se = comp._std_err(pd.DataFrame({VARIANCE + SFX1: [x1.var()],
                                               VARIANCE + SFX2: [x2.var()],
                                               'n' + SFX1: [n1],
-                                              'n' + SFX2: [n2], }))
+                                              'n' + SFX2: [n2],
+                                              'method': ['t-test']}))
 
         assert (np.allclose(std_diff, diff_se, atol=1e-5))
 

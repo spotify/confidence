@@ -21,19 +21,6 @@ from ..constants import NIM_TYPE
 
 
 class ConfidenceComputerABC(ABC):
-
-    @abstractmethod
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 numerator_sum_squares_column: str,
-                 denominator_column: str,
-                 categorical_group_columns: str,
-                 ordinal_group_column: str,
-                 interval_size: float,
-                 correction_method: str):
-        pass
-
     @abstractmethod
     def compute_summary(self, verbose: bool) -> DataFrame:
         """Return Pandas DataFrame with summary statistics.

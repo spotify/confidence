@@ -78,3 +78,8 @@ PREFERENCE_DICT = {'smaller': DECREASE_PREFFERED,
                    TWO_SIDED: TWO_SIDED}
 NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]
 METHOD_COLUMN_NAME = "_method"
+CHI2 = "chi-squared"
+TTEST = "t-test"
+ZTEST = "z-test"
+BOOTSTRAP = "bootstrap"
+METHODS = [CHI2, TTEST, ZTEST, BOOTSTRAP]
