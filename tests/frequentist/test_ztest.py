@@ -24,6 +24,7 @@ class TestPoweredEffectContinuousSingleMetric(object):
             'users': [1010, 22, 150,
                       ],
             'metric_name': ["metricA","metricA","metricA"],
+            'minimum_detectable_effect': [0.2, 0.2, 0.2]
         })
 
         self.test = spotify_confidence.ZTest(
@@ -41,16 +42,20 @@ class TestPoweredEffectContinuousSingleMetric(object):
     def test_powered_effect1(self):
         powered_effect = self.test.difference(
             level_1='control',
-            level_2='test'
+            level_2='test',
+            minimum_detectable_effects=True
            )
         assert np.isclose(powered_effect["powered_effect"][0], 0.3881, atol=0.001)
+        assert np.isclose(powered_effect["required_sample_size"][0], 29412, atol=100)
 
     def test_powered_effect2(self):
         powered_effect = self.test.difference(
             level_1='control',
-            level_2='test2'
+            level_2='test2',
+        minimum_detectable_effects = True
         )
         assert np.isclose(powered_effect["powered_effect"][0], 0.4111, atol=0.001)
+        assert np.isclose(powered_effect["required_sample_size"][0], 5498, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
@@ -65,7 +70,8 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
                                  ],
             'users': [1010, 22, 150, 1010, 22, 150,
                       ],
-            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB']
+            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB'],
+            'minimum_detectable_effect': [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
         })
 
 
@@ -76,8 +82,6 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
             denominator_column='users',
             categorical_group_columns=['variation_name', 'metric_name'],
             ordinal_group_column=None,
-            #metric_column='metric_name',
-            #treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95)
 
@@ -85,12 +89,17 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
         powered_effect = self.test.multiple_difference(
             level='control',
             groupby='metric_name',
-            level_as_reference = True
+            level_as_reference = True,
+            minimum_detectable_effects=True
            )
         assert np.isclose(powered_effect["powered_effect"][0], 0.4626, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][1], 0.4900, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][2], 0.4626, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][3], 0.4900, atol=0.001)
+        assert np.isclose(powered_effect["required_sample_size"][0], 41796, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][1], 7811, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][2], 41796, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][3], 7811, atol=100)
 
 class TestPoweredEffectContinuousMultipleMetricTypes(object):
     def setup(self):
@@ -136,6 +145,10 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
         assert np.isclose(powered_effect["powered_effect"][1], 0.5170, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][2], 0.4490, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][3], 0.4757, atol=0.001)
+        assert powered_effect["required_sample_size"][0] == float('inf')
+        assert powered_effect["required_sample_size"][1] == float('inf')
+        assert np.isclose(powered_effect["required_sample_size"][2], 15738437, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][3], 2943671, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments(object):
@@ -193,6 +206,15 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
         assert np.isclose(powered_effect["powered_effect"][6], 0.4880, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][7], 0.5170, atol=0.001)
 
+        assert powered_effect["required_sample_size"][0] == float('inf')
+        assert powered_effect["required_sample_size"][1] == float('inf')
+        assert powered_effect["required_sample_size"][2] == float('inf')
+        assert powered_effect["required_sample_size"][3] == float('inf')
+        assert np.isclose(powered_effect["required_sample_size"][4], 18590000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][5], 3477019, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][6], 18590000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][7], 3477019, atol=100)
+
 
 class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
     def setup(self):
@@ -248,6 +270,15 @@ class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
         assert np.isclose(powered_effect["powered_effect"][5], 0.5170, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][6], 0.488, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][7], 0.5170, atol=0.001)
+
+        assert np.isclose(powered_effect["required_sample_size"][0], 18590000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][1], 3477019, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][2], 18590000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][3], 3477019, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][4], 18590000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][5], 3477019, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][6], 18590000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][7], 3477019, atol=100)
 
 
 class TestPoweredEffectBinary(object):
@@ -319,6 +350,20 @@ class TestPoweredEffectBinary(object):
         assert np.isclose(powered_effect["powered_effect"][10], 0.2663, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][11], 0.2479, atol=0.001)
 
+        assert powered_effect["required_sample_size"][0] == float('inf')
+        assert powered_effect["required_sample_size"][1] == float('inf')
+        assert powered_effect["required_sample_size"][2] == float('inf')
+        assert powered_effect["required_sample_size"][3] == float('inf')
+        assert powered_effect["required_sample_size"][4] == float('inf')
+        assert powered_effect["required_sample_size"][5] == float('inf')
+        assert np.isclose(powered_effect["required_sample_size"][6], 260541, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][7], 361863, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][8], 326159, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][9], 260541, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][10], 361863, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][11], 326159, atol=100)
+
+
 class TestPoweredEffectBinaryOnlyGuardrail(object):
     def setup(self):
         np.random.seed(123)
@@ -370,6 +415,12 @@ class TestPoweredEffectBinaryOnlyGuardrail(object):
         assert np.isclose(powered_effect["powered_effect"][4], 0.2344, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][5], 0.2182, atol=0.001)
 
+        assert np.isclose(powered_effect["required_sample_size"][0], 201905, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][1], 280423, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][2], 252755, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][3], 201905, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][4], 280423, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][5], 252755, atol=100)
 
 class TestBinary(object):
     def setup(self):

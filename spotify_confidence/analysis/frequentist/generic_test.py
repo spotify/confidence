@@ -91,6 +91,7 @@ class GenericTest(ConfidenceABC):
                    absolute: bool = True,
                    groupby: Union[str, Iterable] = None,
                    non_inferiority_margins: NIM_TYPE = None,
+                   minimum_detectable_effects: bool = False,
                    final_expected_sample_size_column: str = None,
                    verbose: bool = False
                    ) -> DataFrame:
@@ -101,6 +102,7 @@ class GenericTest(ConfidenceABC):
             absolute,
             groupby,
             non_inferiority_margins,
+            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose)
 
@@ -126,6 +128,7 @@ class GenericTest(ConfidenceABC):
                             groupby: Union[str, Iterable] = None,
                             level_as_reference: bool = None,
                             non_inferiority_margins: NIM_TYPE = None,
+                            minimum_detectable_effects: bool = None,
                             final_expected_sample_size_column: str = None,
                             verbose: bool = False
                             ) -> DataFrame:
@@ -136,6 +139,7 @@ class GenericTest(ConfidenceABC):
             groupby,
             level_as_reference,
             non_inferiority_margins,
+            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose)
 

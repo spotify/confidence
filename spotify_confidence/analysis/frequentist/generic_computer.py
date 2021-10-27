@@ -25,7 +25,7 @@ from .sequential_bound_solver import bounds
 from ..constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                          DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
                          ADJUSTED_ALPHA, POWER, POWERED_EFFECT, ADJUSTED_POWER, ADJUSTED_P,
-                         ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
+                         ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT, REQUIRED_SAMPLE_SIZE,
                          NULL_HYPOTHESIS, NIM, PREFERENCE, PREFERENCE_TEST, TWO_SIDED,
                          PREFERENCE_DICT, NIM_TYPE, BONFERRONI, CORRECTION_METHODS,
                          HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH,
@@ -40,7 +40,8 @@ from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 add_nim_columns,
                                 validate_and_rename_nims,
                                 validate_and_rename_final_expected_sample_sizes,
-                                get_all_categorical_group_columns)
+                                get_all_categorical_group_columns,
+                                add_mde_columns)
 
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
@@ -130,6 +131,7 @@ class GenericComputer(ConfidenceComputerABC):
                            absolute: bool,
                            groupby: Union[str, Iterable],
                            nims: NIM_TYPE,
+                           mdes: bool,
                            final_expected_sample_size_column: str,
                            verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
@@ -139,13 +141,14 @@ class GenericComputer(ConfidenceComputerABC):
                                                   groupby,
                                                   level_as_reference=True,
                                                   nims=nims,
+                                                  mdes=mdes,
                                                   final_expected_sample_size_column=final_expected_sample_size_column)
         return (difference_df if verbose else
                 difference_df[listify(groupby) +
                               ['level_1', 'level_2', 'absolute_difference',
                                DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
                               [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT,
-                               POWERED_EFFECT] +
+                               POWERED_EFFECT, REQUIRED_SAMPLE_SIZE] +
                               ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                                if nims is not None else [])])
 
@@ -156,6 +159,7 @@ class GenericComputer(ConfidenceComputerABC):
                                     groupby: Union[str, Iterable],
                                     level_as_reference: bool,
                                     nims: NIM_TYPE,
+                                    minimum_detectable_effect:bool,
                                     final_expected_sample_size_column: str,
                                     verbose: bool) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
@@ -168,11 +172,12 @@ class GenericComputer(ConfidenceComputerABC):
                                                   groupby,
                                                   level_as_reference,
                                                   nims,
+                                                  minimum_detectable_effect,
                                                   final_expected_sample_size_column)
         return (difference_df if verbose else
                 difference_df[listify(groupby) +
                               ['level_1', 'level_2', 'absolute_difference',
-                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE, POWERED_EFFECT] +
+                               DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE, POWERED_EFFECT, REQUIRED_SAMPLE_SIZE] +
                               [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT] +
                               ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                                if nims is not None else [])])
@@ -199,7 +204,7 @@ class GenericComputer(ConfidenceComputerABC):
                               ['level_1', 'level_2', 'absolute_difference',
                                DIFFERENCE, CI_LOWER, CI_UPPER, P_VALUE] +
                               [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT,
-                               POWERED_EFFECT] +
+                               POWERED_EFFECT, REQUIRED_SAMPLE_SIZE] +
                               ([NIM, NULL_HYPOTHESIS, PREFERENCE]
                                if nims is not None else [])])
 
@@ -210,6 +215,7 @@ class GenericComputer(ConfidenceComputerABC):
                              groupby: Union[str, Iterable],
                              level_as_reference: bool,
                              nims: NIM_TYPE,
+                             mdes:bool,
                              final_expected_sample_size_column: str):
         if type(level_as_reference) is not bool:
             raise ValueError(
@@ -236,6 +242,7 @@ class GenericComputer(ConfidenceComputerABC):
                       groups_to_compare=levels,
                       absolute=absolute,
                       nims=nims,
+                      mdes=mdes,
                       final_expected_sample_size_column=final_expected_sample_size_column,
                       filtered_sufficient_statistics=filtered_sufficient_statistics)
                 .assign(level_1=lambda df:
@@ -251,6 +258,7 @@ class GenericComputer(ConfidenceComputerABC):
                               groups_to_compare: List[Tuple[str, str]],
                               absolute: bool,
                               nims: NIM_TYPE,
+                              mdes:bool,
                               final_expected_sample_size_column: str,
                               filtered_sufficient_statistics: DataFrame
                               ) -> DataFrame:
@@ -276,6 +284,7 @@ class GenericComputer(ConfidenceComputerABC):
 
         comparison_df = (
             df.pipe(add_nim_columns, nims=nims)
+                .pipe(add_mde_columns, mdes=mdes)
                 .pipe(join)
                 .query(f'level_1 in {[l1 for l1, l2 in groups_to_compare]} and ' +
                        f'level_2 in {[l2 for l1, l2 in groups_to_compare]}' +
@@ -566,7 +575,7 @@ class GenericComputer(ConfidenceComputerABC):
     ) -> Tuple[Union[Series, float], Union[Series, float]]:
         raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
 
-    def _powered_effect(self,
+    def _powered_effect_and_required_sample_size(self,
                         df: DataFrame,
                         ) -> DataFrame:
         pass

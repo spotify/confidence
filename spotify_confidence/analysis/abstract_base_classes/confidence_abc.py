@@ -41,6 +41,7 @@ class ConfidenceABC(ABC):
     def _confidence_grapher(self, grapher: ConfidenceGrapherABC):
         self._grapher = grapher
 
+
     @abstractmethod
     def __init__(self,
                  data_frame: DataFrame,

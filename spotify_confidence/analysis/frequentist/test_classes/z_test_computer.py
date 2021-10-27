@@ -9,7 +9,7 @@ from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import POINT_ESTIMATE, CI_LOWER, CI_UPPER, VARIANCE, TWO_SIDED, SFX2, SFX1, \
     STD_ERR, PREFERENCE_TEST, NULL_HYPOTHESIS, DIFFERENCE, ALPHA, IS_SIGNIFICANT, HOLM, SPOT_1_HOLM, HOMMEL, \
-    SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG, NIM, ADJUSTED_ALPHA, ADJUSTED_POWER, MDE
+    SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG, NIM, ADJUSTED_ALPHA, ADJUSTED_POWER, MDE, ALTERNATIVE_HYPOTHESIS
 from spotify_confidence.analysis.frequentist.generic_computer import GenericComputer, sequential_bounds
 
 
@@ -268,25 +268,6 @@ class ZTestComputer(GenericComputer):
         else:
             raise ValueError('NIM has to be type float or None.')
 
-        # if isinstance(df[MDE], float):
-        #     mde_exists = not np.isnan(df[MDE])
-        # elif type(df[MDE]) is type(None):
-        #     mde_exists = df[MDE] is not None
-        # else:
-        #     raise ValueError('MDE has to be type float or None.')
-
-        mde_exists = False
-
-        if mde_exists and non_inferiority:
-            raise ValueError('Both MDE and NIM are specified, only one can be given.')
-
-        if non_inferiority:
-            hypothetical_effect = 0
-            null_hypothesis = df[NIM]
-        elif mde_exists:
-            hypothetical_effect = df[MDE]
-            null_hypothesis = 0
-
 
         df['powered_effect'] = self._powered_effect(df=df,
                                                     kappa=kappa,
@@ -298,13 +279,13 @@ class ZTestComputer(GenericComputer):
                         non_inferiority=non_inferiority)
 
 
-        if mde_exists or non_inferiority:
+        if (ALTERNATIVE_HYPOTHESIS + SFX1) in df and NULL_HYPOTHESIS in df:
             df['required_sample_size'] = self._required_sample_size(proportion_of_total=proportion_of_total,
                                 z_alpha=z_alpha,
                                 z_power=z_power,
                                 binary=binary,
                                 non_inferiority=non_inferiority,
-                                hypothetical_effect = hypothetical_effect - null_hypothesis,
+                                hypothetical_effect = df[ALTERNATIVE_HYPOTHESIS + SFX1] - df[NULL_HYPOTHESIS],
                                 control_avg=df[POINT_ESTIMATE + SFX1],
                                 control_var=df[VARIANCE + SFX1],
                                 kappa=kappa

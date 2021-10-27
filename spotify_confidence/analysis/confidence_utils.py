@@ -20,8 +20,8 @@ from scipy.stats import norm
 from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED, DECREASE_PREFFERED, TWO_SIDED,
     NIM_TYPE, NIM_INPUT_COLUMN_NAME, PREFERRED_DIRECTION_INPUT_NAME,
-    NIM, NULL_HYPOTHESIS, PREFERENCE,
-    SFX1, SFX2, POINT_ESTIMATE)
+    NIM, NULL_HYPOTHESIS, PREFERENCE,MDE,ALTERNATIVE_HYPOTHESIS,
+    SFX1, SFX2, POINT_ESTIMATE,MDE_INPUT_COLUMN_NAME)
 
 
 def get_all_group_columns(categorical_columns: Iterable,
@@ -87,6 +87,33 @@ def validate_levels(df: DataFrame,
                 list(df.groupby(level_columns).groups.keys())))
 
 
+def add_mde_columns(df:DataFrame, mdes:bool) -> DataFrame:
+
+    def _mde_2_signed_mde(mde: Tuple[float, str]) -> Tuple[float, float, str]:
+        mde_value = None if (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
+        if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
+            return (mde[0], mde_value, TWO_SIDED)
+        elif mde[1].lower() == INCREASE_PREFFERED:
+            return (mde[0], -mde_value, 'larger')
+        elif mde[1].lower() == DECREASE_PREFFERED:
+            return (mde[0], mde_value, 'smaller')
+    if mdes:
+        return (
+            df.assign(**{MDE: lambda df: df[MDE_INPUT_COLUMN_NAME]})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
+                lambda row: row[POINT_ESTIMATE] * _mde_2_signed_mde((row[MDE],
+                                (row[PREFERRED_DIRECTION_INPUT_NAME] if PREFERRED_DIRECTION_INPUT_NAME in row else np.nan)
+                                                                     ))[1],
+                axis=1)})
+              .assign(**{PREFERENCE: lambda df: df.apply(lambda row: _mde_2_signed_mde(
+                (row[MDE],
+                 (row[PREFERRED_DIRECTION_INPUT_NAME] if PREFERRED_DIRECTION_INPUT_NAME in row else np.nan)
+                 ))[2], axis=1)})
+              .assign(**{NULL_HYPOTHESIS: 0}))
+    else:
+        return df
+
+
 def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
     def _nim_2_signed_nim(nim: Tuple[float, str]) -> Tuple[float, float, str]:
         nim_value = 0 if nim[0] is None or (type(nim[0]) is float and np.isnan(nim[0])) else nim[0]
@@ -111,6 +138,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             df.assign(**{NIM: _nim_2_signed_nim((nims[0], nims[1]))[0]})
               .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * _nim_2_signed_nim((nims[0], nims[1]))[1]})
               .assign(**{PREFERENCE: _nim_2_signed_nim((nims[0], nims[1]))[2]})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     elif type(nims) is dict:
         sgnd_nims = {group: _nim_2_signed_nim(nim) for group, nim in nims.items()}
@@ -123,6 +151,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             df.assign(**{NIM: nim_df[NIM]})
               .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * nim_df[NULL_HYPOTHESIS]})
               .assign(**{PREFERENCE: nim_df[PREFERENCE]})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     elif type(nims) is bool:
         return (
@@ -132,6 +161,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
                 axis=1)})
               .assign(**{PREFERENCE: lambda df: df.apply(lambda row: _nim_2_signed_nim(
                 (row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[2], axis=1)})
+              .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     else:
         raise ValueError(f'non_inferiority_margins must be None, tuple, dict,'

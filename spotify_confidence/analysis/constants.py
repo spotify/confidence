@@ -30,6 +30,7 @@ POWERED_EFFECT = "powered_effect"
 ADJUSTED_POWER = "adjusted_power"
 IS_SIGNIFICANT = "is_significant"
 MDE = "minimum_detectable_effect"
+REQUIRED_SAMPLE_SIZE = "required_sample_size"
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"
@@ -69,8 +70,10 @@ CORRECTION_METHODS_THAT_SUPPORT_CI = [BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG,
                                       SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]
 
 NULL_HYPOTHESIS = "null_hypothesis"
+ALTERNATIVE_HYPOTHESIS = "alternative_hypothesis"
 NIM = "non-inferiority margin"
 NIM_INPUT_COLUMN_NAME = "non_inferiority_margin"
+MDE_INPUT_COLUMN_NAME = 'minimum_detectable_effect'
 PREFERRED_DIRECTION_INPUT_NAME = "preferred_direction"
 INCREASE_PREFFERED = "increase"
 DECREASE_PREFFERED = "decrease"
