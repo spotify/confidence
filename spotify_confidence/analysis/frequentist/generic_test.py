@@ -22,7 +22,8 @@ from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (validate_categorical_columns, listify,
-                                get_all_group_columns, validate_data)
+                                get_all_group_columns, validate_data,
+                                get_all_categorical_group_columns)
 from ..constants import BONFERRONI, NIM_TYPE
 from ...chartgrid import ChartGrid
 from ..frequentist.sample_ratio_test import sample_ratio_test
@@ -50,7 +51,9 @@ class GenericTest(ConfidenceABC):
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         self._denominator = denominator_column
-        self._categorical_group_columns = listify(get_all_group_columns(categorical_group_columns, metric_column))
+        self._categorical_group_columns = get_all_categorical_group_columns(
+                                            categorical_group_columns, metric_column,
+                                            treatment_column)
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
 

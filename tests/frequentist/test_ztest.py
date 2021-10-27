@@ -43,14 +43,14 @@ class TestPoweredEffectContinuousSingleMetric(object):
             level_1='control',
             level_2='test'
            )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.344, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.3881, atol=0.001)
 
     def test_powered_effect2(self):
         powered_effect = self.test.difference(
             level_1='control',
             level_2='test2'
         )
-        assert np.isclose(powered_effect["powered_effect"][0], 0.3649, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][0], 0.4111, atol=0.001)
 
 
 class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
@@ -76,8 +76,8 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
             denominator_column='users',
             categorical_group_columns=['variation_name', 'metric_name'],
             ordinal_group_column=None,
-            metric_column='metric_name',
-            treatment_column='variation_name',
+            #metric_column='metric_name',
+            #treatment_column='variation_name',
             power = 0.8,
             interval_size=0.95)
 

@@ -63,6 +63,12 @@ def get_remaning_groups(all_groups: Iterable,
         ]
     return remaining_groups
 
+def get_all_categorical_group_columns(categorical_columns: Union[str, Iterable, None],
+                                      metric_column: Union[str, None],
+                                      treatment_column: Union[str, None]) -> Iterable:
+    all_columns = listify(categorical_columns) + listify(metric_column) + listify(treatment_column)
+    return list(set(all_columns))
+
 
 def validate_levels(df: DataFrame,
                     level_columns: Union[str, Iterable],

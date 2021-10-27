@@ -39,7 +39,8 @@ from ..confidence_utils import (get_remaning_groups, validate_levels,
                                 level2str, listify, get_all_group_columns,
                                 add_nim_columns,
                                 validate_and_rename_nims,
-                                validate_and_rename_final_expected_sample_sizes)
+                                validate_and_rename_final_expected_sample_sizes,
+                                get_all_categorical_group_columns)
 
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
@@ -74,10 +75,9 @@ class GenericComputer(ConfidenceComputerABC):
                     f'binomial data. Please check your data.')
 
         self._denominator = denominator_column
-        self._categorical_group_columns = get_all_group_columns(categorical_group_columns,
-                                                                metric_column)
-        self._categorical_group_columns = get_all_group_columns(self._categorical_group_columns,
-                                                                treatment_column)
+        self._categorical_group_columns = get_all_categorical_group_columns(
+                                            categorical_group_columns, metric_column,
+                                            treatment_column)
         self._segments = list(set(self._categorical_group_columns) - set([metric_column]) - set([treatment_column]))
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
@@ -89,6 +89,10 @@ class GenericComputer(ConfidenceComputerABC):
             raise ValueError(f'Use one of the correction methods ' +
                              f'in {CORRECTION_METHODS}')
         self._correction_method = correction_method
+        if self._metric_column is not None:
+            if data_frame.groupby(self._metric_column).ngroups == 1:
+                self._categorical_group_columns = list(
+                    set(self._categorical_group_columns) - set([self._metric_column]))
 
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns, self._ordinal_group_column)
@@ -335,6 +339,10 @@ class GenericComputer(ConfidenceComputerABC):
                                        SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                        SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                        SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
+
+
+            if self._metric_column is None:
+                raise ValueError(f"metric_column must be specified for correction method: {self._correction_method}.")
             self._number_success_metrics = df[df[NIM].isnull()].groupby(
                 self._metric_column).ngroups
             number_guardrail_metrics = df.groupby(
@@ -467,8 +475,13 @@ class GenericComputer(ConfidenceComputerABC):
                                    SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                    SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
+
+            if self._metric_column is None:
+                raise ValueError(f"metric_column must be specified for correction method: {correction_method}.")
             self._number_success_metrics = df[df[NIM].isnull()].groupby(
                 self._metric_column).ngroups
+            if self._treatment_column is None:
+                raise ValueError(f"treatment_column must be specified for correction method: {correction_method}.")
             number_comparions = len((df[self._treatment_column+SFX1]+df[self._treatment_column+SFX2] ).unique())
             number_segments = (1 if len(self._segments) is 0 else df.groupby(self._segments).ngroups)
 

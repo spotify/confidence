@@ -191,7 +191,15 @@ class ZTestComputer(GenericComputer):
         binary = df[self._numerator_sumsq + SFX1] == df[self._numerator + SFX1]
         kappa = n2 / n1
         current_number_of_units = n1 + n2
-        if binary and np.isnan(df[NIM]):
+
+        if isinstance(df[NIM], float):
+            different_variances = np.isnan(df[NIM])
+        elif type(df[NIM]) is type(None):
+            different_variances = df[NIM] is None
+        else:
+            raise ValueError('NIM has to be type float or None.')
+
+        if binary and different_variances:
             effect = self._search_MDE_binary_local_search(
                 control_avg=df[POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
