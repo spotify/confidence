@@ -1,10 +1,11 @@
 from typing import Tuple
 
+import numpy as np
 from pandas import DataFrame, Series
 from statsmodels.stats.proportion import proportion_confint, proportions_chisquare, confint_proportions_2indep
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
-from spotify_confidence.analysis.constants import POINT_ESTIMATE, CI_LOWER, CI_UPPER, SFX1, SFX2
+from spotify_confidence.analysis.constants import POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER, SFX1, SFX2
 
 
 class ChiSquaredComputer(object):
@@ -26,6 +27,10 @@ class ChiSquaredComputer(object):
             raise ValueError('Computed variance is negative. '
                              'Please check your inputs.')
         return variance
+
+    def _std_err(self, row: Series) -> float:
+        return np.sqrt(row[VARIANCE + SFX1] / row[self._denominator + SFX1] +
+                       row[VARIANCE + SFX2] / row[self._denominator + SFX2])
 
     def _add_point_estimate_ci(self, row: DataFrame) -> Series:
         row[CI_LOWER], row[CI_UPPER] = proportion_confint(

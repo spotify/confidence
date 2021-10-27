@@ -16,16 +16,17 @@ from typing import (Union, Iterable, Tuple, Dict, List)
 
 from pandas import DataFrame
 
+from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from .chartify_grapher import ChartifyGrapher
 from ..abstract_base_classes.confidence_abc import ConfidenceABC
 from ..abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (validate_categorical_columns, listify,
-                                get_all_group_columns, validate_data)
-from ..constants import BONFERRONI, NIM_TYPE
-from ...chartgrid import ChartGrid
+                                get_all_group_columns)
+from ..constants import BONFERRONI, NIM_TYPE, METHODS
 from ..frequentist.sample_ratio_test import sample_ratio_test
+from ...chartgrid import ChartGrid
 
 
 class GenericTest(ConfidenceABC):
@@ -40,7 +41,9 @@ class GenericTest(ConfidenceABC):
                  interval_size: float = 0.95,
                  correction_method: str = BONFERRONI,
                  confidence_computer: ConfidenceComputerABC = None,
-                 confidence_grapher: ConfidenceGrapherABC = None):
+                 confidence_grapher: ConfidenceGrapherABC = None,
+                 method_column: str = None,
+                 bootstrap_samples_column: str = None):
 
         validate_categorical_columns(categorical_group_columns)
         self._df = data_frame
@@ -53,18 +56,27 @@ class GenericTest(ConfidenceABC):
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns,
             self._ordinal_group_column)
-        validate_data(self._df,
-                      self._numerator,
-                      self._numerator_sumsq,
-                      self._denominator,
-                      self._all_group_columns,
-                      self._ordinal_group_column)
+
+        if method_column is None:
+            raise ValueError("method column cannot be None")
+        if not all(self._df[method_column].map(lambda m: m in METHODS)):
+            raise ValueError(f"Values of method column must be in {METHODS}")
 
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
-            raise ValueError("Pass in a ConfidenceComputer or use one of the "
-                             "subclasses e.g. ZTest.")
+            self._confidence_computer = GenericComputer(
+                data_frame=data_frame,
+                numerator_column=numerator_column,
+                numerator_sum_squares_column=numerator_sum_squares_column,
+                denominator_column=denominator_column,
+                categorical_group_columns=listify(categorical_group_columns),
+                ordinal_group_column=ordinal_group_column,
+                interval_size=interval_size,
+                correction_method=correction_method.lower(),
+                method_column=method_column,
+                bootstrap_samples_column=bootstrap_samples_column
+            )
 
         self._confidence_grapher = confidence_grapher if confidence_grapher \
             is not None \

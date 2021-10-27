@@ -31,6 +31,10 @@ class TTestComputer(object):
                              'Please check your inputs.')
         return variance
 
+    def _std_err(self, row: Series) -> float:
+        return np.sqrt(row[VARIANCE + SFX1] / row[self._denominator + SFX1] +
+                       row[VARIANCE + SFX2] / row[self._denominator + SFX2])
+
     def _add_point_estimate_ci(self, row: DataFrame) -> Series:
         row[CI_LOWER], row[CI_UPPER] = _tconfint_generic(
             mean=row[POINT_ESTIMATE],

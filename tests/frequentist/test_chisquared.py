@@ -78,19 +78,24 @@ class TestCategorical(object):
         diff = x2 - x1
         std_diff = diff.std()
 
-        comp = GenericComputer(data_frame=pd.DataFrame({'success': [1], 'n': [2]}),
+        comp = GenericComputer(data_frame=pd.DataFrame({'group': ['control'],
+                                                        'success': [1],
+                                                        'n': [2],
+                                                        'method': ['chi-squared']}),
                                numerator_column='success',
                                numerator_sum_squares_column=None,
                                denominator_column='n',
-                               categorical_group_columns=[],
+                               categorical_group_columns=['group'],
                                ordinal_group_column=None,
                                interval_size=None,
                                correction_method='Bonferroni',
-                               method_column=None)
+                               method_column='method',
+                               bootstrap_samples_column=None)
         diff_se = comp._std_err(pd.DataFrame({VARIANCE + SFX1: [p1*(1-p1)],
                                               VARIANCE + SFX2: [p2*(1-p2)],
                                               'n' + SFX1: [n1],
-                                              'n' + SFX2: [n2]}))
+                                              'n' + SFX2: [n2],
+                                              'method': ['chi-squared']}))
 
         assert (np.allclose(std_diff, diff_se, atol=1e-6))
 

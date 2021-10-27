@@ -15,7 +15,6 @@
 from typing import (Union, Iterable, List, Tuple)
 from warnings import warn
 
-import numpy as np
 from pandas import DataFrame, Series, concat
 from statsmodels.stats.multitest import multipletests
 
@@ -23,7 +22,7 @@ from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc i
     ConfidenceComputerABC
 from spotify_confidence.analysis.confidence_utils import (get_remaning_groups, validate_levels,
                                                           level2str, listify, get_all_group_columns,
-                                                          add_nim_columns,
+                                                          add_nim_columns, validate_data,
                                                           validate_and_rename_nims, validate_and_rename_column)
 from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                                                    DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
@@ -37,11 +36,12 @@ from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE, CI_
                                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                                    SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY,
                                                    BONFERRONI_ONLY_COUNT_TWOSIDED,
-                                                   BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1)
+                                                   BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
+                                                   CHI2, TTEST, ZTEST, BOOTSTRAP)
+from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
-from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 
 
 class GenericComputer(ConfidenceComputerABC):
@@ -49,13 +49,13 @@ class GenericComputer(ConfidenceComputerABC):
                  numerator_sum_squares_column: str, denominator_column: str,
                  categorical_group_columns: Union[str, Iterable],
                  ordinal_group_column: str, interval_size: float,
-                 correction_method: str, method_column: str):
+                 correction_method: str, method_column: str,
+                 bootstrap_samples_column: str):
 
         self._df = data_frame
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
-        if self._numerator_sumsq is None or \
-                self._numerator_sumsq == self._numerator:
+        if self._numerator is not None and (self._numerator_sumsq is None or self._numerator_sumsq == self._numerator):
             if (data_frame[numerator_column] <=
                     data_frame[denominator_column]).all():
                 # Treat as binomial data
@@ -80,16 +80,28 @@ class GenericComputer(ConfidenceComputerABC):
 
         self._all_group_columns = get_all_group_columns(
             self._categorical_group_columns, self._ordinal_group_column)
-        self._sufficient = None
 
+        self._bootstrap_samples_column = bootstrap_samples_column
+
+        columns_that_must_exist = []
+        if (CHI2 in self._df[self._method_column] or TTEST in self._df[self._method_column]
+                or ZTEST in self._df[self._method_column]):
+            columns_that_must_exist += [self._numerator, self._denominator]
+            columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
+        if BOOTSTRAP in self._df[self._method_column]:
+            columns_that_must_exist += [self._bootstrap_samples_column]
+
+        validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
+
+        self._sufficient = None
         self._computers = {
-            'chi-squared': ChiSquaredComputer(self._numerator, self._numerator_sumsq, self._denominator,
-                                              self._ordinal_group_column, self._interval_size),
-            't-test': TTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
-                                    self._ordinal_group_column, self._interval_size),
-            'z-test': ZTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
-                                    self._ordinal_group_column, self._interval_size),
-            'bootstrap': BootstrapComputer('bootstrap_samples', self._interval_size),
+            CHI2: ChiSquaredComputer(self._numerator, self._numerator_sumsq, self._denominator,
+                                     self._ordinal_group_column, self._interval_size),
+            TTEST: TTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
+                                 self._ordinal_group_column, self._interval_size),
+            ZTEST: ZTestComputer(self._numerator, self._numerator_sumsq, self._denominator,
+                                 self._ordinal_group_column, self._interval_size),
+            BOOTSTRAP: BootstrapComputer(self._bootstrap_samples_column, self._interval_size),
         }
 
     @property
@@ -100,7 +112,8 @@ class GenericComputer(ConfidenceComputerABC):
         return (
             self._sufficient_statistics if verbose else
             self._sufficient_statistics[
-                    self._all_group_columns + [self._numerator, self._denominator, POINT_ESTIMATE, CI_LOWER, CI_UPPER]
+                    self._all_group_columns + [c for c in [self._numerator, self._denominator] if c is not None]
+                    + [POINT_ESTIMATE, CI_LOWER, CI_UPPER]
             ]
         )
 
@@ -266,12 +279,12 @@ class GenericComputer(ConfidenceComputerABC):
               .query(f'level_1 in {[l1 for l1,l2 in groups_to_compare]} and ' +
                      f'level_2 in {[l2 for l1,l2 in groups_to_compare]}' +
                      'and level_1 != level_2')
-              .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] -
-                      df[POINT_ESTIMATE + SFX1]})
-              .assign(**{STD_ERR: self._std_err})
               .pipe(validate_and_rename_nims)
               .pipe(validate_and_rename_column, final_expected_sample_size_column)
               .pipe(validate_and_rename_column, self._method_column)
+              .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] -
+                      df[POINT_ESTIMATE + SFX1]})
+              .assign(**{STD_ERR: self._std_err})
               .pipe(self._add_p_value_and_ci,
                     final_expected_sample_size_column=final_expected_sample_size_column,
                     filtered_sufficient_statistics=filtered_sufficient_statistics)
@@ -301,10 +314,6 @@ class GenericComputer(ConfidenceComputerABC):
                   .assign(**{NULL_HYPOTHESIS:
                           df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
             )
-
-    def _std_err(self, df: DataFrame) -> Series:
-        return np.sqrt(df[VARIANCE + SFX1] / df[self._denominator + SFX1] +
-                       df[VARIANCE + SFX2] / df[self._denominator + SFX2])
 
     def _add_p_value_and_ci(self,
                             df: DataFrame,
@@ -468,6 +477,9 @@ class GenericComputer(ConfidenceComputerABC):
 
     def _variance(self, df: DataFrame) -> Series:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._variance(row), axis=1)
+
+    def _std_err(self, df: DataFrame) -> Series:
+        return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._std_err(row), axis=1)
 
     def _add_point_estimate_ci(self, df: DataFrame) -> DataFrame:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._add_point_estimate_ci(row),

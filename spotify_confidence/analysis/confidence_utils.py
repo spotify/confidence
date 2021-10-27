@@ -181,17 +181,13 @@ def level2str(level: Union[str, Tuple]) -> str:
 
 
 def validate_data(df: DataFrame,
-                  numerator: str,
-                  numerator_sumsq: str,
-                  denominator: str,
+                  columns_that_must_exist,
                   group_columns: Iterable,
                   ordinal_group_column: str):
     """Integrity check input dataframe.
     """
-    _validate_column(df, numerator)
-    if numerator_sumsq is not None:
-        _validate_column(df, numerator_sumsq)
-    _validate_column(df, denominator)
+    for col in columns_that_must_exist:
+        _validate_column(df, col)
 
     if not group_columns:
         raise ValueError("""At least one of `categorical_group_columns`

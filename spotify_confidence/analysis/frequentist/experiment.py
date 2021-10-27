@@ -16,13 +16,11 @@ from typing import (Union, Iterable)
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
     ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from spotify_confidence.analysis.frequentist.generic_test import GenericTest
-from spotify_confidence.analysis.confidence_utils import listify
 from spotify_confidence.analysis.constants import BONFERRONI
+from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 
 
 class Experiment(GenericTest):
@@ -38,19 +36,8 @@ class Experiment(GenericTest):
                  correction_method: str = BONFERRONI,
                  confidence_computer: ConfidenceComputerABC = None,
                  confidence_grapher: ConfidenceGrapherABC = None,
-                 method_column: str = None):
-
-        computer = GenericComputer(
-            data_frame=data_frame,
-            numerator_column=numerator_column,
-            numerator_sum_squares_column=numerator_sum_squares_column,
-            denominator_column=denominator_column,
-            categorical_group_columns=listify(categorical_group_columns),
-            ordinal_group_column=ordinal_group_column,
-            interval_size=interval_size,
-            correction_method=correction_method.lower(),
-            method_column=method_column
-        )
+                 method_column: str = None,
+                 bootstrap_samples_column: str = None):
 
         super(Experiment, self).__init__(
             data_frame,
@@ -61,5 +48,7 @@ class Experiment(GenericTest):
             ordinal_group_column,
             interval_size,
             correction_method,
-            computer,
-            confidence_grapher)
+            confidence_computer,
+            confidence_grapher,
+            method_column,
+            bootstrap_samples_column)

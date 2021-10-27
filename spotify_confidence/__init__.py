@@ -17,6 +17,7 @@ from .analysis.bayesian.bayesian_models import BetaBinomial
 from spotify_confidence.analysis.frequentist.chi_squared import ChiSquared
 from spotify_confidence.analysis.frequentist.t_test import StudentsTTest
 from spotify_confidence.analysis.frequentist.z_test import ZTest
+from spotify_confidence.analysis.frequentist.experiment import Experiment
 from .samplesize.sample_size_calculator import SampleSize
 
 from . import examples
