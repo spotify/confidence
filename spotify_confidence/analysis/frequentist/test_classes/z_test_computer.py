@@ -9,7 +9,7 @@ from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import POINT_ESTIMATE, CI_LOWER, CI_UPPER, VARIANCE, TWO_SIDED, SFX2, SFX1, \
     STD_ERR, PREFERENCE_TEST, NULL_HYPOTHESIS, DIFFERENCE, ALPHA, IS_SIGNIFICANT, HOLM, SPOT_1_HOLM, HOMMEL, \
-    SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG, NIM, ADJUSTED_ALPHA, POWER, ADJUSTED_POWER
+    SIMES_HOCHBERG, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG, NIM, ADJUSTED_ALPHA, ADJUSTED_POWER, MDE
 from spotify_confidence.analysis.frequentist.generic_computer import GenericComputer, sequential_bounds
 
 
@@ -182,24 +182,17 @@ class ZTestComputer(GenericComputer):
 
     def _powered_effect(self,
                         df: Series,
+                        kappa: float,
+                        proportion_of_total: float,
+                        z_alpha: float,
+                        z_power: float,
+                        binary: bool,
+                        current_number_of_units: int,
+                        non_inferiority: bool
                         ) -> Series:
 
-        proportion_of_total = 1  # TODO
-        z_alpha = st.norm.ppf(1 - df[ADJUSTED_ALPHA])
-        z_power = st.norm.ppf(df[ADJUSTED_POWER])
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
-        binary = df[self._numerator_sumsq + SFX1] == df[self._numerator + SFX1]
-        kappa = n2 / n1
-        current_number_of_units = n1 + n2
 
-        if isinstance(df[NIM], float):
-            different_variances = np.isnan(df[NIM])
-        elif type(df[NIM]) is type(None):
-            different_variances = df[NIM] is None
-        else:
-            raise ValueError('NIM has to be type float or None.')
-
-        if binary and different_variances:
+        if binary and not non_inferiority:
             effect = self._search_MDE_binary_local_search(
                 control_avg=df[POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
@@ -221,10 +214,101 @@ class ZTestComputer(GenericComputer):
             effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (
                     n2_partial + kappa * n2_partial))
 
-        df['powered_effect'] = effect
-        return (
-            df
+        return effect
+
+    def _required_sample_size(self,
+            binary: Union[Series, bool],
+            non_inferiority: Union[Series, bool],
+            hypothetical_effect: Union[Series, float],
+            control_avg: Union[Series, float],
+            control_var: Union[Series, float],
+            z_alpha: float = None,
+            kappa: float = None,
+            proportion_of_total: Union[Series, float] = None,
+            z_power: float = None,
+    ) -> Union[Series, float]:
+
+        if kappa is None:
+            raise ValueError('kappa is None, must be postive float')
+        if proportion_of_total is None:
+            raise ValueError('proportion_of_total is None, must be between 0 and 1')
+
+        treatment_var = np.vectorize(self._get_hypothetical_treatment_var)(
+            binary, non_inferiority, control_avg, control_var, hypothetical_effect
         )
+
+        n2 = self._treatment_group_sample_size(
+            z_alpha=z_alpha,
+            z_power=z_power,
+            hypothetical_effect=hypothetical_effect,
+            control_var=control_var,
+            treatment_var=treatment_var,
+            kappa=kappa,
+        )
+        required_sample_size = np.ceil((n2 + n2 * kappa) / proportion_of_total)
+        return required_sample_size
+
+
+
+    def _powered_effect_and_required_sample_size(self,
+                        df: Series,
+                        ) -> Series:
+        proportion_of_total = 1  # TODO
+        z_alpha = st.norm.ppf(1 - df[ADJUSTED_ALPHA])
+        z_power = st.norm.ppf(df[ADJUSTED_POWER])
+        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
+        kappa = n2 / n1
+        binary = df[self._numerator_sumsq + SFX1] == df[self._numerator + SFX1]
+        current_number_of_units = n1 + n2
+
+        if isinstance(df[NIM], float):
+            non_inferiority = not np.isnan(df[NIM])
+        elif type(df[NIM]) is type(None):
+            non_inferiority = df[NIM] is not None
+        else:
+            raise ValueError('NIM has to be type float or None.')
+
+        if isinstance(df[MDE], float):
+            mde_exists = not np.isnan(df[MDE])
+        elif type(df[MDE]) is type(None):
+            mde_exists = df[MDE] is not None
+        else:
+            raise ValueError('MDE has to be type float or None.')
+
+        if mde_exists and non_inferiority:
+            raise ValueError('Both MDE and NIM are specified, only one can be given.')
+
+        if (not mde_exists) and (non_inferiority):
+            raise ValueError('Neither MDE and NIM are specified, one must be given.')
+
+
+        hypothetical_effect = (0 if non_inferiority else df[MDE])
+        null_hypothesis = (0 if not non_inferiority else df[NIM])
+
+        df['powered_effect'] = self._powered_effect(df=df,
+                                                    kappa=kappa,
+                        proportion_of_total=proportion_of_total,
+                        z_alpha=z_alpha,
+                        z_power=z_power,
+                        binary=binary,
+                        current_number_of_units=current_number_of_units,
+                        non_inferiority=non_inferiority)
+
+
+        if not non_inferiority:
+            if df[MDE] is not None:
+                df['required_sample_size'] = self._required_sample_size(proportion_of_total=proportion_of_total,
+                                z_alpha=z_alpha,
+                                z_power=z_power,
+                                binary=binary,
+                                non_inferiority=non_inferiority,
+                                hypothetical_effect = hypothetical_effect - null_hypothesis,
+                                control_avg=df[POINT_ESTIMATE + SFX1],
+                                control_var=df[VARIANCE + SFX1],
+                                )
+        return df
+
+
 
     def _currently_powered_effect(self,
             control_avg: float,

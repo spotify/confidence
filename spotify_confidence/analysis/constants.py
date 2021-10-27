@@ -29,6 +29,7 @@ POWER = "power"
 POWERED_EFFECT = "powered_effect"
 ADJUSTED_POWER = "adjusted_power"
 IS_SIGNIFICANT = "is_significant"
+MDE = "minimum_detectable_effect"
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"
