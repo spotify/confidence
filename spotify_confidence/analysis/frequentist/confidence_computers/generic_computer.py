@@ -30,18 +30,26 @@ from spotify_confidence.analysis.confidence_utils import (get_remaning_groups, v
                                                           validate_data)
 from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                                                    DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
-                                                   ADJUSTED_ALPHA, POWER, POWERED_EFFECT, ADJUSTED_POWER, ADJUSTED_P,
-                                                   ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT, REQUIRED_SAMPLE_SIZE,
-                                                   NULL_HYPOTHESIS, NIM, PREFERENCE, PREFERENCE_TEST, TWO_SIDED,
-                                                   PREFERENCE_DICT, BONFERRONI, HOLM, HOMMEL, SIMES_HOCHBERG, SIDAK,
+                                                   ADJUSTED_ALPHA, POWER, POWERED_EFFECT,
+                                                   ADJUSTED_POWER, ADJUSTED_P,
+                                                   ADJUSTED_LOWER, ADJUSTED_UPPER, IS_SIGNIFICANT,
+                                                   REQUIRED_SAMPLE_SIZE,
+                                                   NULL_HYPOTHESIS, NIM, PREFERENCE,
+                                                   PREFERENCE_TEST, TWO_SIDED,
+                                                   PREFERENCE_DICT, BONFERRONI, HOLM, HOMMEL,
+                                                   SIMES_HOCHBERG, SIDAK,
                                                    HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH,
                                                    FDR_TSBKY,
-                                                   SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
+                                                   SPOT_1_HOLM, SPOT_1_HOMMEL,
+                                                   SPOT_1_SIMES_HOCHBERG,
                                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
-                                                   SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY,
+                                                   SPOT_1_FDR_BY, SPOT_1_FDR_TSBH,
+                                                   SPOT_1_FDR_TSBKY,
                                                    BONFERRONI_ONLY_COUNT_TWOSIDED,
                                                    BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-                                                   SPOT_1, CORRECTION_METHODS, BOOTSTRAP, CHI2, TTEST, ZTEST, NIM_TYPE)
+                                                   SPOT_1, CORRECTION_METHODS, BOOTSTRAP, CHI2,
+                                                   TTEST, ZTEST, NIM_TYPE,
+                                                   CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO)
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
@@ -368,15 +376,9 @@ class GenericComputer(ConfidenceComputerABC):
             number_of_guardrail_metrics + 1
 
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
-        groupby = ['level_1', 'level_2'] + [column for column in df.index.names if
-                                            column is not None]
+
         power_correction = 1
-        if self._correction_method in [BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY, SPOT_1,
-                                       HOLM, HOMMEL, SIMES_HOCHBERG,
-                                       SIDAK, HOLM_SIDAK, FDR_BH, FDR_BY, FDR_TSBH, FDR_TSBKY,
-                                       SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
-                                       SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
-                                       SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
+        if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
 
             self._number_total_metrics = 1 if self._single_metric else df.groupby(
                 self._metric_column).ngroups
@@ -603,7 +605,11 @@ class GenericComputer(ConfidenceComputerABC):
         return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
     def _powered_effect_and_required_sample_size(self, row ) -> DataFrame:
-        return self._confidence_computers[row[self._method_column]]._powered_effect_and_required_sample_size(row)
+        if (self._metric_column is None or self._treatment_column is None) and \
+                self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
+            return row
+        else:
+            return self._confidence_computers[row[self._method_column]]._powered_effect_and_required_sample_size(row)
 
     def _achieved_power(self,
                         row: Series,
