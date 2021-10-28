@@ -12,43 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable, Tuple, Dict, List)
+from typing import Union, Iterable, Tuple, Dict, List
 
 from pandas import DataFrame
 
 from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from .chartify_grapher import ChartifyGrapher
 from ..abstract_base_classes.confidence_abc import ConfidenceABC
-from ..abstract_base_classes.confidence_computer_abc import \
-    ConfidenceComputerABC
+from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from ..confidence_utils import (validate_categorical_columns, listify,
-                                get_all_group_columns, validate_data,
-                                get_all_categorical_group_columns)
+from ..confidence_utils import (
+    validate_categorical_columns,
+    listify,
+    get_all_categorical_group_columns,
+)
 from ..constants import BONFERRONI, NIM_TYPE, METHODS
-from ...chartgrid import ChartGrid
 from ..frequentist.sample_ratio_test import sample_ratio_test
 from ...chartgrid import ChartGrid
 
 
 class GenericTest(ConfidenceABC):
-
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 numerator_sum_squares_column: Union[str, None],
-                 denominator_column: str,
-                 categorical_group_columns: Union[str, Iterable],
-                 ordinal_group_column: Union[str, None] = None,
-                 metric_column = None,
-                 treatment_column = None,
-                 interval_size: float = 0.95,
-                 power: float = 0.8,
-                 correction_method: str = BONFERRONI,
-                 confidence_computer: ConfidenceComputerABC = None,
-                 confidence_grapher: ConfidenceGrapherABC = None,
-                 method_column: str = None,
-                 bootstrap_samples_column: str = None):
+    def __init__(
+        self,
+        data_frame: DataFrame,
+        numerator_column: str,
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: str,
+        categorical_group_columns: Union[str, Iterable],
+        ordinal_group_column: Union[str, None] = None,
+        metric_column=None,
+        treatment_column=None,
+        interval_size: float = 0.95,
+        power: float = 0.8,
+        correction_method: str = BONFERRONI,
+        confidence_computer: ConfidenceComputerABC = None,
+        confidence_grapher: ConfidenceGrapherABC = None,
+        method_column: str = None,
+        bootstrap_samples_column: str = None,
+    ):
 
         validate_categorical_columns(categorical_group_columns)
         self._df = data_frame
@@ -56,8 +57,8 @@ class GenericTest(ConfidenceABC):
         self._numerator_sumsq = numerator_sum_squares_column
         self._denominator = denominator_column
         self._categorical_group_columns = get_all_categorical_group_columns(
-                                            categorical_group_columns, metric_column,
-                                            treatment_column)
+            categorical_group_columns, metric_column, treatment_column
+        )
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
         self._treatment_column = treatment_column
@@ -87,31 +88,35 @@ class GenericTest(ConfidenceABC):
                 interval_size=interval_size,
                 correction_method=correction_method.lower(),
                 method_column=method_column,
-                bootstrap_samples_column=bootstrap_samples_column
+                bootstrap_samples_column=bootstrap_samples_column,
             )
 
-        self._confidence_grapher = confidence_grapher if confidence_grapher \
-            is not None \
+        self._confidence_grapher = (
+            confidence_grapher
+            if confidence_grapher is not None
             else ChartifyGrapher(
                 data_frame=self._df,
                 numerator_column=self._numerator,
                 denominator_column=self._denominator,
                 categorical_group_columns=self._categorical_group_columns,
-                ordinal_group_column=self._ordinal_group_column)
+                ordinal_group_column=self._ordinal_group_column,
+            )
+        )
 
     def summary(self, verbose: bool = False) -> DataFrame:
         return self._confidence_computer.compute_summary(verbose)
 
-    def difference(self,
-                   level_1: Union[str, Tuple],
-                   level_2: Union[str, Tuple],
-                   absolute: bool = True,
-                   groupby: Union[str, Iterable] = None,
-                   non_inferiority_margins: NIM_TYPE = None,
-                   minimum_detectable_effects: bool = False,
-                   final_expected_sample_size_column: str = None,
-                   verbose: bool = False
-                   ) -> DataFrame:
+    def difference(
+        self,
+        level_1: Union[str, Tuple],
+        level_2: Union[str, Tuple],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = False,
+        final_expected_sample_size_column: str = None,
+        verbose: bool = False,
+    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
 
         return self._confidence_computer.compute_difference(
@@ -122,34 +127,34 @@ class GenericTest(ConfidenceABC):
             non_inferiority_margins,
             minimum_detectable_effects,
             final_expected_sample_size_column,
-            verbose)
+            verbose,
+        )
 
-    def differences(self,
-                    levels: Union[Tuple, List[Tuple]],
-                    absolute: bool = True,
-                    groupby: Union[str, Iterable] = None,
-                    non_inferiority_margins: NIM_TYPE = None,
-                    final_expected_sample_size_column: str = None,
-                    verbose: bool = False
-                    ) -> DataFrame:
+    def differences(
+        self,
+        levels: Union[Tuple, List[Tuple]],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        non_inferiority_margins: NIM_TYPE = None,
+        final_expected_sample_size_column: str = None,
+        verbose: bool = False,
+    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(
-            levels,
-            absolute,
-            groupby,
-            non_inferiority_margins,
-            final_expected_sample_size_column,
-            verbose)
+            levels, absolute, groupby, non_inferiority_margins, final_expected_sample_size_column, verbose
+        )
 
-    def multiple_difference(self, level: Union[str, Tuple],
-                            absolute: bool = True,
-                            groupby: Union[str, Iterable] = None,
-                            level_as_reference: bool = None,
-                            non_inferiority_margins: NIM_TYPE = None,
-                            minimum_detectable_effects: bool = None,
-                            final_expected_sample_size_column: str = None,
-                            verbose: bool = False
-                            ) -> DataFrame:
+    def multiple_difference(
+        self,
+        level: Union[str, Tuple],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        level_as_reference: bool = None,
+        non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
+        final_expected_sample_size_column: str = None,
+        verbose: bool = False,
+    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
 
         return self._confidence_computer.compute_multiple_difference(
@@ -160,95 +165,90 @@ class GenericTest(ConfidenceABC):
             non_inferiority_margins,
             minimum_detectable_effects,
             final_expected_sample_size_column,
-            verbose)
+            verbose,
+        )
 
-    def summary_plot(self,
-                     groupby: Union[str, Iterable] = None) -> ChartGrid:
+    def summary_plot(self, groupby: Union[str, Iterable] = None) -> ChartGrid:
         summary_df = self.summary()
         graph = self._confidence_grapher.plot_summary(summary_df, groupby)
         return graph
 
-    def difference_plot(self,
-                        level_1: Union[str, Tuple],
-                        level_2: Union[str, Tuple],
-                        absolute: bool = True,
-                        groupby: Union[str, Iterable] = None,
-                        non_inferiority_margins: NIM_TYPE = None,
-                        minimum_detectable_effects: bool = None,
-                        use_adjusted_intervals: bool = False,
-                        final_expected_sample_size_column: str = None
-                        ) -> ChartGrid:
-        difference_df = self.difference(level_1,
-                                        level_2,
-                                        absolute,
-                                        groupby,
-                                        non_inferiority_margins,
-                                        minimum_detectable_effects,
-                                        final_expected_sample_size_column)
+    def difference_plot(
+        self,
+        level_1: Union[str, Tuple],
+        level_2: Union[str, Tuple],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
+        use_adjusted_intervals: bool = False,
+        final_expected_sample_size_column: str = None,
+    ) -> ChartGrid:
+        difference_df = self.difference(
+            level_1,
+            level_2,
+            absolute,
+            groupby,
+            non_inferiority_margins,
+            minimum_detectable_effects,
+            final_expected_sample_size_column,
+        )
         chartgrid = self._confidence_grapher.plot_difference(
-            difference_df,
-            absolute,
-            groupby,
-            non_inferiority_margins,
-            use_adjusted_intervals)
+            difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals
+        )
         return chartgrid
 
-    def differences_plot(self,
-                         levels: List[Tuple],
-                         absolute: bool = True,
-                         groupby: Union[str, Iterable] = None,
-                         non_inferiority_margins: NIM_TYPE = None,
-                         use_adjusted_intervals: bool = False,
-                         final_expected_sample_size_column: str = None
-                         ) -> ChartGrid:
-        difference_df = self.differences(levels,
-                                         absolute,
-                                         groupby,
-                                         non_inferiority_margins,
-                                         final_expected_sample_size_column)
+    def differences_plot(
+        self,
+        levels: List[Tuple],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        non_inferiority_margins: NIM_TYPE = None,
+        use_adjusted_intervals: bool = False,
+        final_expected_sample_size_column: str = None,
+    ) -> ChartGrid:
+        difference_df = self.differences(
+            levels, absolute, groupby, non_inferiority_margins, final_expected_sample_size_column
+        )
         chartgrid = self._confidence_grapher.plot_differences(
-            difference_df,
-            absolute,
-            groupby,
-            non_inferiority_margins,
-            use_adjusted_intervals)
+            difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals
+        )
         return chartgrid
 
-    def multiple_difference_plot(self,
-                                 level: Union[str, Tuple],
-                                 absolute: bool = True,
-                                 groupby: Union[str, Iterable] = None,
-                                 level_as_reference: bool = False,
-                                 non_inferiority_margins: NIM_TYPE = None,
-                                 minimum_detectable_effects: bool = None,
-                                 use_adjusted_intervals: bool = False,
-                                 final_expected_sample_size_column: str = None
-                                 ) -> ChartGrid:
-        difference_df = self.multiple_difference(level,
-                                                 absolute,
-                                                 groupby,
-                                                 level_as_reference,
-                                                 non_inferiority_margins,
-                                                 minimum_detectable_effects,
-                                                 final_expected_sample_size_column)
-        chartgrid = self._confidence_grapher.plot_multiple_difference(
-            difference_df,
+    def multiple_difference_plot(
+        self,
+        level: Union[str, Tuple],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        level_as_reference: bool = False,
+        non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
+        use_adjusted_intervals: bool = False,
+        final_expected_sample_size_column: str = None,
+    ) -> ChartGrid:
+        difference_df = self.multiple_difference(
+            level,
             absolute,
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            use_adjusted_intervals)
+            minimum_detectable_effects,
+            final_expected_sample_size_column,
+        )
+        chartgrid = self._confidence_grapher.plot_multiple_difference(
+            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, use_adjusted_intervals
+        )
         return chartgrid
 
-    def sample_ratio_test(self, expected_proportions: Dict
-                          ) -> Tuple[float, DataFrame]:
-        return sample_ratio_test(self._df,
-                                 all_group_columns=self._all_group_columns,
-                                 denominator=self._denominator,
-                                 expected_proportions=expected_proportions)
+    def sample_ratio_test(self, expected_proportions: Dict) -> Tuple[float, DataFrame]:
+        return sample_ratio_test(
+            self._df,
+            all_group_columns=self._all_group_columns,
+            denominator=self._denominator,
+            expected_proportions=expected_proportions,
+        )
 
-    def achieved_power(self, level_1, level_2,
-                       mde, alpha, groupby=None) -> DataFrame:
+    def achieved_power(self, level_1, level_2, mde, alpha, groupby=None) -> DataFrame:
         """Calculated the achieved power of test of differences between
         level 1 and level 2 given a targeted MDE.
 
@@ -270,13 +270,12 @@ class GenericTest(ConfidenceABC):
                 negative) error.
 
         """
-        return self._confidence_computer.achieved_power(level_1, level_2,
-                                                        mde, alpha, groupby)
+        return self._confidence_computer.achieved_power(level_1, level_2, mde, alpha, groupby)
 
-    def _validate_sequential(self,
-                             final_expected_sample_size: float,
-                             groupby: Union[str, Iterable]):
+    def _validate_sequential(self, final_expected_sample_size: float, groupby: Union[str, Iterable]):
         if final_expected_sample_size is not None:
             if self._ordinal_group_column not in listify(groupby):
-                raise ValueError(f"{self._ordinal_group_column} must be in groupby argument to use "
-                                 f"sequential testing with final_expected_sample_size")
+                raise ValueError(
+                    f"{self._ordinal_group_column} must be in groupby argument to use "
+                    f"sequential testing with final_expected_sample_size"
+                )

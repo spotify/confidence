@@ -32,16 +32,16 @@ INITIAL_RANDOMIZATION_SEED = np.random.get_state()[1][0]
 def axis_format_precision(max_value, min_value, absolute):
     extra_zeros = 2 if absolute else 0
     precision = -int(np.log10(abs(max_value - min_value))) + extra_zeros
-    zeros = ''.join(['0'] * precision)
-    return "0.{}{}".format(zeros, '' if absolute else '%')
+    zeros = "".join(["0"] * precision)
+    return "0.{}{}".format(zeros, "" if absolute else "%")
 
 
 def add_color_column(df, cols):
     for i, column in enumerate(cols):
         if i == 0:
-            df['color'] = df[column]
+            df["color"] = df[column]
         else:
-            df['color'] = df['color'] + ' ' + df[column]
+            df["color"] = df["color"] + " " + df[column]
     return df
 
 
@@ -58,7 +58,7 @@ def randomization_warning_decorator(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
 
-        option_seed = options.get_option('randomization_seed')
+        option_seed = options.get_option("randomization_seed")
         np_seed = INITIAL_RANDOMIZATION_SEED
         if option_seed != np_seed and option_seed is None:
             randomization_warning_message = """
@@ -69,7 +69,9 @@ def randomization_warning_decorator(f):
 
     confidence.options.set_option('randomization_seed', {})
 
-    """.format(INITIAL_RANDOMIZATION_SEED)
+    """.format(
+                INITIAL_RANDOMIZATION_SEED
+            )
             warnings.warn(randomization_warning_message)
             option_seed = np_seed
         np.random.seed(option_seed)
@@ -82,67 +84,60 @@ class BaseTest(object, metaclass=ABCMeta):
     """Base test class that provides abstract methods
     to ensure consistency across test classes."""
 
-    def __init__(self,
-                 data_frame,
-                 categorical_group_columns,
-                 ordinal_group_column,
-                 numerator_column,
-                 denominator_column,
-                 interval_size):
+    def __init__(
+        self,
+        data_frame,
+        categorical_group_columns,
+        ordinal_group_column,
+        numerator_column,
+        denominator_column,
+        interval_size,
+    ):
 
         self._data_frame = data_frame
         self._numerator_column = numerator_column
         self._denominator_column = denominator_column
         self._interval_size = interval_size
 
-        categorical_string_or_none = (isinstance(categorical_group_columns,
-                                                 str)
-                                      or categorical_group_columns is None)
-        self._categorical_group_columns = [
-            categorical_group_columns
-        ] if categorical_string_or_none else categorical_group_columns
+        categorical_string_or_none = isinstance(categorical_group_columns, str) or categorical_group_columns is None
+        self._categorical_group_columns = (
+            [categorical_group_columns] if categorical_string_or_none else categorical_group_columns
+        )
         self._ordinal_group_column = ordinal_group_column
 
-        self._all_group_columns = self._categorical_group_columns + [
-            self._ordinal_group_column
-        ]
-        self._all_group_columns = [
-            column for column in self._all_group_columns if column is not None
-        ]
+        self._all_group_columns = self._categorical_group_columns + [self._ordinal_group_column]
+        self._all_group_columns = [column for column in self._all_group_columns if column is not None]
         self._validate_data()
 
     def _validate_data(self):
-        """Integrity check input dataframe.
-        """
+        """Integrity check input dataframe."""
         if not self._all_group_columns:
-            raise ValueError("""At least one of `categorical_group_columns`
+            raise ValueError(
+                """At least one of `categorical_group_columns`
                                 or `ordinal_group_column` must be specified."""
-                             )
+            )
 
         # Ensure there's at most 1 observation per grouping.
-        max_one_row_per_grouping = all(
-            self._data_frame.groupby(self._all_group_columns).size() <= 1)
+        max_one_row_per_grouping = all(self._data_frame.groupby(self._all_group_columns).size() <= 1)
         if not max_one_row_per_grouping:
-            raise ValueError(
-                """Each grouping should have at most 1 observation.""")
+            raise ValueError("""Each grouping should have at most 1 observation.""")
 
         if self._ordinal_group_column:
-            ordinal_column_type = self._data_frame[
-                self._ordinal_group_column].dtype.type
-            if not np.issubdtype(ordinal_column_type,
-                                 np.number) and not issubclass(
-                                     ordinal_column_type, np.datetime64):
-                raise TypeError("""`ordinal_group_column` is type `{}`.
-    Must be number or datetime type.""".format(ordinal_column_type))
+            ordinal_column_type = self._data_frame[self._ordinal_group_column].dtype.type
+            if not np.issubdtype(ordinal_column_type, np.number) and not issubclass(
+                ordinal_column_type, np.datetime64
+            ):
+                raise TypeError(
+                    """`ordinal_group_column` is type `{}`.
+    Must be number or datetime type.""".format(
+                        ordinal_column_type
+                    )
+                )
 
     @classmethod
     def as_cumulative(
-            cls,
-            data_frame,
-            numerator_column,
-            denominator_column,
-            ordinal_group_column,
-            categorical_group_columns=None):
+        cls, data_frame, numerator_column, denominator_column, ordinal_group_column, categorical_group_columns=None
+    ):
         """
         Instantiate the class with a cumulative representation of the dataframe.
         Sorts by the ordinal variable and calculates the cumulative sum
@@ -163,18 +158,14 @@ class BaseTest(object, metaclass=ABCMeta):
         sorted_df = data_frame.sort_values(by=ordinal_group_column)
         cumsum_cols = [numerator_column, denominator_column]
         if categorical_group_columns:
-            sorted_df[cumsum_cols] = (
-                sorted_df.groupby(by=categorical_group_columns)[cumsum_cols]
-                .cumsum())
+            sorted_df[cumsum_cols] = sorted_df.groupby(by=categorical_group_columns)[cumsum_cols].cumsum()
         else:
             sorted_df[cumsum_cols] = sorted_df[cumsum_cols].cumsum()
 
-        return cls(sorted_df, numerator_column, denominator_column,
-                   categorical_group_columns, ordinal_group_column)
+        return cls(sorted_df, numerator_column, denominator_column, categorical_group_columns, ordinal_group_column)
 
     def summary(self):
-        """Return Pandas DataFrame with summary statistics.
-        """
+        """Return Pandas DataFrame with summary statistics."""
         return self._summary(self._data_frame, self._interval)
 
     def _summary(self, data_frame, ci_function):
@@ -185,15 +176,10 @@ class BaseTest(object, metaclass=ABCMeta):
         - Additional summary stats
             (e.g. probability in the case of Binomial data)
         """
-        summary_df = data_frame[
-            self._all_group_columns +
-            [self._numerator_column, self._denominator_column]].copy()
+        summary_df = data_frame[self._all_group_columns + [self._numerator_column, self._denominator_column]].copy()
 
-        summary_df['point_estimate'] = \
-            (summary_df[self._numerator_column] * 1.0 /
-             summary_df[self._denominator_column])
-        summary_df[['ci_lower', 'ci_upper']] = \
-            (data_frame.apply(ci_function, axis=1, result_type='expand'))
+        summary_df["point_estimate"] = summary_df[self._numerator_column] * 1.0 / summary_df[self._denominator_column]
+        summary_df[["ci_lower", "ci_upper"]] = data_frame.apply(ci_function, axis=1, result_type="expand")
 
         return summary_df
 
@@ -215,87 +201,79 @@ class BaseTest(object, metaclass=ABCMeta):
         Returns:
             ChartGrid object.
         """
-        chart_grid = self._iterate_groupby_to_chartgrid(self._summary_plot,
-                                                        groupby=groupby)
+        chart_grid = self._iterate_groupby_to_chartgrid(self._summary_plot, groupby=groupby)
         return chart_grid
 
     def _summary_plot(self, level_name, level_df, remaining_groups, groupby):
 
-        if (self._ordinal_group_column is not None
-                and self._ordinal_group_column in remaining_groups):
+        if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
 
-            ch = self._ordinal_summary_plot(level_name, level_df,
-                                            remaining_groups, groupby)
+            ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
-            ch = self._categorical_summary_plot(level_name, level_df,
-                                                remaining_groups, groupby)
+            ch = self._categorical_summary_plot(level_name, level_df, remaining_groups, groupby)
         return ch
 
-    def _ordinal_summary_plot(self, level_name, level_df,
-                              remaining_groups, groupby):
+    def _ordinal_summary_plot(self, level_name, level_df, remaining_groups, groupby):
         remaining_groups = self._remaining_categorical_groups(remaining_groups)
         df = self._summary(level_df, self._interval)
-        title = "Estimate of {} / {}".format(self._numerator_column,
-                                             self._denominator_column)
-        y_axis_label = "{} / {}".format(self._numerator_column,
-                                        self._denominator_column)
-        return self._ordinal_plot('point_estimate', df, groupby, level_name,
-                                  remaining_groups, absolute=True,
-                                  title=title, y_axis_label=y_axis_label)
+        title = "Estimate of {} / {}".format(self._numerator_column, self._denominator_column)
+        y_axis_label = "{} / {}".format(self._numerator_column, self._denominator_column)
+        return self._ordinal_plot(
+            "point_estimate",
+            df,
+            groupby,
+            level_name,
+            remaining_groups,
+            absolute=True,
+            title=title,
+            y_axis_label=y_axis_label,
+        )
 
-    def _ordinal_plot(self, center_name, df, groupby, level_name,
-                      remaining_groups, absolute, title, y_axis_label):
+    def _ordinal_plot(self, center_name, df, groupby, level_name, remaining_groups, absolute, title, y_axis_label):
         df = add_color_column(df, remaining_groups)
-        colors = 'color' if remaining_groups else None
+        colors = "color" if remaining_groups else None
         ch = chartify.Chart(x_axis_type=self._ordinal_type())
         ch.plot.line(
             data_frame=df.sort_values(self._ordinal_group_column),
             x_column=self._ordinal_group_column,
             y_column=center_name,
-            color_column=colors)
+            color_column=colors,
+        )
         ch.style.color_palette.reset_palette_order()
         ch.plot.area(
             data_frame=df.sort_values(self._ordinal_group_column),
             x_column=self._ordinal_group_column,
-            y_column='ci_lower',
-            second_y_column='ci_upper',
-            color_column=colors)
+            y_column="ci_lower",
+            second_y_column="ci_upper",
+            color_column=colors,
+        )
         ch.axes.set_yaxis_label(y_axis_label)
         ch.axes.set_xaxis_label(self._ordinal_group_column)
         ch.set_source_label("")
-        axis_format = axis_format_precision(df['ci_lower'].min(),
-                                            df['ci_upper'].max(), absolute)
+        axis_format = axis_format_precision(df["ci_lower"].min(), df["ci_upper"].max(), absolute)
         ch.axes.set_yaxis_tick_format(axis_format)
         subtitle = "" if not groupby else "{}: {}".format(groupby, level_name)
         ch.set_subtitle(subtitle)
         ch.set_title(title)
         if colors:
-            ch.set_legend_location('outside_bottom')
+            ch.set_legend_location("outside_bottom")
         return ch
 
     def _remaining_categorical_groups(self, remaining_groups):
-        remaining_groups_list = [remaining_groups] \
-            if isinstance(remaining_groups, str) else remaining_groups
+        remaining_groups_list = [remaining_groups] if isinstance(remaining_groups, str) else remaining_groups
 
         remaining_categorical_groups = [
-            group_name for group_name in remaining_groups_list
-            if group_name != self._ordinal_group_column
+            group_name for group_name in remaining_groups_list if group_name != self._ordinal_group_column
         ]
         return remaining_categorical_groups
 
     def _ordinal_type(self):
-        ordinal_column_type = \
-            self._data_frame[self._ordinal_group_column].dtype.type
-        axis_type = 'datetime' if issubclass(ordinal_column_type,
-                                             np.datetime64) else 'linear'
+        ordinal_column_type = self._data_frame[self._ordinal_group_column].dtype.type
+        axis_type = "datetime" if issubclass(ordinal_column_type, np.datetime64) else "linear"
         return axis_type
 
     @abstractmethod
-    def _categorical_summary_plot(self,
-                                  level_name,
-                                  level_df,
-                                  remaining_groups,
-                                  groupby):
+    def _categorical_summary_plot(self, level_name, level_df, remaining_groups, groupby):
         pass
 
     @abstractmethod
@@ -352,60 +330,55 @@ class BaseTest(object, metaclass=ABCMeta):
         use_ordinal_axis = self._use_ordinal_axis(groupby)
 
         if use_ordinal_axis:
-            ch = self._ordinal_difference_plot(level_1, level_2,
-                                               absolute, groupby)
+            ch = self._ordinal_difference_plot(level_1, level_2, absolute, groupby)
             chart_grid = ChartGrid()
             chart_grid.charts.append(ch)
         else:
-            chart_grid = self._categorical_difference_plot(level_1, level_2,
-                                                           absolute, groupby)
+            chart_grid = self._categorical_difference_plot(level_1, level_2, absolute, groupby)
 
         return chart_grid
 
     def _use_ordinal_axis(self, groupby):
         is_ordinal_difference_plot = (
-                groupby is not None and
-                self._ordinal_group_column is not None and
-                self._ordinal_group_column in groupby)
+            groupby is not None and self._ordinal_group_column is not None and self._ordinal_group_column in groupby
+        )
         return is_ordinal_difference_plot
 
     def _ordinal_difference_plot(self, level_1, level_2, absolute, groupby):
-        difference_df = self.difference(level_1, level_2,
-                                        absolute, groupby)
+        difference_df = self.difference(level_1, level_2, absolute, groupby)
         remaining_groups = self._remaining_categorical_groups(groupby)
         title = "Change from {} to {}".format(level_1, level_2)
         y_axis_label = self.get_difference_plot_label(absolute)
-        ch = self._ordinal_plot('difference', difference_df, groupby=None,
-                                level_name="",
-                                remaining_groups=remaining_groups,
-                                absolute=absolute,
-                                title=title, y_axis_label=y_axis_label)
+        ch = self._ordinal_plot(
+            "difference",
+            difference_df,
+            groupby=None,
+            level_name="",
+            remaining_groups=remaining_groups,
+            absolute=absolute,
+            title=title,
+            y_axis_label=y_axis_label,
+        )
         ch.callout.line(0)
 
         return ch
 
     def get_difference_plot_label(self, absolute):
-        change_type = 'Absolute' if absolute else "Relative"
-        return change_type + " change in {} / {}".format(
-            self._numerator_column, self._denominator_column)
+        change_type = "Absolute" if absolute else "Relative"
+        return change_type + " change in {} / {}".format(self._numerator_column, self._denominator_column)
 
     @abstractmethod
     def _categorical_difference_plot(self, level_1, level_2, absolute, groupby):
         pass
 
     @abstractmethod
-    def multiple_difference(self,
-                            level,
-                            absolute=True,
-                            groupby=None,
-                            level_as_reference=False):
+    def multiple_difference(self, level, absolute=True, groupby=None, level_as_reference=False):
         """The pairwise probability that the specific group
         is greater than all other groups.
         """
         pass
 
-    def multiple_difference_plot(self, level, absolute=True, groupby=None,
-                                 level_as_reference=False):
+    def multiple_difference_plot(self, level, absolute=True, groupby=None, level_as_reference=False):
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
 
@@ -424,40 +397,35 @@ class BaseTest(object, metaclass=ABCMeta):
         use_ordinal_axis = self._use_ordinal_axis(groupby)
 
         if use_ordinal_axis:
-            ch = self._ordinal_multiple_difference_plot(
-                level,
-                absolute,
-                groupby,
-                level_as_reference)
+            ch = self._ordinal_multiple_difference_plot(level, absolute, groupby, level_as_reference)
             chart_grid = ChartGrid()
             chart_grid.charts.append(ch)
         else:
-            chart_grid = self._categorical_multiple_difference_plot(
-                level,
-                absolute,
-                groupby,
-                level_as_reference)
+            chart_grid = self._categorical_multiple_difference_plot(level, absolute, groupby, level_as_reference)
 
         return chart_grid
 
-    def _ordinal_multiple_difference_plot(self, level, absolute, groupby,
-                                          level_as_reference):
-        difference_df = self.multiple_difference(level, absolute, groupby,
-                                                 level_as_reference)
+    def _ordinal_multiple_difference_plot(self, level, absolute, groupby, level_as_reference):
+        difference_df = self.multiple_difference(level, absolute, groupby, level_as_reference)
         remaining_groups = self._remaining_categorical_groups(groupby)
-        groupby_columns = self._add_level_column(remaining_groups,
-                                                 level_as_reference)
+        groupby_columns = self._add_level_column(remaining_groups, level_as_reference)
         title = "Comparison to {}".format(level)
         y_axis_label = self.get_difference_plot_label(absolute)
-        ch = self._ordinal_plot('difference', difference_df, groupby=None,
-                                level_name="", remaining_groups=groupby_columns,
-                                absolute=absolute,
-                                title=title, y_axis_label=y_axis_label)
+        ch = self._ordinal_plot(
+            "difference",
+            difference_df,
+            groupby=None,
+            level_name="",
+            remaining_groups=groupby_columns,
+            absolute=absolute,
+            title=title,
+            y_axis_label=y_axis_label,
+        )
         ch.callout.line(0)
         return ch
 
     def _add_level_column(self, groupby, level_as_reference):
-        level_column = 'level_2' if level_as_reference else 'level_1'
+        level_column = "level_2" if level_as_reference else "level_1"
         if groupby is None:
             groupby_columns = level_column
         else:
@@ -468,8 +436,7 @@ class BaseTest(object, metaclass=ABCMeta):
         return groupby_columns
 
     @abstractmethod
-    def _categorical_multiple_difference_plot(self, level, absolute,
-                                              groupby, level_as_reference):
+    def _categorical_multiple_difference_plot(self, level, absolute, groupby, level_as_reference):
         pass
 
     @staticmethod
@@ -477,28 +444,26 @@ class BaseTest(object, metaclass=ABCMeta):
         try:
             level_df.groupby(remaining_groups).get_group(level)
         except (KeyError, ValueError):
-            raise ValueError("""
+            raise ValueError(
+                """
                 Invalid level: '{}'
                 Must supply a level within the ungrouped dimensions: {}
                 Valid levels:
                 {}
                 """.format(
-                level, remaining_groups,
-                list(level_df.groupby(remaining_groups).groups.keys())))
+                    level, remaining_groups, list(level_df.groupby(remaining_groups).groups.keys())
+                )
+            )
 
     def _groupby_iterator(self, input_function, groupby, **kwargs):
         groupby = [] if groupby is None else groupby
         # Will group over the whole dataframe if groupby is None
         level_groups = groupby if groupby else np.ones(len(self._data_frame))
 
-        remaining_groups = [
-            group for group in self._all_group_columns
-            if group not in groupby and group is not None
-        ]
+        remaining_groups = [group for group in self._all_group_columns if group not in groupby and group is not None]
 
         for level_name, level_df in self._data_frame.groupby(level_groups):
-            yield input_function(level_name, level_df, remaining_groups,
-                                 groupby, **kwargs)
+            yield input_function(level_name, level_df, remaining_groups, groupby, **kwargs)
 
     def _iterate_groupby_to_chartgrid(self, input_function, groupby, **kwargs):
         """Iterate through groups in the test and apply the input function.
@@ -506,8 +471,7 @@ class BaseTest(object, metaclass=ABCMeta):
         Returns ChartGrid"""
         chart_grid = ChartGrid()
 
-        chart_grid.charts = list(
-            self._groupby_iterator(input_function, groupby, **kwargs))
+        chart_grid.charts = list(self._groupby_iterator(input_function, groupby, **kwargs))
 
         return chart_grid
 
@@ -515,15 +479,12 @@ class BaseTest(object, metaclass=ABCMeta):
         """Iterate through groups in the test and apply the input function.
 
         Returns pd.DataFrame"""
-        groupby_iterator = self._groupby_iterator(input_function, groupby,
-                                                  **kwargs)
+        groupby_iterator = self._groupby_iterator(input_function, groupby, **kwargs)
 
         # Flatten any nested generators.
         groupby_iterator = list(groupby_iterator)
         if isinstance(groupby_iterator[0], types.GeneratorType):
-            groupby_iterator = [
-                group for generator in groupby_iterator for group in generator
-            ]
+            groupby_iterator = [group for generator in groupby_iterator for group in generator]
 
         results_data_frame = pd.concat(groupby_iterator, axis=0)
 
@@ -535,8 +496,7 @@ class BaseTest(object, metaclass=ABCMeta):
         """Return a list of all group keys.
 
         Returns: list"""
-        groups = list(self._data_frame.groupby(self._all_group_columns)
-                          .groups.keys())
+        groups = list(self._data_frame.groupby(self._all_group_columns).groups.keys())
         return groups
 
     def _add_group_by_columns(self, difference_df, groupby, level_name):
@@ -547,6 +507,7 @@ class BaseTest(object, metaclass=ABCMeta):
             else:
                 for col, val in zip(groupby, level_name):
                     difference_df.insert(0, column=col, value=val)
+
 
 # class BinomialResponse(BaseTest, metaclass=ABCMeta):
 #     """Binomial Response Variable.

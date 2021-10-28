@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import (Union, Iterable)
+from typing import Union, Iterable
 
 from pandas import DataFrame
 
@@ -21,49 +21,50 @@ from ..constants import NIM_TYPE
 
 
 class ConfidenceComputerABC(ABC):
-
     @abstractmethod
     def compute_summary(self, verbose: bool) -> DataFrame:
-        """Return Pandas DataFrame with summary statistics.
-        """
+        """Return Pandas DataFrame with summary statistics."""
         pass
 
     @abstractmethod
-    def compute_difference(self,
-                           level_1: Union[str, Iterable],
-                           level_2: Union[str, Iterable],
-                           absolute: bool,
-                           groupby: Union[str, Iterable],
-                           nims: NIM_TYPE,
-                           final_expected_sample_size_column: str,
-                           verbose: bool
-                           ) -> DataFrame:
+    def compute_difference(
+        self,
+        level_1: Union[str, Iterable],
+        level_2: Union[str, Iterable],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        nims: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+    ) -> DataFrame:
         """Return dataframe containing the difference in means between
-            group 1 and 2, p-value and confidence interval
+        group 1 and 2, p-value and confidence interval
         """
         pass
 
     @abstractmethod
-    def compute_multiple_difference(self,
-                                    level: Union[str, Iterable],
-                                    absolute: bool,
-                                    groupby: Union[str, Iterable],
-                                    level_as_reference: bool,
-                                    nims: NIM_TYPE,
-                                    mdes: bool,
-                                    final_expected_sample_size_column: str,
-                                    verbose: bool
-                                    ) -> DataFrame:
+    def compute_multiple_difference(
+        self,
+        level: Union[str, Iterable],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        level_as_reference: bool,
+        nims: NIM_TYPE,
+        mdes: bool,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+    ) -> DataFrame:
         """The pairwise probability that the specific group
         is greater than all other groups.
         """
         pass
 
-    def achieved_power(self,
-                       level_1: Union[str, Iterable],
-                       level_2: Union[str, Iterable],
-                       mde: float,
-                       alpha: float,
-                       groupby: Union[str, Iterable]) -> DataFrame:
+    def achieved_power(
+        self,
+        level_1: Union[str, Iterable],
+        level_2: Union[str, Iterable],
+        mde: float,
+        alpha: float,
+        groupby: Union[str, Iterable],
+    ) -> DataFrame:
         pass
-

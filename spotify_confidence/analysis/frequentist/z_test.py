@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable)
+from typing import Union, Iterable
 
 from pandas import DataFrame
 
 from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
-from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import \
-    ConfidenceComputerABC
+from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 from spotify_confidence.analysis.confidence_utils import listify
@@ -26,25 +25,26 @@ from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
 
 
 class ZTest(GenericTest):
+    def __init__(
+        self,
+        data_frame: DataFrame,
+        numerator_column: str,
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: str,
+        categorical_group_columns: Union[str, Iterable],
+        ordinal_group_column: Union[str, None] = None,
+        metric_column: Union[str, None] = None,
+        treatment_column: Union[str, None] = None,
+        interval_size: float = 0.95,
+        power: float = 0.8,
+        correction_method: str = BONFERRONI,
+        confidence_computer: ConfidenceComputerABC = None,
+        confidence_grapher: ConfidenceGrapherABC = None,
+    ):
 
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 numerator_sum_squares_column: Union[str, None],
-                 denominator_column: str,
-                 categorical_group_columns: Union[str, Iterable],
-                 ordinal_group_column: Union[str, None] = None,
-                 metric_column: Union[str, None] = None,
-                 treatment_column: Union[str, None] = None,
-                 interval_size: float = 0.95,
-                 power: float = 0.8,
-                 correction_method: str = BONFERRONI,
-                 confidence_computer: ConfidenceComputerABC = None,
-                 confidence_grapher: ConfidenceGrapherABC = None):
-
-        if(confidence_computer is None):
+        if confidence_computer is None:
             confidence_computer = GenericComputer(
-                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: 'z-test'}),
+                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test"}),
                 numerator_column=numerator_column,
                 numerator_sum_squares_column=numerator_sum_squares_column,
                 denominator_column=denominator_column,
@@ -56,10 +56,11 @@ class ZTest(GenericTest):
                 power=power,
                 correction_method=correction_method.lower(),
                 method_column=METHOD_COLUMN_NAME,
-                bootstrap_samples_column=None)
+                bootstrap_samples_column=None,
+            )
 
         super(ZTest, self).__init__(
-            data_frame.assign(**{METHOD_COLUMN_NAME: 'z-test'}),
+            data_frame.assign(**{METHOD_COLUMN_NAME: "z-test"}),
             numerator_column,
             numerator_sum_squares_column,
             denominator_column,
@@ -72,4 +73,5 @@ class ZTest(GenericTest):
             correction_method,
             confidence_computer,
             confidence_grapher,
-            METHOD_COLUMN_NAME)
+            METHOD_COLUMN_NAME,
+        )

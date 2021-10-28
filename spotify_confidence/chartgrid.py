@@ -29,6 +29,6 @@ class ChartGrid:
             charts = []
         self.charts = charts
 
-    def show(self, format='html'):
+    def show(self, format="html"):
         for chart in self.charts:
             chart.show(format=format)

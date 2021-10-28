@@ -18,10 +18,9 @@ from scipy.stats import chi2
 from typing import Dict, Tuple, Iterable
 
 
-def sample_ratio_test(df: DataFrame,
-                      all_group_columns: Iterable,
-                      denominator: str,
-                      expected_proportions: Dict) -> Tuple[float, DataFrame]:
+def sample_ratio_test(
+    df: DataFrame, all_group_columns: Iterable, denominator: str, expected_proportions: Dict
+) -> Tuple[float, DataFrame]:
     """Goodness of fit test of observed vs. expected group frequencies.
 
     Tests whether the observed proportion of total users in each group
@@ -44,32 +43,30 @@ def sample_ratio_test(df: DataFrame,
     """
 
     if not isinstance(expected_proportions, dict):
-        raise TypeError('`expected_proportions` must be a dict with '
-                        'groupings as keys and expected proportions '
-                        'as values')
+        raise TypeError(
+            "`expected_proportions` must be a dict with " "groupings as keys and expected proportions " "as values"
+        )
     elif not np.allclose(sum(expected_proportions.values()), 1.0):
-        raise ValueError('proportions must sum to one')
+        raise ValueError("proportions must sum to one")
     elif not (np.array(list(expected_proportions.values())) > 0).all():
-        raise ValueError('proportions must all be positive')
+        raise ValueError("proportions must all be positive")
 
     all_groups = list(df.groupby(all_group_columns).groups.keys())
     if set(all_groups) != set(expected_proportions.keys()):
-        raise ValueError(
-            f"`expected_proportion` keys must match groupings in the "
-            f"order {all_group_columns}")
+        raise ValueError(f"`expected_proportion` keys must match groupings in the " f"order {all_group_columns}")
 
     n_tot = df[denominator].sum()
 
     grouped_data = df.groupby(all_group_columns)
     sr_df = grouped_data.sum()
-    sr_df['observed_proportion'] = np.zeros(len(sr_df))
-    sr_df['expected_proportion'] = np.zeros(len(sr_df))
-    sr_df['difference'] = np.zeros(len(sr_df))
+    sr_df["observed_proportion"] = np.zeros(len(sr_df))
+    sr_df["expected_proportion"] = np.zeros(len(sr_df))
+    sr_df["difference"] = np.zeros(len(sr_df))
 
     a = 0
     for grouping, expected_proportion in expected_proportions.items():
         try:
-            n_group = (grouped_data.get_group(grouping)[denominator].iloc[0])
+            n_group = grouped_data.get_group(grouping)[denominator].iloc[0]
         except KeyError as e:
             raise KeyError(f"{e} is not a valid group")
 
@@ -78,9 +75,9 @@ def sample_ratio_test(df: DataFrame,
         sq_diff = np.power(diff, 2)
         a += sq_diff / expected_proportion
 
-        sr_df.loc[grouping, 'observed_proportion'] = actual_proportion
-        sr_df.loc[grouping, 'expected_proportion'] = expected_proportion
-        sr_df.loc[grouping, 'difference'] = diff
+        sr_df.loc[grouping, "observed_proportion"] = actual_proportion
+        sr_df.loc[grouping, "expected_proportion"] = expected_proportion
+        sr_df.loc[grouping, "difference"] = diff
 
     chi2_stat = n_tot * a
     deg_freedom = len(grouped_data) - 1
