@@ -294,7 +294,7 @@ class ZTestComputer(object):
         row: Series,
     ) -> Series:
         proportion_of_total = 1  # TODO
-        z_alpha = st.norm.ppf(1 - row[ADJUSTED_ALPHA])
+        z_alpha = st.norm.ppf(1 - row[ADJUSTED_ALPHA] / (2 if row[PREFERENCE_TEST] == TWO_SIDED else 1))
         z_power = st.norm.ppf(row[ADJUSTED_POWER])
         n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
         kappa = n2 / n1

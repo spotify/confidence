@@ -417,6 +417,7 @@ class GenericComputer(ConfidenceComputerABC):
                 + f"level_2 in {[l2 for l1, l2 in groups_to_compare]}"
                 + "and level_1 != level_2"
             )
+            # TODO: validate_and_rename_mdes
             .pipe(validate_and_rename_nims)
             .pipe(validate_and_rename_column, final_expected_sample_size_column)
             .pipe(validate_and_rename_column, self._method_column)
@@ -568,12 +569,8 @@ class GenericComputer(ConfidenceComputerABC):
             ]:
                 groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
                 n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
-                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons / (1 + (df[PREFERENCE_TEST] == "two-sided").astype(int))
-                df[ADJUSTED_P] = df.apply(
-                    lambda row: min(row[P_VALUE] * n_comparisons * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1),
-                    axis=1,
-                )
-                # df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons , 1))
+                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+                df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
             else:
                 raise ValueError("Can't figure out which correction method to use :(")
@@ -727,11 +724,9 @@ class GenericComputer(ConfidenceComputerABC):
                 nims=None,  # TODO: IS this right?
                 mdes=None,
                 final_expected_sample_size_column=None,
-            )  # TODO: IS this
-            # right?
-            .pipe(lambda df: df if groupby == [] else df.set_index(groupby)).assign(
-                achieved_power=lambda df: df.apply(self._achieved_power, mde=mde, alpha=alpha, axis=1)
-            )
+            )  # TODO: IS this right?
+            .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
+            .assign(achieved_power=lambda df: df.apply(self._achieved_power, mde=mde, alpha=alpha, axis=1))
         )[["level_1", "level_2", "achieved_power"]]
 
     def _point_estimate(self, df: DataFrame) -> Series:

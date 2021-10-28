@@ -18,7 +18,6 @@ from spotify_confidence.analysis.constants import (
     CORRECTION_METHODS,
     SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
-    PREFERENCE_TEST,
 )
 
 
@@ -973,9 +972,7 @@ class TestCategoricalBinary(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df.apply(
-                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
-            ),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp, 1), axis=1),
             difference_df["adjusted p-value"],
             rtol=0.01,
         )
@@ -989,9 +986,7 @@ class TestCategoricalBinary(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df.apply(
-                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
-            ),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp, 1), axis=1),
             difference_df["adjusted p-value"],
             rtol=0.01,
         )
@@ -1003,9 +998,7 @@ class TestCategoricalBinary(object):
         assert len(difference_df) == ((self.data.variation_name.unique().size - 1) * self.data.country.unique().size)
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df.apply(
-                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
-            ),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp, 1), axis=1),
             difference_df["adjusted p-value"],
             rtol=0.01,
         )
@@ -1182,9 +1175,7 @@ class TestOrdinal(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df.apply(
-                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
-            ),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp, 1), axis=1),
             difference_df["adjusted p-value"],
             rtol=0.01,
         )
@@ -1198,9 +1189,7 @@ class TestOrdinal(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df.apply(
-                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
-            ),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp, 1), axis=1),
             difference_df["adjusted p-value"],
             rtol=0.01,
         )
