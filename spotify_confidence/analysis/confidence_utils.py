@@ -29,7 +29,6 @@ from spotify_confidence.analysis.constants import (
     NIM,
     NULL_HYPOTHESIS,
     PREFERENCE,
-    MDE,
     ALTERNATIVE_HYPOTHESIS,
     SFX1,
     SFX2,
@@ -115,16 +114,15 @@ def add_mde_columns(df: DataFrame, mde_column: bool) -> DataFrame:
         elif mde[1].lower() == DECREASE_PREFFERED:
             return (mde[0], mde_value, "smaller")
 
-    if mde_column is not None and mde_column:
+    if mde_column is not None:
         return (
-            df.assign(**{MDE: lambda df: df[mde_column]})
-            .assign(
+            df.assign(
                 **{
                     ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
                         lambda row: row[POINT_ESTIMATE]
                         * _mde_2_signed_mde(
                             (
-                                row[MDE],
+                                row[mde_column],
                                 (
                                     row[PREFERRED_DIRECTION_INPUT_NAME]
                                     if PREFERRED_DIRECTION_INPUT_NAME in row
@@ -141,7 +139,7 @@ def add_mde_columns(df: DataFrame, mde_column: bool) -> DataFrame:
                     PREFERENCE: lambda df: df.apply(
                         lambda row: _mde_2_signed_mde(
                             (
-                                row[MDE],
+                                row[mde_column],
                                 (
                                     row[PREFERRED_DIRECTION_INPUT_NAME]
                                     if PREFERRED_DIRECTION_INPUT_NAME in row
@@ -239,7 +237,7 @@ def validate_and_rename_nims(df: DataFrame) -> DataFrame:
 
 
 def validate_and_rename_column(df: DataFrame, column: str) -> DataFrame:
-    if column is None:
+    if column is None or column + SFX1 not in df.columns or column + SFX2 not in df.columns:
         return df
 
     if df.apply(lambda row: equals_none_or_nan(row[column + SFX1], row[column + SFX2]), axis=1).all():

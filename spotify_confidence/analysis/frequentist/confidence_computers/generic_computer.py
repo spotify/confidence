@@ -418,6 +418,7 @@ class GenericComputer(ConfidenceComputerABC):
             # TODO: validate_and_rename_mdes
             .pipe(validate_and_rename_nims)
             .pipe(validate_and_rename_column, final_expected_sample_size_column)
+            .pipe(validate_and_rename_column, mde_column)
             .pipe(validate_and_rename_column, self._method_column)
             .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
             .assign(**{STD_ERR: self._std_err})
@@ -428,7 +429,7 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .pipe(self._adjust_if_absolute, absolute=absolute)
             .pipe(self._add_adjusted_power)
-            .apply(self._powered_effect_and_required_sample_size, axis=1)
+            .apply(self._powered_effect_and_required_sample_size, mde_column=mde_column, axis=1)
             .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
         )
 
@@ -741,13 +742,19 @@ class GenericComputer(ConfidenceComputerABC):
         )
 
     def _p_value(self, row) -> float:
+        if row[self._method_column] == CHI2 and row[NIM] is not None:
+            raise ValueError(
+                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
+            )
         return self._confidence_computers[row[self._method_column]]._p_value(row)
 
     def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
-    def _powered_effect_and_required_sample_size(self, row) -> DataFrame:
-        if row[ADJUSTED_POWER] is None or ZTEST not in row[self._method_column]:
+    def _powered_effect_and_required_sample_size(self, row, mde_column) -> DataFrame:
+        if row[self._method_column] != ZTEST and mde_column in row:
+            raise ValueError("Minimum detectable effects only supported for ZTest.")
+        elif row[self._method_column] != ZTEST or row[ADJUSTED_POWER] is None:
             row["powered_effect"] = None
             row["required_sample_size"] = None
             return row

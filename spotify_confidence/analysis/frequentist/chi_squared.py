@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, Tuple, List
+from typing import Union, Iterable
 
 from pandas import DataFrame
 
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE, METHOD_COLUMN_NAME
+from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
 from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 
 
@@ -52,85 +52,4 @@ class ChiSquared(GenericTest):
             metric_column=metric_column,
             treatment_column=treatment_column,
             power=0.8,
-        )
-
-    def difference(
-        self,
-        level_1: Union[str, Tuple],
-        level_2: Union[str, Tuple],
-        absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
-        verbose: bool = False,
-        minimum_detectable_effects_column: str = None,
-    ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError(
-                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
-            )
-        if minimum_detectable_effects_column is not None:
-            raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
-        return super(ChiSquared, self).difference(
-            level_1=level_1,
-            level_2=level_2,
-            absolute=absolute,
-            groupby=groupby,
-            non_inferiority_margins=None,
-            final_expected_sample_size_column=final_expected_sample_size_column,
-            verbose=verbose,
-            minimum_detectable_effects_column=None,
-        )
-
-    def multiple_difference(
-        self,
-        level: Union[str, Tuple],
-        absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        level_as_reference: bool = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
-        final_expected_sample_size_column: str = None,
-        verbose: bool = False,
-    ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError(
-                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
-            )
-        if minimum_detectable_effects is not None:
-            raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
-        return super(ChiSquared, self).multiple_difference(
-            level=level,
-            absolute=absolute,
-            groupby=groupby,
-            level_as_reference=level_as_reference,
-            non_inferiority_margins=None,
-            final_expected_sample_size_column=final_expected_sample_size_column,
-            minimum_detectable_effects_column=None,
-        )
-
-    def differences(
-        self,
-        levels: Union[Tuple, List[Tuple]],
-        absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
-        verbose: bool = False,
-        minimum_detectable_effects_column: str = None,
-    ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError(
-                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
-            )
-        if minimum_detectable_effects_column is not None:
-            raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
-        return super(ChiSquared, self).differences(
-            levels=levels,
-            absolute=absolute,
-            groupby=groupby,
-            non_inferiority_margins=None,
-            final_expected_sample_size_column=final_expected_sample_size_column,
-            verbose=verbose,
-            minimum_detectable_effects_column=None,
         )
