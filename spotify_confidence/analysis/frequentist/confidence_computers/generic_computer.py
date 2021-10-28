@@ -211,6 +211,7 @@ class GenericComputer(ConfidenceComputerABC):
             if verbose
             else self._sufficient_statistics[
                 self._all_group_columns
+                + ([self._metric_column] if self._metric_column is not None else [])
                 + [c for c in [self._numerator, self._denominator] if c is not None]
                 + [POINT_ESTIMATE, CI_LOWER, CI_UPPER]
             ]
