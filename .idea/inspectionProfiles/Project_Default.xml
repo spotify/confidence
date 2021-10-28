@@ -1,0 +1,15 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="ignoredPackages">
+        <value>
+          <list size="2">
+            <item index="0" class="java.lang.String" itemvalue="bqt" />
+            <item index="1" class="java.lang.String" itemvalue="scikit-learn" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
