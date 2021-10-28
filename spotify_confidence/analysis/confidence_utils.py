@@ -28,9 +28,16 @@ from spotify_confidence.analysis.constants import (
 
 def get_all_group_columns(categorical_columns: Iterable,
                           additional_column: str) -> Iterable:
-    all_columns = categorical_columns + [None if additional_column is None else additional_column]
-    all_columns = [col for col in all_columns if col is not None]
+    all_columns = listify(categorical_columns) + listify(additional_column)
+    #all_columns = [col for col in all_columns if col is not None]
     return list(OrderedDict.fromkeys(all_columns))
+
+def remove_group_columns(categorical_columns: Iterable,
+                          additional_column: str) -> Iterable:
+    od = OrderedDict.fromkeys(categorical_columns)
+    if additional_column is not None:
+        del od[additional_column]
+    return list(od)
 
 
 def validate_categorical_columns(
