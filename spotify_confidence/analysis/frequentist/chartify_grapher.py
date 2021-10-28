@@ -99,7 +99,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         return chart_grid
 
     def plot_multiple_difference(
-        self, difference_df, absolute, groupby, level_as_reference, nims: NIM_TYPE, mdes: bool, use_adjusted_intervals: bool
+        self,
+        difference_df,
+        absolute,
+        groupby,
+        level_as_reference,
+        nims: NIM_TYPE,
+        mdes: bool,
+        use_adjusted_intervals: bool,
     ) -> ChartGrid:
         if self._ordinal_group_column in listify(groupby):
             ch = self._ordinal_multiple_difference_plot(

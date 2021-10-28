@@ -37,9 +37,9 @@ class ChiSquared(GenericTest):
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
     ):
-        treatment_column=None
-        metric_column=None
-        power=0.8
+        treatment_column = None
+        metric_column = None
+        power = 0.8
         if confidence_computer is None:
             confidence_computer = GenericComputer(
                 data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
@@ -54,7 +54,7 @@ class ChiSquared(GenericTest):
                 bootstrap_samples_column=None,
                 metric_column=metric_column,
                 treatment_column=treatment_column,
-                power=power
+                power=power,
             )
 
         super(ChiSquared, self).__init__(
@@ -89,9 +89,7 @@ class ChiSquared(GenericTest):
                 "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
             )
         if minimum_detectable_effects is not None:
-            raise ValueError(
-                "Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead."
-            )
+            raise ValueError("Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead.")
         return super(ChiSquared, self).difference(
             level_1, level_2, absolute, groupby, None, None, final_expected_sample_size_column
         )
@@ -111,9 +109,7 @@ class ChiSquared(GenericTest):
                 "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
             )
         if minimum_detectable_effects is not None:
-            raise ValueError(
-                "Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead."
-            )
+            raise ValueError("Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead.")
         return super(ChiSquared, self).multiple_difference(
             level, absolute, groupby, level_as_reference, None, None, final_expected_sample_size_column
         )

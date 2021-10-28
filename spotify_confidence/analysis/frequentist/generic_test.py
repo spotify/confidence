@@ -25,7 +25,7 @@ from ..confidence_utils import (
     validate_categorical_columns,
     listify,
     get_all_categorical_group_columns,
-    get_all_group_columns
+    get_all_group_columns,
 )
 from ..constants import BONFERRONI, NIM_TYPE, METHODS
 from ..frequentist.sample_ratio_test import sample_ratio_test
@@ -143,7 +143,13 @@ class GenericTest(ConfidenceABC):
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(
-            levels, absolute, groupby, non_inferiority_margins, minimum_detectable_effects, final_expected_sample_size_column, verbose
+            levels,
+            absolute,
+            groupby,
+            non_inferiority_margins,
+            minimum_detectable_effects,
+            final_expected_sample_size_column,
+            verbose,
         )
 
     def multiple_difference(

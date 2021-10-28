@@ -92,7 +92,7 @@ class TestCategorical(object):
             bootstrap_samples_column=None,
             metric_column=None,
             treatment_column=None,
-            power=0.8
+            power=0.8,
         )
         diff_se = comp._std_err(
             pd.DataFrame(
