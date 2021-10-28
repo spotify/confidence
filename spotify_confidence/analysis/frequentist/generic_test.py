@@ -182,7 +182,6 @@ class GenericTest(ConfidenceABC):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
     ) -> ChartGrid:
@@ -192,7 +191,7 @@ class GenericTest(ConfidenceABC):
             absolute=absolute,
             groupby=groupby,
             non_inferiority_margins=non_inferiority_margins,
-            minimum_detectable_effects=minimum_detectable_effects,
+            minimum_detectable_effects=None,
             final_expected_sample_size_column=final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_difference(
@@ -224,7 +223,6 @@ class GenericTest(ConfidenceABC):
         groupby: Union[str, Iterable] = None,
         level_as_reference: bool = False,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
     ) -> ChartGrid:
@@ -234,11 +232,11 @@ class GenericTest(ConfidenceABC):
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            minimum_detectable_effects,
+            None,
             final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_multiple_difference(
-            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, minimum_detectable_effects, use_adjusted_intervals
+            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, None, use_adjusted_intervals
         )
         return chartgrid
 
