@@ -377,27 +377,28 @@ class GenericComputer(ConfidenceComputerABC):
 
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
 
-        power_correction = 1
         if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
-
-            self._number_total_metrics = 1 if self._single_metric else df.groupby(
-                self._metric_column).ngroups
-            if self._single_metric:
-                if df[df[NIM].isnull()].shape[0] > 0:
-                    self._number_success_metrics = 1
-                else:
-                    self._number_success_metrics = 0
+            if self._metric_column is None or self._treatment_column is None:
+                return df.assign(**{ADJUSTED_POWER: None})
             else:
-                self._number_success_metrics = df[df[NIM].isnull()].groupby(
-                    self._metric_column).ngroups
+                self._number_total_metrics = 1 if self._single_metric else df.groupby( self._metric_column).ngroups
+                if self._single_metric:
+                    if df[df[NIM].isnull()].shape[0] > 0:
+                        self._number_success_metrics = 1
+                    else:
+                        self._number_success_metrics = 0
+                else:
+                    self._number_success_metrics = df[df[NIM].isnull()].groupby(
+                        self._metric_column).ngroups
 
-            self._number_guardrail_metrics = self._number_total_metrics - \
-                                             self._number_success_metrics
+                self._number_guardrail_metrics = self._number_total_metrics - \
+                                                 self._number_success_metrics
             power_correction = self._corrections_power(
-                number_of_guardrail_metrics=self._number_guardrail_metrics,
-                number_of_success_metrics=self._number_success_metrics)
-
-        return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
+                    number_of_guardrail_metrics=self._number_guardrail_metrics,
+                    number_of_success_metrics=self._number_success_metrics)
+            return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
+        else:
+            return df.assign(**{ADJUSTED_POWER:df[POWER]})
 
     def _add_p_value_and_ci(self,
                             df: DataFrame,
@@ -531,20 +532,22 @@ class GenericComputer(ConfidenceComputerABC):
                                    SPOT_1_HOLM, SPOT_1_HOMMEL, SPOT_1_SIMES_HOCHBERG,
                                    SPOT_1_SIDAK, SPOT_1_HOLM_SIDAK, SPOT_1_FDR_BH,
                                    SPOT_1_FDR_BY, SPOT_1_FDR_TSBH, SPOT_1_FDR_TSBKY]:
-
-            if self._single_metric:
-                if df[df[NIM].isnull()].shape[0] > 0:
-                    self._number_success_metrics = 1
-                else:
-                    self._number_success_metrics = 0
+            if self._metric_column is None or self._treatment_column is None:
+                return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
             else:
-                self._number_success_metrics = df[df[NIM].isnull()].groupby(
-                    self._metric_column).ngroups
+                if self._single_metric:
+                    if df[df[NIM].isnull()].shape[0] > 0:
+                        self._number_success_metrics = 1
+                    else:
+                        self._number_success_metrics = 0
+                else:
+                    self._number_success_metrics = df[df[NIM].isnull()].groupby(
+                        self._metric_column).ngroups
 
-            number_comparions = len((df[self._treatment_column + SFX1] + df[self._treatment_column + SFX2]).unique())
-            number_segments = (1 if len(self._segments) is 0 or not all(item in df.index.names for item in self._segments) else df.groupby(self._segments).ngroups)
+                number_comparions = len((df[self._treatment_column + SFX1] + df[self._treatment_column + SFX2]).unique())
+                number_segments = (1 if len(self._segments) is 0 or not all(item in df.index.names for item in self._segments) else df.groupby(self._segments).ngroups)
 
-            return max(1, number_comparions * max(1, self._number_success_metrics) * number_segments)
+                return max(1, number_comparions * max(1, self._number_success_metrics) * number_segments)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
 
@@ -605,8 +608,9 @@ class GenericComputer(ConfidenceComputerABC):
         return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
     def _powered_effect_and_required_sample_size(self, row ) -> DataFrame:
-        if (self._metric_column is None or self._treatment_column is None) and \
-                self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
+        if row[ADJUSTED_POWER] is None:
+            row['powered_effect'] = None
+            row['required_sample_size'] = None
             return row
         else:
             return self._confidence_computers[row[self._method_column]]._powered_effect_and_required_sample_size(row)

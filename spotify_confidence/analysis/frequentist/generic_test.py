@@ -24,8 +24,7 @@ from ..abstract_base_classes.confidence_computer_abc import \
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (validate_categorical_columns, listify,
                                 get_all_group_columns, validate_data,
-                                get_all_categorical_group_columns,
-                                validate_metric_and_treatment)
+                                get_all_categorical_group_columns)
 from ..constants import BONFERRONI, NIM_TYPE, METHODS
 from ...chartgrid import ChartGrid
 from ..frequentist.sample_ratio_test import sample_ratio_test
@@ -62,9 +61,6 @@ class GenericTest(ConfidenceABC):
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
         self._treatment_column = treatment_column
-        self._all_group_columns = get_all_group_columns(
-            self._categorical_group_columns,
-            self._ordinal_group_column)
 
         if method_column is None:
             raise ValueError("method column cannot be None")
@@ -77,9 +73,6 @@ class GenericTest(ConfidenceABC):
         #               self._denominator,
         #               self._all_group_columns,
         #               self._ordinal_group_column)
-        validate_metric_and_treatment(self._metric_column,
-                                      self._treatment_column,
-                                      correction_method)
 
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
@@ -120,9 +113,7 @@ class GenericTest(ConfidenceABC):
                    verbose: bool = False
                    ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
-        validate_metric_and_treatment(self._metric_column,
-                                      self._treatment_column,
-                                      self._confidence_computer._correction_method)
+
         return self._confidence_computer.compute_difference(
             level_1,
             level_2,
@@ -160,9 +151,7 @@ class GenericTest(ConfidenceABC):
                             verbose: bool = False
                             ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
-        validate_metric_and_treatment(self._metric_column,
-                                      self._treatment_column,
-                                      self._confidence_computer._correction_method)
+
         return self._confidence_computer.compute_multiple_difference(
             level,
             absolute,

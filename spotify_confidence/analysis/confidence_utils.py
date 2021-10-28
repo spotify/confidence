@@ -261,12 +261,6 @@ def _validate_column(df: DataFrame, col: str):
     if col not in df.columns:
         raise ValueError(f"""Column {col} is not in dataframe""")
 
-def validate_metric_and_treatment(metric_column, treatment_column, correction_method):
-    if correction_method.startswith('spot-1') or correction_method == BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY:
-        if metric_column is None:
-            raise ValueError(f"metric_column must be specified for correction method: {correction_method}.")
-        if treatment_column is None:
-            raise ValueError(f"treatment_column must be specified for correction method: {correction_method}.")
 
 def _get_finite_bounds(numbers: Series) -> Tuple[float, float]:
     finite_numbers = numbers[numbers.abs() != float("inf")]
