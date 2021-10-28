@@ -40,24 +40,27 @@ class SampleSize(object):
         TODO: Calculate achieved power given reached sample size.
 
     """
+
     default_alpha = 0.05
     default_power = 0.85
     default_treatments = 2
-    default_comparisons = 'control_vs_all'
+    default_comparisons = "control_vs_all"
     default_treatment_costs = None
     default_treatment_allocations = None
     default_bonferroni = False
 
     @staticmethod
-    def continuous(average_absolute_mde,
-                   baseline_variance,
-                   alpha=default_alpha,
-                   power=default_power,
-                   treatments=default_treatments,
-                   comparisons=default_comparisons,
-                   treatment_costs=default_treatment_costs,
-                   treatment_allocations=default_treatment_allocations,
-                   bonferroni_correction=default_bonferroni):
+    def continuous(
+        average_absolute_mde,
+        baseline_variance,
+        alpha=default_alpha,
+        power=default_power,
+        treatments=default_treatments,
+        comparisons=default_comparisons,
+        treatment_costs=default_treatment_costs,
+        treatment_allocations=default_treatment_allocations,
+        bonferroni_correction=default_bonferroni,
+    ):
         """Calculate the required sample size for a binomial metric.
 
         Args:
@@ -98,30 +101,34 @@ class SampleSize(object):
         mde = SampleSize._clean_continuous_mde(average_absolute_mde)
         baseline_variance = SampleSize._validate_positive(baseline_variance)
 
-        return SampleSize._calculate_samplesize(mde,
-                                                baseline_variance,
-                                                alpha,
-                                                power,
-                                                treatments,
-                                                comparisons,
-                                                treatment_costs,
-                                                treatment_allocations,
-                                                bonferroni_correction)
+        return SampleSize._calculate_samplesize(
+            mde,
+            baseline_variance,
+            alpha,
+            power,
+            treatments,
+            comparisons,
+            treatment_costs,
+            treatment_allocations,
+            bonferroni_correction,
+        )
 
     @staticmethod
     def continuous_interactive():
-        SampleSize._calculate_sample_size_interactive('continuous')
+        SampleSize._calculate_sample_size_interactive("continuous")
 
     @staticmethod
-    def binomial(absolute_percentage_mde,
-                 baseline_proportion,
-                 alpha=default_alpha,
-                 power=default_power,
-                 treatments=default_treatments,
-                 comparisons=default_comparisons,
-                 treatment_costs=default_treatment_costs,
-                 treatment_allocations=default_treatment_allocations,
-                 bonferroni_correction=default_bonferroni):
+    def binomial(
+        absolute_percentage_mde,
+        baseline_proportion,
+        alpha=default_alpha,
+        power=default_power,
+        treatments=default_treatments,
+        comparisons=default_comparisons,
+        treatment_costs=default_treatment_costs,
+        treatment_allocations=default_treatment_allocations,
+        bonferroni_correction=default_bonferroni,
+    ):
         """Calculate the required sample size for a binomial metric.
 
         Args:
@@ -166,55 +173,58 @@ class SampleSize(object):
         mde = SampleSize._clean_binomial_mde(absolute_percentage_mde, baseline)
         baseline_variance = baseline * (1 - baseline)
 
-        return SampleSize._calculate_samplesize(mde,
-                                                baseline_variance,
-                                                alpha,
-                                                power,
-                                                treatments,
-                                                comparisons,
-                                                treatment_costs,
-                                                treatment_allocations,
-                                                bonferroni_correction)
+        return SampleSize._calculate_samplesize(
+            mde,
+            baseline_variance,
+            alpha,
+            power,
+            treatments,
+            comparisons,
+            treatment_costs,
+            treatment_allocations,
+            bonferroni_correction,
+        )
 
     @staticmethod
     def binomial_interactive():
-        SampleSize._calculate_sample_size_interactive('binomial')
+        SampleSize._calculate_sample_size_interactive("binomial")
 
     @staticmethod
-    def _calculate_samplesize(mde, baseline_variance, alpha, power, treatments,
-                              comparisons, treatment_costs,
-                              treatment_allocations, bonferroni):
+    def _calculate_samplesize(
+        mde,
+        baseline_variance,
+        alpha,
+        power,
+        treatments,
+        comparisons,
+        treatment_costs,
+        treatment_allocations,
+        bonferroni,
+    ):
         power = SampleSize._validate_percentage(power)
         treatments = SampleSize._clean_treatments(treatments)
         comparisons = SampleSize._clean_comparisons(comparisons)
-        treatment_costs = SampleSize._clean_treatment_costs(treatments,
-                                                            treatment_costs)
+        treatment_costs = SampleSize._clean_treatment_costs(treatments, treatment_costs)
 
-        alpha = SampleSize._get_alpha(alpha, power, bonferroni,
-                                      treatments, comparisons)
-        treatment_allocations = (
-            SampleSize._get_treatment_allocations(treatments,
-                                                  comparisons,
-                                                  treatment_costs,
-                                                  treatment_allocations))
+        alpha = SampleSize._get_alpha(alpha, power, bonferroni, treatments, comparisons)
+        treatment_allocations = SampleSize._get_treatment_allocations(
+            treatments, comparisons, treatment_costs, treatment_allocations
+        )
 
         num_comparisons = SampleSize._num_comparisons(treatments, comparisons)
-        comparison_matrix = SampleSize._get_comparison_matrix(treatments,
-                                                              comparisons)
+        comparison_matrix = SampleSize._get_comparison_matrix(treatments, comparisons)
 
         z_alpha = st.norm.ppf(1 - alpha / 2)
         z_power = st.norm.ppf(power)
 
-        a = np.power(1. / (num_comparisons * mde), 2)
+        a = np.power(1.0 / (num_comparisons * mde), 2)
         b = np.power(z_power + z_alpha, 2)
         c = baseline_variance
         d = 0
         for i in range(treatments):
             for j in range(treatments):
                 if comparison_matrix[i, j] > 0:
-                    d += np.sqrt(
-                        1. / treatment_allocations[i] +
-                        1. / treatment_allocations[j])
+                    d += np.sqrt(1.0 / treatment_allocations[i] + 1.0 / treatment_allocations[j])
         d = np.power(d, 2)
 
         n_total = np.ceil(a * b * c * d).astype(int)
@@ -223,102 +233,91 @@ class SampleSize(object):
 
     @staticmethod
     def _calculate_sample_size_interactive(metric):
-        style = {'description_width': 'initial'}
-        desc_layout = widgets.Layout(width='50%')
-        if metric == 'continuous':
+        style = {"description_width": "initial"}
+        desc_layout = widgets.Layout(width="50%")
+        if metric == "continuous":
             mde_widget = widgets.FloatText(
                 value=0.01,
-                description='',
+                description="",
             )
 
-            mde_desc = widgets.HTML("""
+            mde_desc = widgets.HTML(
+                """
                 <small>
                     This is the smallest absolute difference in averages that
                     any of your comparisons can detect at the given statistical
                     rigour.
                 </small>
-            """, layout=desc_layout)
+            """,
+                layout=desc_layout,
+            )
 
             baseline_title = widgets.HTML("<strong>Baseline variance</strong>")
             baseline_widget = widgets.BoundedFloatText(
                 value=1.0,
                 min=0.00001,
                 max=1000000000.0,
-                description='',
+                description="",
             )
-            baseline_desc = widgets.HTML("""
+            baseline_desc = widgets.HTML(
+                """
                     <small>
                         This is the expected variance of the metric among
                         users in your control group.
                     </small>
-                """, layout=desc_layout)
-
-        elif metric == 'binomial':
-            mde_widget = widgets.FloatLogSlider(
-                value=0.003,
-                base=10,
-                min=-4,
-                max=np.log10(0.5),
-                step=0.001,
-                description='',
-                readout_format='.4f'
+                """,
+                layout=desc_layout,
             )
 
-            mde_desc = widgets.HTML("""
+        elif metric == "binomial":
+            mde_widget = widgets.FloatLogSlider(
+                value=0.003, base=10, min=-4, max=np.log10(0.5), step=0.001, description="", readout_format=".4f"
+            )
+
+            mde_desc = widgets.HTML(
+                """
                 <small>
                     This is the smallest absolute difference (percentage
                     point / 100) that any of your comparisons can detect
                     at the given statistical rigour.
                 </small>
-            """, layout=desc_layout)
-
-            baseline_title = widgets.HTML("<strong>Baseline "
-                                          "proportion</strong>")
-            baseline_widget = widgets.FloatSlider(
-                value=0.5,
-                min=0.00001,
-                max=0.99999,
-                step=0.01,
-                description=''
+            """,
+                layout=desc_layout,
             )
-            baseline_desc = widgets.HTML("""
+
+            baseline_title = widgets.HTML("<strong>Baseline " "proportion</strong>")
+            baseline_widget = widgets.FloatSlider(value=0.5, min=0.00001, max=0.99999, step=0.01, description="")
+            baseline_desc = widgets.HTML(
+                """
                     <small>
                         This is the expected value of the metric among
                         users in your control group.
                     </small>
-                """, layout=desc_layout)
+                """,
+                layout=desc_layout,
+            )
 
         else:
-            raise ValueError('metric must be `continuous` or `binomial`')
+            raise ValueError("metric must be `continuous` or `binomial`")
 
         alpha_widget = widgets.FloatSlider(
-            value=0.05,
-            min=0.001,
-            max=0.10,
-            step=0.001,
-            description=r'\(\alpha\)',
-            readout_format='.3f')
+            value=0.05, min=0.001, max=0.10, step=0.001, description=r"\(\alpha\)", readout_format=".3f"
+        )
 
         power_widget = widgets.FloatSlider(
-            value=0.85,
-            min=0.8,
-            max=0.99,
-            step=0.01,
-            description=r'Power, \( 1-\beta\)')
+            value=0.85, min=0.8, max=0.99, step=0.01, description=r"Power, \( 1-\beta\)"
+        )
 
         treatments_widget = widgets.IntSlider(
-            value=2,
-            min=2,
-            max=20,
-            step=1,
-            description='Groups (including control)',
-            style=style)
+            value=2, min=2, max=20, step=1, description="Groups (including control)", style=style
+        )
 
         comparisons_widget = widgets.RadioButtons(
-            options=['Control vs. All', 'All vs. All'],
-            value='Control vs. All',
-            description='Groups to compare',
-            style=style)
+            options=["Control vs. All", "All vs. All"],
+            value="Control vs. All",
+            description="Groups to compare",
+            style=style,
+        )
 
         control_group_widget = widgets.FloatLogSlider(
             value=1,
@@ -326,11 +325,12 @@ class SampleSize(object):
             base=10,
             min=0,
             max=4,
-            description='Control group advantage',
+            description="Control group advantage",
             readout=False,
             style=style,
         )
-        control_group_description = widgets.HTML("""
+        control_group_description = widgets.HTML(
+            """
             <small>
                 Sometime we want the control group to be bigger than what is
                 strictly optimal. This can be either because we can collect
@@ -339,80 +339,87 @@ class SampleSize(object):
                 control group comes at the cost of an increased total
                 required sample.
             </small>
-        """, layout=desc_layout)
+        """,
+            layout=desc_layout,
+        )
 
-        bonferroni_widget = widgets.Checkbox(
-            value=False,
-            description='Apply Bonferroni correction')
+        bonferroni_widget = widgets.Checkbox(value=False, description="Apply Bonferroni correction")
 
         risk_reset_btn = widgets.Button(
-            description=' ',
+            description=" ",
             disabled=False,
-            button_style='',
-            tooltip='Reset variant risk',
-            icon='repeat',
-            layout=widgets.Layout(width="40px")
+            button_style="",
+            tooltip="Reset variant risk",
+            icon="repeat",
+            layout=widgets.Layout(width="40px"),
         )
 
         def reset_widget(b):
             control_group_widget.value = 1
+
         risk_reset_btn.on_click(reset_widget)
 
-        ui = widgets.VBox([
-            widgets.HTML('<h4>Target metric</h4>'),
-            widgets.VBox(
-                children=[
-                    widgets.HTML("<strong>Minimal Detectable Effect "
-                                 "size</strong>"),
-                    mde_widget,
-                    mde_desc],
-            ),
-            widgets.VBox(
-                children=[
-                    baseline_title,
-                    baseline_widget,
-                    baseline_desc],
-            ),
-            widgets.HTML('<h4>Statistical rigour</h4>'),
-            alpha_widget,
-            power_widget,
-            bonferroni_widget,
-            widgets.HTML('<h4>Treatment groups</h4>'),
-            treatments_widget,
-            comparisons_widget,
-            widgets.VBox(
-                children=[
-                    widgets.HBox([control_group_widget, risk_reset_btn]),
-                    control_group_description
-                ]
-            )])
+        ui = widgets.VBox(
+            [
+                widgets.HTML("<h4>Target metric</h4>"),
+                widgets.VBox(
+                    children=[
+                        widgets.HTML("<strong>Minimal Detectable Effect " "size</strong>"),
+                        mde_widget,
+                        mde_desc,
+                    ],
+                ),
+                widgets.VBox(
+                    children=[baseline_title, baseline_widget, baseline_desc],
+                ),
+                widgets.HTML("<h4>Statistical rigour</h4>"),
+                alpha_widget,
+                power_widget,
+                bonferroni_widget,
+                widgets.HTML("<h4>Treatment groups</h4>"),
+                treatments_widget,
+                comparisons_widget,
+                widgets.VBox(
+                    children=[widgets.HBox([control_group_widget, risk_reset_btn]), control_group_description]
+                ),
+            ]
+        )
 
-        def show_samplesize(mde,
-                            baseline,
-                            alpha,
-                            power,
-                            treatments,
-                            comparisons_readable,
-                            bonferroni_correction,
-                            relative_risk):
-            if comparisons_readable == 'Control vs. All':
-                comparisons = 'control_vs_all'
+        def show_samplesize(
+            mde, baseline, alpha, power, treatments, comparisons_readable, bonferroni_correction, relative_risk
+        ):
+            if comparisons_readable == "Control vs. All":
+                comparisons = "control_vs_all"
             else:
-                comparisons = 'all_vs_all'
+                comparisons = "all_vs_all"
 
             treatment_costs = np.ones(treatments)
             treatment_costs[1:] = relative_risk
             treatment_allocations = None
 
-            if metric == 'continuous':
+            if metric == "continuous":
                 n_optimal, _, _ = SampleSize.continuous(
-                    mde, baseline, alpha, power,
-                    treatments, comparisons, None,
-                    treatment_allocations, bonferroni_correction)
+                    mde,
+                    baseline,
+                    alpha,
+                    power,
+                    treatments,
+                    comparisons,
+                    None,
+                    treatment_allocations,
+                    bonferroni_correction,
+                )
                 n_tot, n_cell, prop_cell = SampleSize.continuous(
-                    mde, baseline, alpha, power,
-                    treatments, comparisons, treatment_costs,
-                    treatment_allocations, bonferroni_correction)
+                    mde,
+                    baseline,
+                    alpha,
+                    power,
+                    treatments,
+                    comparisons,
+                    treatment_costs,
+                    treatment_allocations,
+                    bonferroni_correction,
+                )
                 code_html = widgets.HTML(
                     "<pre><code>"
                     f"SampleSize.continuous(average_absolute_mde={ mde },\n"
@@ -427,16 +434,31 @@ class SampleSize(object):
                     f"                      treatment_allocations=None,\n"
                     f"                      bonferroni_correction="
                     f"{ bonferroni_correction })"
-                    "<code></pre>")
+                    "<code></pre>"
+                )
             else:
                 n_tot, n_cell, prop_cell = SampleSize.binomial(
-                    mde, baseline, alpha, power,
-                    treatments, comparisons, treatment_costs,
-                    treatment_allocations, bonferroni_correction)
+                    mde,
+                    baseline,
+                    alpha,
+                    power,
+                    treatments,
+                    comparisons,
+                    treatment_costs,
+                    treatment_allocations,
+                    bonferroni_correction,
+                )
                 n_optimal, _, _ = SampleSize.binomial(
-                    mde, baseline, alpha, power,
-                    treatments, comparisons, None,
-                    treatment_allocations, bonferroni_correction)
+                    mde,
+                    baseline,
+                    alpha,
+                    power,
+                    treatments,
+                    comparisons,
+                    None,
+                    treatment_allocations,
+                    bonferroni_correction,
+                )
                 code_html = widgets.HTML(
                     "<pre><code>"
                     f"SampleSize.binomial(absolute_percentage_mde={ mde },\n"
@@ -452,43 +474,51 @@ class SampleSize(object):
                     f"                    treatment_allocations=None,\n"
                     f"                    bonferroni_correction="
                     f"{ bonferroni_correction })"
-                    "<code></pre>")
+                    "<code></pre>"
+                )
 
             def compare_against_optimal(current, optimal):
                 if current == optimal:
-                    return ''
+                    return ""
                 else:
-                    return (f"<br><small><em>{current/optimal:.1f}x "
-                            f"optimal group allocation of {optimal:,}."
-                            f"</em></small>")
+                    return (
+                        f"<br><small><em>{current/optimal:.1f}x "
+                        f"optimal group allocation of {optimal:,}."
+                        f"</em></small>"
+                    )
 
-            display(widgets.HTML(
-                f"<h4>Required sample size</h4>"
-                f"<strong>Total:</strong><br>{n_tot:,}"
-                f"{compare_against_optimal(n_tot, n_optimal)}"))
-            cell_str = '<strong>Sample size in each cell</strong>'
+            display(
+                widgets.HTML(
+                    f"<h4>Required sample size</h4>"
+                    f"<strong>Total:</strong><br>{n_tot:,}"
+                    f"{compare_against_optimal(n_tot, n_optimal)}"
+                )
+            )
+            cell_str = "<strong>Sample size in each cell</strong>"
             for i in range(len(n_cell)):
                 if i == 0:
-                    treatment = 'Control'
+                    treatment = "Control"
                 else:
-                    treatment = 'Variant ' + str(i)
+                    treatment = "Variant " + str(i)
 
-                cell_str += (f"<br><em>{treatment}:</em> "
-                             f"{n_cell[i]:,} ({prop_cell[i]*100:.1f}%)")
+                cell_str += f"<br><em>{treatment}:</em> " f"{n_cell[i]:,} ({prop_cell[i]*100:.1f}%)"
 
             display(widgets.HTML(cell_str))
             display(code_html)
 
-        out = widgets.interactive_output(show_samplesize, {
-            'mde': mde_widget,
-            'baseline': baseline_widget,
-            'alpha': alpha_widget,
-            'power': power_widget,
-            'treatments': treatments_widget,
-            'comparisons_readable': comparisons_widget,
-            'bonferroni_correction': bonferroni_widget,
-            'relative_risk': control_group_widget
-        })
+        out = widgets.interactive_output(
+            show_samplesize,
+            {
+                "mde": mde_widget,
+                "baseline": baseline_widget,
+                "alpha": alpha_widget,
+                "power": power_widget,
+                "treatments": treatments_widget,
+                "comparisons_readable": comparisons_widget,
+                "bonferroni_correction": bonferroni_widget,
+                "relative_risk": control_group_widget,
+            },
+        )
 
         display(ui, out)
 
@@ -509,8 +539,7 @@ class SampleSize(object):
                 equal to two.
 
         """
-        error_string = 'Treatments must be a whole number ' \
-                       'greater than or equal to two'
+        error_string = "Treatments must be a whole number " "greater than or equal to two"
         try:
             remainder = treatments % 1
         except TypeError:
@@ -539,9 +568,8 @@ class SampleSize(object):
                 'all_vs_all'.
 
         """
-        if comparisons not in ('control_vs_all', 'all_vs_all'):
-            raise ValueError('comparisons must be either '
-                             '"control_vs_all" or "all_vs_all"')
+        if comparisons not in ("control_vs_all", "all_vs_all"):
+            raise ValueError("comparisons must be either " '"control_vs_all" or "all_vs_all"')
         else:
             return comparisons
 
@@ -566,11 +594,10 @@ class SampleSize(object):
         treatments = SampleSize._clean_treatments(treatments)
         comparisons = SampleSize._clean_comparisons(comparisons)
 
-        if comparisons == 'control_vs_all':
+        if comparisons == "control_vs_all":
             num_comparisons = treatments - 1
         else:
-            num_comparisons = math.factorial(treatments) /\
-                              (2 * math.factorial(treatments - 2))
+            num_comparisons = math.factorial(treatments) / (2 * math.factorial(treatments - 2))
 
         return int(num_comparisons)
 
@@ -593,7 +620,7 @@ class SampleSize(object):
         treatments = SampleSize._clean_treatments(treatments)
         comparisons = SampleSize._clean_comparisons(comparisons)
 
-        if comparisons == 'control_vs_all':
+        if comparisons == "control_vs_all":
             comparison_matrix = np.zeros((treatments, treatments))
             comparison_matrix[1:, 0] = 1
 
@@ -632,25 +659,26 @@ class SampleSize(object):
             # Default equal cost of all cells
             return np.ones(treatments)
 
-        elif (not (isinstance(treatment_costs, np.ndarray) or
-                   isinstance(treatment_costs, list)) or
-              len(treatment_costs) != treatments):
-            raise TypeError('treatment_costs must be a list or numpy array of'
-                            'the same length as the number of treatments')
+        elif (
+            not (isinstance(treatment_costs, np.ndarray) or isinstance(treatment_costs, list))
+            or len(treatment_costs) != treatments
+        ):
+            raise TypeError(
+                "treatment_costs must be a list or numpy array of" "the same length as the number of treatments"
+            )
 
         try:
             treatment_costs = np.array(treatment_costs)
             if not (treatment_costs > 0).all():
-                raise ValueError('treatment_costs values must all be positive')
+                raise ValueError("treatment_costs values must all be positive")
 
         except TypeError:
-            raise TypeError('treatment_costs array must only contain numbers')
+            raise TypeError("treatment_costs array must only contain numbers")
 
         return treatment_costs
 
     @staticmethod
-    def _get_treatment_allocations(treatments, comparisons, treatment_costs,
-                                   treatment_allocations):
+    def _get_treatment_allocations(treatments, comparisons, treatment_costs, treatment_allocations):
         """Validate or generate treatment allocation array.
 
         See the footnote on page 31 of "Duflo, E., Glennerster, R., & Kremer,
@@ -687,43 +715,35 @@ class SampleSize(object):
         treatments = SampleSize._clean_treatments(treatments)
 
         if treatment_allocations is not None:
-            if (isinstance(treatment_allocations, list) or
-                    isinstance(treatment_allocations, tuple)):
+            if isinstance(treatment_allocations, list) or isinstance(treatment_allocations, tuple):
                 treatment_allocations = np.array(treatment_allocations)
 
-            if (not isinstance(treatment_allocations, np.ndarray) or
-                    len(treatment_allocations) != treatments):
-                raise TypeError('treatment_allocations must be a numpy array '
-                                'or list of the same length as the number of '
-                                'treatments')
+            if not isinstance(treatment_allocations, np.ndarray) or len(treatment_allocations) != treatments:
+                raise TypeError(
+                    "treatment_allocations must be a numpy array "
+                    "or list of the same length as the number of "
+                    "treatments"
+                )
 
             elif not (treatment_allocations > 0).all():
-                raise ValueError('treatment_allocations values '
-                                 'must all be positive')
+                raise ValueError("treatment_allocations values " "must all be positive")
 
             elif not math.isclose(treatment_allocations.sum(), 1.0):
-                raise ValueError('treatment_allocations values '
-                                 'must sum to one')
+                raise ValueError("treatment_allocations values " "must sum to one")
 
             else:
                 return np.array(treatment_allocations)
 
-        comparisons = SampleSize._get_comparison_matrix(treatments,
-                                                        comparisons)
-        weighted_comparisons = comparisons/np.sum(comparisons)
-        treatment_costs = SampleSize._clean_treatment_costs(treatments,
-                                                            treatment_costs)
+        comparisons = SampleSize._get_comparison_matrix(treatments, comparisons)
+        weighted_comparisons = comparisons / np.sum(comparisons)
+        treatment_costs = SampleSize._clean_treatment_costs(treatments, treatment_costs)
 
         ratios = np.zeros((treatments, treatments))
         for i in range(treatments):
-            sum_importance_i = (np.sum(weighted_comparisons[:, i]) +
-                                np.sum(weighted_comparisons[i, :]))
+            sum_importance_i = np.sum(weighted_comparisons[:, i]) + np.sum(weighted_comparisons[i, :])
             for j in range(treatments):
-                sum_importance_j = (np.sum(weighted_comparisons[:, j]) +
-                                    np.sum(weighted_comparisons[j, :]))
-                ratios[i, j] = (sum_importance_i / sum_importance_j *
-                                np.sqrt(treatment_costs[j] /
-                                        treatment_costs[i]))
+                sum_importance_j = np.sum(weighted_comparisons[:, j]) + np.sum(weighted_comparisons[j, :])
+                ratios[i, j] = sum_importance_i / sum_importance_j * np.sqrt(treatment_costs[j] / treatment_costs[i])
 
         treatment_allocations = ratios[:, 0] / np.sum(ratios[:, 0])
 
@@ -754,9 +774,9 @@ class SampleSize(object):
         alpha = SampleSize._validate_percentage(alpha)
 
         if power <= alpha:
-            raise ValueError('alpha must be less than power')
+            raise ValueError("alpha must be less than power")
         elif not isinstance(bonferroni, bool):
-            raise TypeError('bonferroni must be a bool')
+            raise TypeError("bonferroni must be a bool")
 
         num_comparisons = SampleSize._num_comparisons(treatments, comparisons)
 
@@ -781,9 +801,9 @@ class SampleSize(object):
 
         """
         if not isinstance(num, float):
-            raise TypeError('num must be a float')
+            raise TypeError("num must be a float")
         elif not 0 < num < 1:
-            raise ValueError('num must be between 0 and 1')
+            raise ValueError("num must be between 0 and 1")
         else:
             return num
 
@@ -802,7 +822,7 @@ class SampleSize(object):
 
         """
         if not val > 0:
-            raise ValueError('value must be positive')
+            raise ValueError("value must be positive")
         else:
             return val
 
@@ -821,8 +841,8 @@ class SampleSize(object):
             ValueError: If `average_absolute_mde` is zero.
 
         """
-        if math.isclose(average_absolute_mde, 0.):
-            raise ValueError('average_absolute_mde cannot be zero')
+        if math.isclose(average_absolute_mde, 0.0):
+            raise ValueError("average_absolute_mde cannot be zero")
         else:
             return average_absolute_mde
 
@@ -844,7 +864,6 @@ class SampleSize(object):
         baseline = SampleSize._validate_percentage(baseline_proportion)
 
         if baseline - mde < 0 and baseline + mde > 1:
-            raise ValueError('absolute_percentage_mde is too large '
-                             'given baseline_proportion')
+            raise ValueError("absolute_percentage_mde is too large " "given baseline_proportion")
         else:
             return mde
