@@ -41,15 +41,15 @@ class GenericTest(ConfidenceABC):
         denominator_column: str,
         categorical_group_columns: Union[str, Iterable],
         ordinal_group_column: Union[str, None] = None,
-        metric_column=None,
-        treatment_column=None,
         interval_size: float = 0.95,
-        power: float = 0.8,
         correction_method: str = BONFERRONI,
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
         method_column: str = None,
         bootstrap_samples_column: str = None,
+        metric_column=None,
+        treatment_column=None,
+        power: float = 0.8,
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -69,13 +69,6 @@ class GenericTest(ConfidenceABC):
         if not all(self._df[method_column].map(lambda m: m in METHODS)):
             raise ValueError(f"Values of method column must be in {METHODS}")
 
-        # validate_data(self._df,
-        #               self._numerator,
-        #               self._numerator_sumsq,
-        #               self._denominator,
-        #               self._all_group_columns,
-        #               self._ordinal_group_column)
-
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
@@ -90,6 +83,9 @@ class GenericTest(ConfidenceABC):
                 correction_method=correction_method.lower(),
                 method_column=method_column,
                 bootstrap_samples_column=bootstrap_samples_column,
+                metric_column=metric_column,
+                treatment_column=treatment_column,
+                power=power,
             )
 
         self._confidence_grapher = (
@@ -242,7 +238,7 @@ class GenericTest(ConfidenceABC):
             final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_multiple_difference(
-            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, None, use_adjusted_intervals
+            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, use_adjusted_intervals
         )
         return chartgrid
 

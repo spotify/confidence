@@ -64,14 +64,14 @@ class ChiSquared(GenericTest):
             denominator_column,
             categorical_group_columns,
             ordinal_group_column,
-            metric_column,
-            treatment_column,
             interval_size,
-            power,
             correction_method,
             confidence_computer,
             confidence_grapher,
             METHOD_COLUMN_NAME,
+            metric_column=metric_column,
+            treatment_column=treatment_column,
+            power=power,
         )
 
     def difference(

@@ -105,7 +105,6 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         groupby,
         level_as_reference,
         nims: NIM_TYPE,
-        mdes: bool,
         use_adjusted_intervals: bool,
     ) -> ChartGrid:
         if self._ordinal_group_column in listify(groupby):

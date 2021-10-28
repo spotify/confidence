@@ -59,10 +59,10 @@ class TestPoweredEffectContinuousSingleMetric(object):
             denominator_column="users",
             categorical_group_columns=["variation_name"],
             ordinal_group_column=None,
+            interval_size=0.95,
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
         )
 
     def test_powered_effect1(self):
@@ -118,8 +118,8 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
             denominator_column="users",
             categorical_group_columns=["variation_name", "metric_name"],
             ordinal_group_column=None,
-            power=0.8,
             interval_size=0.95,
+            power=0.8,
         )
 
     def test_powered_effect1(self):
@@ -179,11 +179,11 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
             denominator_column="users",
             categorical_group_columns=["variation_name", "metric_name"],
             ordinal_group_column=None,
+            interval_size=0.95,
+            correction_method="spot-1-bonferroni",
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
-            correction_method="spot-1-bonferroni",
         )
 
     def test_powered_effect(self):
@@ -301,11 +301,11 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
             denominator_column="users",
             categorical_group_columns=["variation_name", "metric_name", "segment"],
             ordinal_group_column=None,
+            interval_size=0.95,
+            correction_method="spot-1-bonferroni",
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
-            correction_method="spot-1-bonferroni",
         )
 
     def test_powered_effect(self):
@@ -432,11 +432,11 @@ class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
             denominator_column="users",
             categorical_group_columns=["variation_name", "metric_name", "segment"],
             ordinal_group_column=None,
+            interval_size=0.95,
+            correction_method="spot-1-bonferroni",
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
-            correction_method="spot-1-bonferroni",
         )
 
     def test_powered_effect(self):
@@ -563,11 +563,11 @@ class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
             denominator_column="users",
             categorical_group_columns=["variation_name", "metric_name", "segment"],
             ordinal_group_column=None,
+            interval_size=0.95,
+            correction_method="spot-1-bonferroni",
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
-            correction_method="spot-1-bonferroni",
         )
 
     def test_powered_effect(self):
@@ -703,11 +703,11 @@ class TestPoweredEffectBinary(object):
             numerator_sum_squares_column=None,
             denominator_column="total",
             categorical_group_columns=["country", "variation_name"],
+            interval_size=0.95,
+            correction_method="spot-1-bonferroni",
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
-            correction_method="spot-1-bonferroni",
         )
 
     def test_powered_effect(self):
@@ -781,11 +781,11 @@ class TestPoweredEffectBinaryOnlyGuardrail(object):
             numerator_sum_squares_column=None,
             denominator_column="total",
             categorical_group_columns=["country", "variation_name"],
+            interval_size=0.95,
+            correction_method="spot-1-bonferroni",
             metric_column="metric_name",
             treatment_column="variation_name",
             power=0.8,
-            interval_size=0.95,
-            correction_method="spot-1-bonferroni",
         )
 
     def test_powered_effect(self):
