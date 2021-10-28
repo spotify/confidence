@@ -26,7 +26,12 @@ STD_ERR = "std_err"
 Z_CRIT = "z_crit"
 ALPHA = "alpha"
 ADJUSTED_ALPHA = "adjusted_alpha"
+POWER = "power"
+POWERED_EFFECT = "powered_effect"
+ADJUSTED_POWER = "adjusted_power"
 IS_SIGNIFICANT = "is_significant"
+MDE = "minimum_detectable_effect"
+REQUIRED_SAMPLE_SIZE = "required_sample_size"
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"
@@ -97,9 +102,28 @@ CORRECTION_METHODS_THAT_SUPPORT_CI = [
     SPOT_1_FDR_TSBKY,
 ]
 
+CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO = [
+    BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+    SPOT_1,
+    SPOT_1_HOLM,
+    SPOT_1_HOMMEL,
+    SPOT_1_SIMES_HOCHBERG,
+    SPOT_1_SIDAK,
+    SPOT_1_HOLM_SIDAK,
+    SPOT_1_FDR_BH,
+    SPOT_1_FDR_BY,
+    SPOT_1_FDR_TSBH,
+    SPOT_1_FDR_TSBKY,
+]
+CORRECTION_METHODS_THAT_DONT_REQUIRE_METRIC_INFO = list(
+    set(CORRECTION_METHODS) - set(CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO)
+)
+
 NULL_HYPOTHESIS = "null_hypothesis"
+ALTERNATIVE_HYPOTHESIS = "alternative_hypothesis"
 NIM = "non-inferiority margin"
 NIM_INPUT_COLUMN_NAME = "non_inferiority_margin"
+MDE_INPUT_COLUMN_NAME = "minimum_detectable_effect"
 PREFERRED_DIRECTION_INPUT_NAME = "preferred_direction"
 INCREASE_PREFFERED = "increase"
 DECREASE_PREFFERED = "decrease"

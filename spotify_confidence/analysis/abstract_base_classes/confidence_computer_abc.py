@@ -50,6 +50,7 @@ class ConfidenceComputerABC(ABC):
         groupby: Union[str, Iterable],
         level_as_reference: bool,
         nims: NIM_TYPE,
+        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
     ) -> DataFrame:
