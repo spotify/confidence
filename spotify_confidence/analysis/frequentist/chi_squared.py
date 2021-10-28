@@ -103,12 +103,17 @@ class ChiSquared(GenericTest):
         groupby: Union[str, Iterable] = None,
         level_as_reference: bool = None,
         non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
                 "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
             )
+        if minimum_detectable_effects is not None:
+            raise ValueError(
+                "Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead."
+            )
         return super(ChiSquared, self).multiple_difference(
-            level, absolute, groupby, level_as_reference, None, final_expected_sample_size_column
+            level, absolute, groupby, level_as_reference, None, None, final_expected_sample_size_column
         )

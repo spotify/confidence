@@ -25,6 +25,7 @@ from ..confidence_utils import (
     validate_categorical_columns,
     listify,
     get_all_categorical_group_columns,
+    get_all_group_columns
 )
 from ..constants import BONFERRONI, NIM_TYPE, METHODS
 from ..frequentist.sample_ratio_test import sample_ratio_test
@@ -62,7 +63,7 @@ class GenericTest(ConfidenceABC):
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
         self._treatment_column = treatment_column
-
+        self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
         if method_column is None:
             raise ValueError("method column cannot be None")
         if not all(self._df[method_column].map(lambda m: m in METHODS)):

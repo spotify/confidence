@@ -101,6 +101,7 @@ class ConfidenceGrapherABC(ABC):
         groupby: Union[str, Iterable],
         level_as_reference: bool,
         nims: NIM_TYPE,
+        mdes: bool,
         use_adjusted_intervals: bool,
     ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
