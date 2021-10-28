@@ -22,20 +22,19 @@ from ..constants import NIM_TYPE
 
 
 class ConfidenceGrapherABC(ABC):
-
     @abstractmethod
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 denominator_column: str,
-                 categorical_group_columns: str,
-                 ordinal_group_column: str):
+    def __init__(
+        self,
+        data_frame: DataFrame,
+        numerator_column: str,
+        denominator_column: str,
+        categorical_group_columns: str,
+        ordinal_group_column: str,
+    ):
         pass
 
     @abstractmethod
-    def plot_summary(self,
-                     summary_df: DataFrame,
-                     groupby: Union[str, Iterable]) -> ChartGrid:
+    def plot_summary(self, summary_df: DataFrame, groupby: Union[str, Iterable]) -> ChartGrid:
         """Plot for each group in the data_frame:
 
         if ordinal level exists:
@@ -53,13 +52,14 @@ class ConfidenceGrapherABC(ABC):
         pass
 
     @abstractmethod
-    def plot_difference(self,
-                        difference_df: DataFrame,
-                        absolute: bool,
-                        groupby: Union[str, Iterable],
-                        nims: NIM_TYPE,
-                        use_adjusted_intervals: bool
-                        ) -> ChartGrid:
+    def plot_difference(
+        self,
+        difference_df: DataFrame,
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        nims: NIM_TYPE,
+        use_adjusted_intervals: bool,
+    ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2 with
         confidence intervals.
 
@@ -73,13 +73,14 @@ class ConfidenceGrapherABC(ABC):
         """
 
     @abstractmethod
-    def plot_differences(self,
-                         difference_df: DataFrame,
-                         absolute: bool,
-                         groupby: Union[str, Iterable],
-                         nims: NIM_TYPE,
-                         use_adjusted_intervals: bool
-                         ) -> ChartGrid:
+    def plot_differences(
+        self,
+        difference_df: DataFrame,
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        nims: NIM_TYPE,
+        use_adjusted_intervals: bool,
+    ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2 with
         confidence intervals.
 
@@ -93,14 +94,15 @@ class ConfidenceGrapherABC(ABC):
         """
 
     @abstractmethod
-    def plot_multiple_difference(self,
-                                 difference_df: DataFrame,
-                                 absolute: bool,
-                                 groupby: Union[str, Iterable],
-                                 level_as_reference: bool,
-                                 nims: NIM_TYPE,
-                                 use_adjusted_intervals: bool
-                                 ) -> ChartGrid:
+    def plot_multiple_difference(
+        self,
+        difference_df: DataFrame,
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        level_as_reference: bool,
+        nims: NIM_TYPE,
+        use_adjusted_intervals: bool,
+    ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
 

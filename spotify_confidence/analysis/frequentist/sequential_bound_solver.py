@@ -18,7 +18,7 @@ from scipy.stats import norm
 
 
 def _alphas(alpha: np.array, phi: float, t: np.array):
-    """ Alpha spending function."""
+    """Alpha spending function."""
     pe = np.zeros(len(t))
     pd = np.zeros(len(t))
     for j, tt in enumerate(t):
@@ -35,7 +35,15 @@ def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: floa
     return qp
 
 
-def _bsearch(last: np.array, nints: int, i: float, pd: float, stdv: float, ya: np.array, yb: np.array,) -> np.array:
+def _bsearch(
+    last: np.array,
+    nints: int,
+    i: float,
+    pd: float,
+    stdv: float,
+    ya: np.array,
+    yb: np.array,
+) -> np.array:
     """
     Note: function signature slightly modified in comparison to R implementation (which takes complete nints
     array instead of scalar), but should be semantically equivalent
@@ -112,7 +120,7 @@ class ComputationState:
 
     @property
     def last_fcab(self):
-        """ fcab calculation referring to the last row of df """
+        """fcab calculation referring to the last row of df"""
 
         # copy to avoid side effects
         return None if self._last_fcab is None else np.copy(self._last_fcab)
@@ -124,7 +132,12 @@ class ComputationState:
 
 
 def landem(
-    t: np.array, alpha: float, phi: float, ztrun: float, state: ComputationState, max_nints: int = None,
+    t: np.array,
+    alpha: float,
+    phi: float,
+    ztrun: float,
+    state: ComputationState,
+    max_nints: int = None,
 ):
     """
     This function is a Python implementation of landem.R of ldbounds package.
@@ -193,7 +206,11 @@ def landem(
         df.at[start, "ya"] = df.at[start, "za"] * df.at[start, "stdv"]
         df.at[start, "nints"] = np.ceil((df.at[start, "yb"] - df.at[start, "ya"]) / (h * df.at[start, "stdv"]))
 
-        grid = np.linspace(df.at[start, "ya"], df.at[start, "yb"], int(df.at[start, "nints"] + 1),)
+        grid = np.linspace(
+            df.at[start, "ya"],
+            df.at[start, "yb"],
+            int(df.at[start, "nints"] + 1),
+        )
         scaled_x = grid / df.at[start, "stdv"]
         last_fcab = _fast_norm_pdf_prescaled(scaled_x, df.at[start, "stdv"])
 
@@ -270,7 +287,11 @@ def landem(
                 # in R implementation, i < len(t)-1. However we run until len(t) because that calculation will be
                 # required if landem() is called again with df used as a starting point
                 hlast = (df.at[i - 1, "yb"] - df.at[i - 1, "ya"]) / df.at[i - 1, "nints"]
-                x = np.linspace(df.at[i, "ya"], df.at[i, "yb"], int(df.at[i, "nints"] + 1),)
+                x = np.linspace(
+                    df.at[i, "ya"],
+                    df.at[i, "yb"],
+                    int(df.at[i, "nints"] + 1),
+                )
                 last_fcab = _fcab(last_fcab, df.at[i - 1, "nints"], df.at[i - 1, "ya"], hlast, x, df.at[i, "stdv"])
     return df, ComputationState(df, last_fcab)
 

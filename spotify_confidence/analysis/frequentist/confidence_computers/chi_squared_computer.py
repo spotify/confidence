@@ -18,34 +18,32 @@ class ChiSquaredComputer(object):
 
     def _point_estimate(self, row: Series) -> float:
         if row[self._denominator] == 0:
-            raise ValueError('''Can't compute point estimate: denominator is 0''')
+            raise ValueError("""Can't compute point estimate: denominator is 0""")
         return row[self._numerator] / row[self._denominator]
 
     def _variance(self, row: Series) -> float:
         variance = row[POINT_ESTIMATE] * (1 - row[POINT_ESTIMATE])
         if variance < 0:
-            raise ValueError('Computed variance is negative. '
-                             'Please check your inputs.')
+            raise ValueError("Computed variance is negative. " "Please check your inputs.")
         return variance
 
     def _std_err(self, row: Series) -> float:
-        return np.sqrt(row[VARIANCE + SFX1] / row[self._denominator + SFX1] +
-                       row[VARIANCE + SFX2] / row[self._denominator + SFX2])
+        return np.sqrt(
+            row[VARIANCE + SFX1] / row[self._denominator + SFX1] + row[VARIANCE + SFX2] / row[self._denominator + SFX2]
+        )
 
     def _add_point_estimate_ci(self, row: DataFrame) -> Series:
         row[CI_LOWER], row[CI_UPPER] = proportion_confint(
             count=row[self._numerator],
             nobs=row[self._denominator],
-            alpha=1-self._interval_size,
+            alpha=1 - self._interval_size,
         )
         return row
 
     def _p_value(self, row: Series) -> float:
-        _, p_value, _ = (
-            proportions_chisquare(count=[row[self._numerator + SFX1],
-                                         row[self._numerator + SFX2]],
-                                  nobs=[row[self._denominator + SFX1],
-                                        row[self._denominator + SFX2]])
+        _, p_value, _ = proportions_chisquare(
+            count=[row[self._numerator + SFX1], row[self._numerator + SFX2]],
+            nobs=[row[self._denominator + SFX1], row[self._denominator + SFX2]],
         )
         return p_value
 
@@ -56,14 +54,11 @@ class ChiSquaredComputer(object):
             count2=row[self._numerator + SFX1],
             nobs2=row[self._denominator + SFX1],
             alpha=row[alpha_column],
-            compare='diff',
-            method='wald'
+            compare="diff",
+            method="wald",
         )
 
-    def _achieved_power(self,
-                        df: DataFrame,
-                        mde: float,
-                        alpha: float) -> DataFrame:
+    def _achieved_power(self, df: DataFrame, mde: float, alpha: float) -> DataFrame:
         s1, s2 = df[self._numerator + SFX1], df[self._numerator + SFX2]
         n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
 

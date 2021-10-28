@@ -18,8 +18,7 @@ class BootstrapComputer(object):
         variance = row[self._bootstrap_samples].var()
 
         if variance < 0:
-            raise ValueError('Computed variance is negative. '
-                             'Please check your inputs.')
+            raise ValueError("Computed variance is negative. " "Please check your inputs.")
         return variance
 
     def _std_err(self, row: Series) -> float:
@@ -27,8 +26,8 @@ class BootstrapComputer(object):
 
     def _add_point_estimate_ci(self, row: DataFrame) -> Series:
 
-        row[CI_LOWER] = np.percentile(row[self._bootstrap_samples], 100*(1 - self._interval_size) / 2)
-        row[CI_UPPER] = np.percentile(row[self._bootstrap_samples], 100*(1 - (1-self._interval_size) / 2))
+        row[CI_LOWER] = np.percentile(row[self._bootstrap_samples], 100 * (1 - self._interval_size) / 2)
+        row[CI_UPPER] = np.percentile(row[self._bootstrap_samples], 100 * (1 - (1 - self._interval_size) / 2))
         return row
 
     def _p_value(self, row) -> float:
@@ -36,12 +35,9 @@ class BootstrapComputer(object):
 
     def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         differences = row[self._bootstrap_samples + SFX2] - row[self._bootstrap_samples + SFX1]
-        lower = np.percentile(differences, 100*row[alpha_column] / 2)
-        upper = np.percentile(differences, 100*(1 - row[alpha_column] / 2))
+        lower = np.percentile(differences, 100 * row[alpha_column] / 2)
+        upper = np.percentile(differences, 100 * (1 - row[alpha_column] / 2))
         return lower, upper
 
-    def _achieved_power(self,
-                        df: DataFrame,
-                        mde: float,
-                        alpha: float) -> DataFrame:
+    def _achieved_power(self, df: DataFrame, mde: float, alpha: float) -> DataFrame:
         return None

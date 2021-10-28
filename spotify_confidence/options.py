@@ -17,9 +17,11 @@ from collections import OrderedDict
 
 class ConfidenceOptions(object):
     def __init__(self):
-        self._options = OrderedDict({
-            'randomization_seed': OptionValue(None),
-        })
+        self._options = OrderedDict(
+            {
+                "randomization_seed": OptionValue(None),
+            }
+        )
 
     def get_option(self, option_name):
         """Return the value of the given option"""
@@ -40,7 +42,7 @@ class OptionValue(object):
         self.value = value
 
     def __repr__(self):
-        return '%s' % self.value
+        return "%s" % self.value
 
 
 options = ConfidenceOptions()
