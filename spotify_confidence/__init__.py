@@ -17,6 +17,7 @@ from .analysis.bayesian.bayesian_models import BetaBinomial
 from spotify_confidence.analysis.frequentist.chi_squared import ChiSquared
 from spotify_confidence.analysis.frequentist.t_test import StudentsTTest
 from spotify_confidence.analysis.frequentist.z_test import ZTest
+from spotify_confidence.analysis.frequentist.z_test_linreg import ZTestLinreg
 from spotify_confidence.analysis.frequentist.experiment import Experiment
 from .samplesize.sample_size_calculator import SampleSize
 
@@ -25,4 +26,5 @@ from .options import options
 
 __version__ = _require("spotify_confidence")[0].version
 
-__all__ = ["BetaBinomial", "ChiSquared", "StudentsTTest", "ZTest", "Experiment", "examples", "options", "SampleSize"]
+__all__ = ["BetaBinomial", "ChiSquared", "StudentsTTest", "ZTest", "ZTestLinreg",
+           "Experiment", "examples", "options", "SampleSize"]

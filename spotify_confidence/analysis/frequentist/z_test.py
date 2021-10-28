@@ -51,6 +51,9 @@ class ZTest(GenericTest):
                 correction_method=correction_method.lower(),
                 method_column=METHOD_COLUMN_NAME,
                 bootstrap_samples_column=None,
+                feature_column=None,
+                feature_cross_sum_column=None,
+                feature_sum_squares_column=None,
             )
 
         super(ZTest, self).__init__(

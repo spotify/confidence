@@ -79,12 +79,13 @@ from spotify_confidence.analysis.constants import (
     CHI2,
     TTEST,
     ZTEST,
-    BOOTSTRAP,
+    BOOTSTRAP, ZTESTLINREG,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer import ZTestLinregComputer
 
 
 class GenericComputer(ConfidenceComputerABC):
@@ -100,6 +101,10 @@ class GenericComputer(ConfidenceComputerABC):
         correction_method: str,
         method_column: str,
         bootstrap_samples_column: str,
+        feature_column: str,
+        feature_sum_squares_column: str,
+        feature_cross_sum_column: str
+
     ):
 
         self._df = data_frame
@@ -122,6 +127,11 @@ class GenericComputer(ConfidenceComputerABC):
         self._ordinal_group_column = ordinal_group_column
         self._interval_size = interval_size
 
+        self._feature = feature_column
+        self._feature_ssq = feature_sum_squares_column
+        self._feature_cross = feature_cross_sum_column
+
+
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
         self._correction_method = correction_method
@@ -130,6 +140,8 @@ class GenericComputer(ConfidenceComputerABC):
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
         self._bootstrap_samples_column = bootstrap_samples_column
+
+
 
         columns_that_must_exist = []
         if (
@@ -141,6 +153,8 @@ class GenericComputer(ConfidenceComputerABC):
             columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
         if BOOTSTRAP in self._df[self._method_column]:
             columns_that_must_exist += [self._bootstrap_samples_column]
+        if ZTESTLINREG in self._df[self._method_column]:
+            columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_ssq]
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
@@ -166,6 +180,17 @@ class GenericComputer(ConfidenceComputerABC):
                 self._denominator,
                 self._ordinal_group_column,
                 self._interval_size,
+            ),
+            ZTESTLINREG: ZTestLinregComputer(
+                self._numerator,
+                self._numerator_sumsq,
+                self._denominator,
+                self._ordinal_group_column,
+                self._interval_size,
+                self._feature,
+                self._feature_ssq,
+                self._feature_cross,
+                self._method_column,
             ),
             BOOTSTRAP: BootstrapComputer(self._bootstrap_samples_column, self._interval_size),
         }
