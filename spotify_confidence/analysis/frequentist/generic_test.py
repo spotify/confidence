@@ -25,6 +25,7 @@ from ..confidence_utils import (
     validate_categorical_columns,
     listify,
     get_all_categorical_group_columns,
+    get_all_group_columns,
 )
 from ..constants import BONFERRONI, NIM_TYPE, METHODS
 from ..frequentist.sample_ratio_test import sample_ratio_test
@@ -62,7 +63,7 @@ class GenericTest(ConfidenceABC):
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
         self._treatment_column = treatment_column
-
+        self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
         if method_column is None:
             raise ValueError("method column cannot be None")
         if not all(self._df[method_column].map(lambda m: m in METHODS)):
@@ -136,12 +137,19 @@ class GenericTest(ConfidenceABC):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(
-            levels, absolute, groupby, non_inferiority_margins, final_expected_sample_size_column, verbose
+            levels,
+            absolute,
+            groupby,
+            non_inferiority_margins,
+            minimum_detectable_effects,
+            final_expected_sample_size_column,
+            verbose,
         )
 
     def multiple_difference(
@@ -180,18 +188,17 @@ class GenericTest(ConfidenceABC):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
     ) -> ChartGrid:
         difference_df = self.difference(
-            level_1,
-            level_2,
-            absolute,
-            groupby,
-            non_inferiority_margins,
-            minimum_detectable_effects,
-            final_expected_sample_size_column,
+            level_1=level_1,
+            level_2=level_2,
+            absolute=absolute,
+            groupby=groupby,
+            non_inferiority_margins=non_inferiority_margins,
+            minimum_detectable_effects=None,
+            final_expected_sample_size_column=final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_difference(
             difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals
@@ -222,7 +229,6 @@ class GenericTest(ConfidenceABC):
         groupby: Union[str, Iterable] = None,
         level_as_reference: bool = False,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
     ) -> ChartGrid:
@@ -232,11 +238,11 @@ class GenericTest(ConfidenceABC):
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            minimum_detectable_effects,
+            None,
             final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_multiple_difference(
-            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, use_adjusted_intervals
+            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, None, use_adjusted_intervals
         )
         return chartgrid
 

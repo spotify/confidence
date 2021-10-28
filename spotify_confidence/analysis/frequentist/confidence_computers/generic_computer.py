@@ -314,6 +314,7 @@ class GenericComputer(ConfidenceComputerABC):
         absolute: bool,
         groupby: Union[str, Iterable],
         nims: NIM_TYPE,
+        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
     ) -> DataFrame:
@@ -325,6 +326,7 @@ class GenericComputer(ConfidenceComputerABC):
             groupby,
             level_as_reference=True,
             nims=nims,
+            mdes=mdes,
             final_expected_sample_size_column=final_expected_sample_size_column,
         )
         return (
@@ -723,6 +725,7 @@ class GenericComputer(ConfidenceComputerABC):
                 groupby,
                 level_as_reference=True,
                 nims=None,  # TODO: IS this right?
+                mdes=None,
                 final_expected_sample_size_column=None,
             )  # TODO: IS this
             # right?
@@ -752,7 +755,7 @@ class GenericComputer(ConfidenceComputerABC):
         return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
     def _powered_effect_and_required_sample_size(self, row) -> DataFrame:
-        if row[ADJUSTED_POWER] is None:
+        if row[ADJUSTED_POWER] is None or ZTEST not in row[self._method_column]:
             row["powered_effect"] = None
             row["required_sample_size"] = None
             return row
