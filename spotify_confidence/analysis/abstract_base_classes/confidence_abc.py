@@ -74,6 +74,7 @@ class ConfidenceABC(ABC):
         absolute: bool,
         groupby: Union[str, Iterable],
         non_inferiority_margins: NIM_TYPE,
+        minimum_detectable_effects: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
     ) -> DataFrame:
@@ -95,6 +96,7 @@ class ConfidenceABC(ABC):
                 (None, preffered direction).
                 Alternatively, pass True to use the "non_inferiority_margin" and "preferred_direction"
                 columns of dataframe that was passed to the contructor, as source of nims.
+            minimum_detectable_effects (bool): The minimum detectable effect, used for calculating required sample size.
             final_expected_sample_size_column (str): Column in source data frame containing expected number of
                     observations at end of experiment.
                 Use in combination with ordinal groupby to perform a

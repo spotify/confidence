@@ -136,12 +136,13 @@ class GenericTest(ConfidenceABC):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(
-            levels, absolute, groupby, non_inferiority_margins, final_expected_sample_size_column, verbose
+            levels, absolute, groupby, non_inferiority_margins, minimum_detectable_effects, final_expected_sample_size_column, verbose
         )
 
     def multiple_difference(
@@ -185,13 +186,13 @@ class GenericTest(ConfidenceABC):
         final_expected_sample_size_column: str = None,
     ) -> ChartGrid:
         difference_df = self.difference(
-            level_1,
-            level_2,
-            absolute,
-            groupby,
-            non_inferiority_margins,
-            minimum_detectable_effects,
-            final_expected_sample_size_column,
+            level_1=level_1,
+            level_2=level_2,
+            absolute=absolute,
+            groupby=groupby,
+            non_inferiority_margins=non_inferiority_margins,
+            minimum_detectable_effects=minimum_detectable_effects,
+            final_expected_sample_size_column=final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_difference(
             difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals
@@ -236,7 +237,7 @@ class GenericTest(ConfidenceABC):
             final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_multiple_difference(
-            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, use_adjusted_intervals
+            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, minimum_detectable_effects, use_adjusted_intervals
         )
         return chartgrid
 

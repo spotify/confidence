@@ -37,7 +37,9 @@ class ChiSquared(GenericTest):
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
     ):
-
+        treatment_column=None
+        metric_column=None
+        power=0.8
         if confidence_computer is None:
             confidence_computer = GenericComputer(
                 data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
@@ -50,6 +52,9 @@ class ChiSquared(GenericTest):
                 correction_method=correction_method.lower(),
                 method_column=METHOD_COLUMN_NAME,
                 bootstrap_samples_column=None,
+                metric_column=metric_column,
+                treatment_column=treatment_column,
+                power=power
             )
 
         super(ChiSquared, self).__init__(
@@ -59,7 +64,10 @@ class ChiSquared(GenericTest):
             denominator_column,
             categorical_group_columns,
             ordinal_group_column,
+            metric_column,
+            treatment_column,
             interval_size,
+            power,
             correction_method,
             confidence_computer,
             confidence_grapher,
@@ -73,14 +81,19 @@ class ChiSquared(GenericTest):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
+        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
                 "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
             )
+        if minimum_detectable_effects is not None:
+            raise ValueError(
+                "Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead."
+            )
         return super(ChiSquared, self).difference(
-            level_1, level_2, absolute, groupby, None, final_expected_sample_size_column
+            level_1, level_2, absolute, groupby, None, None, final_expected_sample_size_column
         )
 
     def multiple_difference(
