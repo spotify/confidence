@@ -65,12 +65,16 @@ class TestPoweredEffectContinuousSingleMetric(object):
         )
 
     def test_powered_effect1(self):
-        powered_effect = self.test.difference(level_1="control", level_2="test", minimum_detectable_effects=True)
+        powered_effect = self.test.difference(
+            level_1="control", level_2="test", minimum_detectable_effects_column="minimum_detectable_effect"
+        )
         assert np.isclose(powered_effect["powered_effect"][0], 0.3881, atol=0.001)
         assert np.isclose(powered_effect["required_sample_size"][0], 29412, atol=100)
 
     def test_powered_effect2(self):
-        powered_effect = self.test.difference(level_1="control", level_2="test2", minimum_detectable_effects=True)
+        powered_effect = self.test.difference(
+            level_1="control", level_2="test2", minimum_detectable_effects_column="minimum_detectable_effect"
+        )
         assert np.isclose(powered_effect["powered_effect"][0], 0.4111, atol=0.001)
         assert np.isclose(powered_effect["required_sample_size"][0], 5498, atol=100)
 
@@ -123,7 +127,10 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
 
     def test_powered_effect1(self):
         powered_effect = self.test.multiple_difference(
-            level="control", groupby="metric_name", level_as_reference=True, minimum_detectable_effects=True
+            level="control",
+            groupby="metric_name",
+            level_as_reference=True,
+            minimum_detectable_effects_column="minimum_detectable_effect",
         )
         assert np.isclose(powered_effect["powered_effect"][0], 0.4626, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][1], 0.4900, atol=0.001)
@@ -574,7 +581,7 @@ class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
             level="control",
             groupby=["metric_name", "segment"],
             level_as_reference=True,
-            minimum_detectable_effects=True,
+            minimum_detectable_effects_column="minimum_detectable_effect",
         )
         assert np.isclose(powered_effect["powered_effect"][0], 0.4626, atol=0.001)
         assert np.isclose(powered_effect["powered_effect"][1], 0.4900, atol=0.001)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, Tuple
+from typing import Union, Iterable, Tuple, List
 
 from pandas import DataFrame
 
@@ -61,18 +61,25 @@ class ChiSquared(GenericTest):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
+        minimum_detectable_effects_column: str = None,
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
                 "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
             )
-        if minimum_detectable_effects is not None:
+        if minimum_detectable_effects_column is not None:
             raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
         return super(ChiSquared, self).difference(
-            level_1, level_2, absolute, groupby, None, None, final_expected_sample_size_column
+            level_1=level_1,
+            level_2=level_2,
+            absolute=absolute,
+            groupby=groupby,
+            non_inferiority_margins=None,
+            final_expected_sample_size_column=final_expected_sample_size_column,
+            verbose=verbose,
+            minimum_detectable_effects_column=None,
         )
 
     def multiple_difference(
@@ -98,6 +105,32 @@ class ChiSquared(GenericTest):
             groupby=groupby,
             level_as_reference=level_as_reference,
             non_inferiority_margins=None,
-            minimum_detectable_effects=None,
             final_expected_sample_size_column=final_expected_sample_size_column,
+            minimum_detectable_effects_column=None,
+        )
+
+    def differences(
+        self,
+        levels: Union[Tuple, List[Tuple]],
+        absolute: bool = True,
+        groupby: Union[str, Iterable] = None,
+        non_inferiority_margins: NIM_TYPE = None,
+        final_expected_sample_size_column: str = None,
+        verbose: bool = False,
+        minimum_detectable_effects_column: str = None,
+    ) -> DataFrame:
+        if non_inferiority_margins is not None:
+            raise ValueError(
+                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
+            )
+        if minimum_detectable_effects_column is not None:
+            raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
+        return super(ChiSquared, self).differences(
+            levels=levels,
+            absolute=absolute,
+            groupby=groupby,
+            non_inferiority_margins=None,
+            final_expected_sample_size_column=final_expected_sample_size_column,
+            verbose=verbose,
+            minimum_detectable_effects_column=None,
         )

@@ -34,7 +34,6 @@ from spotify_confidence.analysis.constants import (
     SFX1,
     SFX2,
     POINT_ESTIMATE,
-    MDE_INPUT_COLUMN_NAME,
 )
 
 
@@ -106,7 +105,7 @@ def validate_levels(df: DataFrame, level_columns: Union[str, Iterable], levels: 
             )
 
 
-def add_mde_columns(df: DataFrame, mdes: bool) -> DataFrame:
+def add_mde_columns(df: DataFrame, mde_column: bool) -> DataFrame:
     def _mde_2_signed_mde(mde: Tuple[float, str]) -> Tuple[float, float, str]:
         mde_value = None if (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
         if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
@@ -116,9 +115,9 @@ def add_mde_columns(df: DataFrame, mdes: bool) -> DataFrame:
         elif mde[1].lower() == DECREASE_PREFFERED:
             return (mde[0], mde_value, "smaller")
 
-    if mdes is not None and mdes:
+    if mde_column is not None and mde_column:
         return (
-            df.assign(**{MDE: lambda df: df[MDE_INPUT_COLUMN_NAME]})
+            df.assign(**{MDE: lambda df: df[mde_column]})
             .assign(
                 **{
                     ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(

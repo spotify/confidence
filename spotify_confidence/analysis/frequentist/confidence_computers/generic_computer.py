@@ -233,20 +233,20 @@ class GenericComputer(ConfidenceComputerABC):
         absolute: bool,
         groupby: Union[str, Iterable],
         nims: NIM_TYPE,
-        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
+        mde_column: str,
     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
-            level_columns,
-            [(level_1, level_2)],
-            absolute,
-            groupby,
+            level_columns=level_columns,
+            levels=[(level_1, level_2)],
+            absolute=absolute,
+            groupby=groupby,
             level_as_reference=True,
             nims=nims,
-            mdes=mdes,
             final_expected_sample_size_column=final_expected_sample_size_column,
+            mde_column=mde_column,
         )
         return (
             difference_df
@@ -266,9 +266,9 @@ class GenericComputer(ConfidenceComputerABC):
         groupby: Union[str, Iterable],
         level_as_reference: bool,
         nims: NIM_TYPE,
-        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
+        mde_column: str,
     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [
@@ -276,14 +276,14 @@ class GenericComputer(ConfidenceComputerABC):
         ]
         levels = [(level, other) for other in other_levels]
         difference_df = self._compute_differences(
-            level_columns,
-            levels,
-            absolute,
-            groupby,
-            level_as_reference,
-            nims,
-            mdes,
-            final_expected_sample_size_column,
+            level_columns=level_columns,
+            levels=levels,
+            absolute=absolute,
+            groupby=groupby,
+            level_as_reference=level_as_reference,
+            nims=nims,
+            final_expected_sample_size_column=final_expected_sample_size_column,
+            mde_column=mde_column,
         )
         return (
             difference_df
@@ -312,20 +312,20 @@ class GenericComputer(ConfidenceComputerABC):
         absolute: bool,
         groupby: Union[str, Iterable],
         nims: NIM_TYPE,
-        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
+        mde_column: str,
     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
-            level_columns,
-            [levels] if type(levels) == tuple else levels,
-            absolute,
-            groupby,
+            level_columns=level_columns,
+            levels=[levels] if type(levels) == tuple else levels,
+            absolute=absolute,
+            groupby=groupby,
             level_as_reference=True,
             nims=nims,
-            mdes=mdes,
             final_expected_sample_size_column=final_expected_sample_size_column,
+            mde_column=mde_column,
         )
         return (
             difference_df
@@ -346,8 +346,8 @@ class GenericComputer(ConfidenceComputerABC):
         groupby: Union[str, Iterable],
         level_as_reference: bool,
         nims: NIM_TYPE,
-        mdes: bool,
         final_expected_sample_size_column: str,
+        mde_column: str,
     ):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_is_reference must be either True or False, but is {level_as_reference}.")
@@ -372,7 +372,7 @@ class GenericComputer(ConfidenceComputerABC):
                 groups_to_compare=levels,
                 absolute=absolute,
                 nims=nims,
-                mdes=mdes,
+                mde_column=mde_column,
                 final_expected_sample_size_column=final_expected_sample_size_column,
                 filtered_sufficient_statistics=filtered_sufficient_statistics,
             )
@@ -388,7 +388,7 @@ class GenericComputer(ConfidenceComputerABC):
         groups_to_compare: List[Tuple[str, str]],
         absolute: bool,
         nims: NIM_TYPE,
-        mdes: bool,
+        mde_column: bool,
         final_expected_sample_size_column: str,
         filtered_sufficient_statistics: DataFrame,
     ) -> DataFrame:
@@ -408,7 +408,7 @@ class GenericComputer(ConfidenceComputerABC):
 
         comparison_df = (
             df.pipe(add_nim_columns, nims=nims)
-            .pipe(add_mde_columns, mdes=mdes)
+            .pipe(add_mde_columns, mde_column=mde_column)
             .pipe(join)
             .query(
                 f"level_1 in {[l1 for l1, l2 in groups_to_compare]} and "
@@ -718,9 +718,9 @@ class GenericComputer(ConfidenceComputerABC):
                 True,
                 groupby,
                 level_as_reference=True,
-                nims=None,  # TODO: IS this right?
-                mdes=None,
+                nims=None,
                 final_expected_sample_size_column=None,
+                mde_column=None,
             )  # TODO: IS this right?
             .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
             .assign(achieved_power=lambda df: df.apply(self._achieved_power, mde=mde, alpha=alpha, axis=1))

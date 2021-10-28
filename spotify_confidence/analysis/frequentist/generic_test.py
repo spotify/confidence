@@ -110,9 +110,9 @@ class GenericTest(ConfidenceABC):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = False,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
+        minimum_detectable_effects_column: str = None,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
 
@@ -122,9 +122,9 @@ class GenericTest(ConfidenceABC):
             absolute,
             groupby,
             non_inferiority_margins,
-            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose,
+            minimum_detectable_effects_column,
         )
 
     def differences(
@@ -133,9 +133,9 @@ class GenericTest(ConfidenceABC):
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
+        minimum_detectable_effects_column: str = None,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(
@@ -143,9 +143,9 @@ class GenericTest(ConfidenceABC):
             absolute,
             groupby,
             non_inferiority_margins,
-            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose,
+            minimum_detectable_effects_column,
         )
 
     def multiple_difference(
@@ -155,9 +155,9 @@ class GenericTest(ConfidenceABC):
         groupby: Union[str, Iterable] = None,
         level_as_reference: bool = None,
         non_inferiority_margins: NIM_TYPE = None,
-        minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
+        minimum_detectable_effects_column: str = None,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
 
@@ -167,9 +167,9 @@ class GenericTest(ConfidenceABC):
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            minimum_detectable_effects,
             final_expected_sample_size_column,
             verbose,
+            minimum_detectable_effects_column,
         )
 
     def summary_plot(self, groupby: Union[str, Iterable] = None) -> ChartGrid:
@@ -193,7 +193,6 @@ class GenericTest(ConfidenceABC):
             absolute=absolute,
             groupby=groupby,
             non_inferiority_margins=non_inferiority_margins,
-            minimum_detectable_effects=None,
             final_expected_sample_size_column=final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_difference(
