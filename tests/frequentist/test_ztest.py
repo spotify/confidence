@@ -280,6 +280,70 @@ class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
         assert np.isclose(powered_effect["required_sample_size"][6], 18590000, atol=100)
         assert np.isclose(powered_effect["required_sample_size"][7], 3477019, atol=100)
 
+class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
+    def setup(self):
+
+        self.data = pd.DataFrame({
+            'variation_name': ['test', 'control', 'test2','test', 'control', 'test2',
+                               'test', 'control', 'test2','test', 'control', 'test2'],
+            'nr_of_items': [500, 8, 100, 500, 8, 100,
+                            500, 8, 100, 500, 8, 100,],
+            'nr_of_items_sumsq': [2500, 12, 150,2500, 12, 150,
+                                  2500, 12, 150,2500, 12, 150,],
+            'users': [1010, 22, 150, 1010, 22, 150,
+                      1010, 22, 150, 1010, 22, 150,],
+            'metric_name': ['metricA','metricA','metricA','metricB','metricB','metricB',
+                            'metricA','metricA','metricA','metricB','metricB','metricB'],
+            'minimum_detectable_effect': [
+                0.02, 0.02, 0.02,
+                0.02, 0.02, 0.02,
+                0.02, 0.02, 0.02,
+                0.02, 0.02, 0.02
+            ],
+            'preferred_direction': ["increase", "increase", "increase", "increase", "increase", "increase",
+                                    "increase", "increase", "increase", "increase", "increase", "increase"],
+            'segment': ['us','us','us','us','us','us','se','se','se','se','se','se']
+        })
+
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column='nr_of_items',
+            numerator_sum_squares_column='nr_of_items_sumsq',
+            denominator_column='users',
+            categorical_group_columns=['variation_name', 'metric_name', 'segment'],
+            ordinal_group_column=None,
+            metric_column='metric_name',
+            treatment_column='variation_name',
+            power = 0.8,
+            interval_size=0.95,
+            correction_method='spot-1-bonferroni')
+
+    def test_powered_effect(self):
+        powered_effect = self.test.multiple_difference(
+            level='control',
+            groupby=['metric_name', 'segment'],
+            level_as_reference = True,
+            minimum_detectable_effects=True
+           )
+        assert np.isclose(powered_effect["powered_effect"][0], 0.4626, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][1], 0.4900, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][2], 0.4626, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][3], 0.4900, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][4], 0.4626, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][5], 0.4900, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][6], 0.4626, atol=0.001)
+        assert np.isclose(powered_effect["powered_effect"][7], 0.4900, atol=0.001)
+
+        assert np.isclose(powered_effect["required_sample_size"][0], 4175642, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][1], 781000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][2], 4175642, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][3], 781000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][4], 4175642, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][5], 781000, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][6], 4175642, atol=100)
+        assert np.isclose(powered_effect["required_sample_size"][7], 781000, atol=100)
+
 
 class TestPoweredEffectBinary(object):
     def setup(self):
