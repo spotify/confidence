@@ -27,7 +27,7 @@ from spotify_confidence.analysis.confidence_utils import (get_remaning_groups, v
                                                           validate_and_rename_column,
                                                           add_mde_columns,
                                                           get_all_categorical_group_columns, get_all_group_columns,
-                                                          validate_data)
+                                                          validate_data, remove_group_columns)
 from spotify_confidence.analysis.constants import (POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER,
                                                    DIFFERENCE, P_VALUE, SFX1, SFX2, STD_ERR, ALPHA,
                                                    ADJUSTED_ALPHA, POWER, POWERED_EFFECT, ADJUSTED_POWER, ADJUSTED_P,
@@ -86,7 +86,8 @@ class GenericComputer(ConfidenceComputerABC):
         self._categorical_group_columns = get_all_categorical_group_columns(
             categorical_group_columns, metric_column,
             treatment_column)
-        self._segments = list(set(self._categorical_group_columns) - set([metric_column]) - set([treatment_column]))
+        self._segments = remove_group_columns(self._categorical_group_columns, metric_column)
+        self._segments = remove_group_columns(self._segments, treatment_column)
         self._ordinal_group_column = ordinal_group_column
         self._metric_column = metric_column
         self._interval_size = interval_size
@@ -102,8 +103,7 @@ class GenericComputer(ConfidenceComputerABC):
         self._single_metric = True
         if self._metric_column is not None:
             if data_frame.groupby(self._metric_column).ngroups == 1:
-                self._categorical_group_columns = list(
-                    set(self._categorical_group_columns) - set([self._metric_column]))
+                self._categorical_group_columns = remove_group_columns(self._categorical_group_columns, self._metric_column)
             else:
                 self._single_metric = False
 
@@ -540,7 +540,7 @@ class GenericComputer(ConfidenceComputerABC):
                     self._metric_column).ngroups
 
             number_comparions = len((df[self._treatment_column + SFX1] + df[self._treatment_column + SFX2]).unique())
-            number_segments = (1 if len(self._segments) is 0 else df.groupby(self._segments).ngroups)
+            number_segments = (1 if len(self._segments) is 0 or not all(item in df.index.names for item in self._segments) else df.groupby(self._segments).ngroups)
 
             return max(1, number_comparions * max(1, self._number_success_metrics) * number_segments)
         else:
