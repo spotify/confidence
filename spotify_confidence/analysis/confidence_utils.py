@@ -105,7 +105,8 @@ def add_mde_columns(df:DataFrame, mdes:bool) -> DataFrame:
             return (mde[0], -mde_value, 'larger')
         elif mde[1].lower() == DECREASE_PREFFERED:
             return (mde[0], mde_value, 'smaller')
-    if mdes:
+
+    if mdes is not None and mdes:
         return (
             df.assign(**{MDE: lambda df: df[MDE_INPUT_COLUMN_NAME]})
               .assign(**{ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(

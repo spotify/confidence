@@ -9,7 +9,8 @@ from spotify_confidence.analysis.constants import (
     CI_LOWER, CI_UPPER, P_VALUE,
     ADJUSTED_LOWER, ADJUSTED_UPPER,
     DIFFERENCE, BONFERRONI, BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-    CORRECTION_METHODS, SPOT_1, CORRECTION_METHODS_THAT_SUPPORT_CI)
+    CORRECTION_METHODS, SPOT_1, CORRECTION_METHODS_THAT_SUPPORT_CI,
+    PREFERENCE_TEST)
 
 class TestPoweredEffectContinuousSingleMetric(object):
     def setup(self):
@@ -633,7 +634,6 @@ class TestBinary(object):
             level_as_reference=True)
         assert len(chartgrid.charts) == 1
 
-
 class TestCategoricalBinary(object):
     def setup(self):
         np.random.seed(123)
@@ -689,7 +689,8 @@ class TestCategoricalBinary(object):
 
     def test_multiple_difference(self):
         difference_df = self.test.multiple_difference(level=('us', 'control'),
-                                                      level_as_reference=True)
+                                                      level_as_reference=True,
+                                                      verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.country.unique().size +
@@ -697,12 +698,13 @@ class TestCategoricalBinary(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST]=='two-sided')), 1), axis=1),
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_level_as_reference_false(self):
         difference_df = self.test.multiple_difference(level=('us', 'control'),
-                                                      level_as_reference=False)
+                                                      level_as_reference=False,
+                                                      verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.country.unique().size +
@@ -710,20 +712,21 @@ class TestCategoricalBinary(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST]=='two-sided')), 1), axis=1),
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_groupby(self):
         difference_df = self.test.multiple_difference(level='control',
                                                       groupby='country',
-                                                      level_as_reference=True)
+                                                      level_as_reference=True,
+                                                      verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.country.unique().size
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST]=='two-sided')), 1), axis=1),
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_summary_plot(self):
@@ -758,6 +761,9 @@ class TestCategoricalBinary(object):
             groupby='country',
             level_as_reference=True)
         assert len(chartgrid.charts) == 1
+
+
+
 
 
 class TestCategoricalContinuous(object):
@@ -862,7 +868,6 @@ class TestCategoricalContinuous(object):
             level_as_reference=True)
         assert len(chartgrid.charts) == 1
 
-
 class TestOrdinal(object):
     def setup(self):
 
@@ -919,7 +924,8 @@ class TestOrdinal(object):
 
     def test_multiple_difference(self):
         difference_df = self.test.multiple_difference(level=('control', 1),
-                                                      level_as_reference=True)
+                                                      level_as_reference=True,
+                                                      verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.days_since_reg.unique().size +
@@ -927,20 +933,21 @@ class TestOrdinal(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST]=='two-sided')), 1), axis=1),
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_multiple_difference_groupby(self):
         difference_df = self.test.multiple_difference(level='control',
                                                       groupby='days_since_reg',
-                                                      level_as_reference=True)
+                                                      level_as_reference=True,
+                                                      verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1)
             * self.data.days_since_reg.unique().size
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df['p-value'].map(lambda p: min(1, n_comp * p)),
+            difference_df.apply(lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST]=='two-sided')), 1), axis=1),
             difference_df['adjusted p-value'], rtol=0.01)
 
     def test_summary_plot(self):
@@ -975,6 +982,7 @@ class TestOrdinal(object):
             groupby='days_since_reg',
             level_as_reference=True)
         assert len(chartgrid.charts) == 1
+
 
 
 class TestOrdinalPlusTwoCategorical(object):

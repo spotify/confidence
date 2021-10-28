@@ -174,6 +174,7 @@ class GenericTest(ConfidenceABC):
                         absolute: bool = True,
                         groupby: Union[str, Iterable] = None,
                         non_inferiority_margins: NIM_TYPE = None,
+                        minimum_detectable_effects: bool = None,
                         use_adjusted_intervals: bool = False,
                         final_expected_sample_size_column: str = None
                         ) -> ChartGrid:
@@ -182,6 +183,7 @@ class GenericTest(ConfidenceABC):
                                         absolute,
                                         groupby,
                                         non_inferiority_margins,
+                                        minimum_detectable_effects,
                                         final_expected_sample_size_column)
         chartgrid = self._confidence_grapher.plot_difference(
             difference_df,
@@ -218,6 +220,7 @@ class GenericTest(ConfidenceABC):
                                  groupby: Union[str, Iterable] = None,
                                  level_as_reference: bool = False,
                                  non_inferiority_margins: NIM_TYPE = None,
+                                 minimum_detectable_effects: bool = None,
                                  use_adjusted_intervals: bool = False,
                                  final_expected_sample_size_column: str = None
                                  ) -> ChartGrid:
@@ -226,6 +229,7 @@ class GenericTest(ConfidenceABC):
                                                  groupby,
                                                  level_as_reference,
                                                  non_inferiority_margins,
+                                                 minimum_detectable_effects,
                                                  final_expected_sample_size_column)
         chartgrid = self._confidence_grapher.plot_multiple_difference(
             difference_df,
