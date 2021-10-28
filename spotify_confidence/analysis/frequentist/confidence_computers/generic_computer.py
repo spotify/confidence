@@ -151,14 +151,12 @@ class GenericComputer(ConfidenceComputerABC):
         self._correction_method = correction_method
         self._method_column = method_column
 
-        self._single_metric = True
-        if self._metric_column is not None:
-            if data_frame.groupby(self._metric_column).ngroups == 1:
-                self._categorical_group_columns = remove_group_columns(
-                    self._categorical_group_columns, self._metric_column
-                )
-            else:
-                self._single_metric = False
+        self._single_metric = False
+        if self._metric_column is not None and data_frame.groupby(self._metric_column).ngroups == 1:
+            self._single_metric = True
+            self._categorical_group_columns = remove_group_columns(
+                self._categorical_group_columns, self._metric_column
+            )
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
@@ -268,7 +266,7 @@ class GenericComputer(ConfidenceComputerABC):
         groupby: Union[str, Iterable],
         level_as_reference: bool,
         nims: NIM_TYPE,
-        minimum_detectable_effect: bool,
+        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
     ) -> DataFrame:
@@ -284,7 +282,7 @@ class GenericComputer(ConfidenceComputerABC):
             groupby,
             level_as_reference,
             nims,
-            minimum_detectable_effect,
+            mdes,
             final_expected_sample_size_column,
         )
         return (
@@ -455,7 +453,6 @@ class GenericComputer(ConfidenceComputerABC):
         return number_of_guardrail_metrics if number_of_success_metrics == 0 else number_of_guardrail_metrics + 1
 
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
-
         if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
             if self._metric_column is None or self._treatment_column is None:
                 return df.assign(**{ADJUSTED_POWER: None})

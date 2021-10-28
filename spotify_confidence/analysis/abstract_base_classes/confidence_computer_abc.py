@@ -34,6 +34,7 @@ class ConfidenceComputerABC(ABC):
         absolute: bool,
         groupby: Union[str, Iterable],
         nims: NIM_TYPE,
+        mdes: bool,
         final_expected_sample_size_column: str,
         verbose: bool,
     ) -> DataFrame:

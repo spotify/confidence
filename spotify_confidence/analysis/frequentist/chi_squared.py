@@ -16,12 +16,10 @@ from typing import Union, Iterable, Tuple
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from spotify_confidence.analysis.frequentist.generic_test import GenericTest
-from spotify_confidence.analysis.confidence_utils import listify
 from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE, METHOD_COLUMN_NAME
+from spotify_confidence.analysis.frequentist.generic_test import GenericTest
 
 
 class ChiSquared(GenericTest):
@@ -36,42 +34,24 @@ class ChiSquared(GenericTest):
         correction_method: str = BONFERRONI,
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
+        metric_column: Union[str, None] = None,
+        treatment_column: Union[str, None] = None,
     ):
-        treatment_column = None
-        metric_column = None
-        power = 0.8
-        if confidence_computer is None:
-            confidence_computer = GenericComputer(
-                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
-                numerator_column=numerator_column,
-                numerator_sum_squares_column=numerator_column,
-                denominator_column=denominator_column,
-                categorical_group_columns=listify(categorical_group_columns),
-                ordinal_group_column=ordinal_group_column,
-                interval_size=interval_size,
-                correction_method=correction_method.lower(),
-                method_column=METHOD_COLUMN_NAME,
-                bootstrap_samples_column=None,
-                metric_column=metric_column,
-                treatment_column=treatment_column,
-                power=power,
-            )
-
         super(ChiSquared, self).__init__(
-            data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
-            numerator_column,
-            numerator_column,
-            denominator_column,
-            categorical_group_columns,
-            ordinal_group_column,
-            interval_size,
-            correction_method,
-            confidence_computer,
-            confidence_grapher,
-            METHOD_COLUMN_NAME,
+            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
+            numerator_column=numerator_column,
+            numerator_sum_squares_column=numerator_column,
+            denominator_column=denominator_column,
+            categorical_group_columns=categorical_group_columns,
+            ordinal_group_column=ordinal_group_column,
+            interval_size=interval_size,
+            correction_method=correction_method,
+            confidence_computer=confidence_computer,
+            confidence_grapher=confidence_grapher,
+            method_column=METHOD_COLUMN_NAME,
             metric_column=metric_column,
             treatment_column=treatment_column,
-            power=power,
+            power=0.8,
         )
 
     def difference(
@@ -83,6 +63,7 @@ class ChiSquared(GenericTest):
         non_inferiority_margins: NIM_TYPE = None,
         minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
+        verbose: bool = False,
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
@@ -103,6 +84,7 @@ class ChiSquared(GenericTest):
         non_inferiority_margins: NIM_TYPE = None,
         minimum_detectable_effects: bool = None,
         final_expected_sample_size_column: str = None,
+        verbose: bool = False,
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
