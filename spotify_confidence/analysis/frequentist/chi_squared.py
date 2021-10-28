@@ -86,10 +86,10 @@ class ChiSquared(GenericTest):
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
-                "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
+                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
             )
         if minimum_detectable_effects is not None:
-            raise ValueError("Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead.")
+            raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
         return super(ChiSquared, self).difference(
             level_1, level_2, absolute, groupby, None, None, final_expected_sample_size_column
         )
@@ -106,10 +106,16 @@ class ChiSquared(GenericTest):
     ) -> DataFrame:
         if non_inferiority_margins is not None:
             raise ValueError(
-                "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
+                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
             )
         if minimum_detectable_effects is not None:
-            raise ValueError("Minimum detectable effects not supported in " "ChiSquared. Use ZTest instead.")
+            raise ValueError("Minimum detectable effects not supported in ChiSquared. Use ZTest instead.")
         return super(ChiSquared, self).multiple_difference(
-            level, absolute, groupby, level_as_reference, None, None, final_expected_sample_size_column
+            level=level,
+            absolute=absolute,
+            groupby=groupby,
+            level_as_reference=level_as_reference,
+            non_inferiority_margins=None,
+            minimum_detectable_effects=None,
+            final_expected_sample_size_column=final_expected_sample_size_column,
         )
