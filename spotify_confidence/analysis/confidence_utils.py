@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, Tuple, List
-from pandas import DataFrame, concat, Series
-import numpy as np
-from scipy.stats import norm
 from collections import OrderedDict
+from typing import Union, Iterable, Tuple, List
+
+import numpy as np
+from pandas import DataFrame, concat, Series
+from scipy.stats import norm
 
 from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
@@ -34,7 +35,6 @@ from spotify_confidence.analysis.constants import (
     SFX2,
     POINT_ESTIMATE,
     MDE_INPUT_COLUMN_NAME,
-    BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
 )
 
 
@@ -116,7 +116,7 @@ def add_mde_columns(df: DataFrame, mdes: bool) -> DataFrame:
         elif mde[1].lower() == DECREASE_PREFFERED:
             return (mde[0], mde_value, "smaller")
 
-    if mdes:
+    if mdes is not None and mdes:
         return (
             df.assign(**{MDE: lambda df: df[MDE_INPUT_COLUMN_NAME]})
             .assign(
@@ -296,14 +296,6 @@ def validate_data(df: DataFrame, columns_that_must_exist, group_columns: Iterabl
 def _validate_column(df: DataFrame, col: str):
     if col not in df.columns:
         raise ValueError(f"""Column {col} is not in dataframe""")
-
-
-def validate_metric_and_treatment(metric_column, treatment_column, correction_method):
-    if correction_method.startswith("spot-1") or correction_method == BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY:
-        if metric_column is None:
-            raise ValueError(f"metric_column must be specified for correction method: {correction_method}.")
-        if treatment_column is None:
-            raise ValueError(f"treatment_column must be specified for correction method: {correction_method}.")
 
 
 def _get_finite_bounds(numbers: Series) -> Tuple[float, float]:

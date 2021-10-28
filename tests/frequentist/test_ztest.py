@@ -18,6 +18,7 @@ from spotify_confidence.analysis.constants import (
     CORRECTION_METHODS,
     SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
+    PREFERENCE_TEST,
 )
 
 
@@ -964,7 +965,7 @@ class TestCategoricalBinary(object):
         assert len(difference_df) == self.data.country.unique().size
 
     def test_multiple_difference(self):
-        difference_df = self.test.multiple_difference(level=("us", "control"), level_as_reference=True)
+        difference_df = self.test.multiple_difference(level=("us", "control"), level_as_reference=True, verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1) * self.data.country.unique().size
             + self.data.country.unique().size
@@ -972,11 +973,15 @@ class TestCategoricalBinary(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df["p-value"].map(lambda p: min(1, n_comp * p)), difference_df["adjusted p-value"], rtol=0.01
+            difference_df.apply(
+                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
+            ),
+            difference_df["adjusted p-value"],
+            rtol=0.01,
         )
 
     def test_multiple_difference_level_as_reference_false(self):
-        difference_df = self.test.multiple_difference(level=("us", "control"), level_as_reference=False)
+        difference_df = self.test.multiple_difference(level=("us", "control"), level_as_reference=False, verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1) * self.data.country.unique().size
             + self.data.country.unique().size
@@ -984,15 +989,25 @@ class TestCategoricalBinary(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df["p-value"].map(lambda p: min(1, n_comp * p)), difference_df["adjusted p-value"], rtol=0.01
+            difference_df.apply(
+                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
+            ),
+            difference_df["adjusted p-value"],
+            rtol=0.01,
         )
 
     def test_multiple_difference_groupby(self):
-        difference_df = self.test.multiple_difference(level="control", groupby="country", level_as_reference=True)
+        difference_df = self.test.multiple_difference(
+            level="control", groupby="country", level_as_reference=True, verbose=True
+        )
         assert len(difference_df) == ((self.data.variation_name.unique().size - 1) * self.data.country.unique().size)
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df["p-value"].map(lambda p: min(1, n_comp * p)), difference_df["adjusted p-value"], rtol=0.01
+            difference_df.apply(
+                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
+            ),
+            difference_df["adjusted p-value"],
+            rtol=0.01,
         )
 
     def test_summary_plot(self):
@@ -1159,7 +1174,7 @@ class TestOrdinal(object):
         assert len(difference_df) == self.data.days_since_reg.unique().size
 
     def test_multiple_difference(self):
-        difference_df = self.test.multiple_difference(level=("control", 1), level_as_reference=True)
+        difference_df = self.test.multiple_difference(level=("control", 1), level_as_reference=True, verbose=True)
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1) * self.data.days_since_reg.unique().size
             + self.data.days_since_reg.unique().size
@@ -1167,19 +1182,27 @@ class TestOrdinal(object):
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df["p-value"].map(lambda p: min(1, n_comp * p)), difference_df["adjusted p-value"], rtol=0.01
+            difference_df.apply(
+                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
+            ),
+            difference_df["adjusted p-value"],
+            rtol=0.01,
         )
 
     def test_multiple_difference_groupby(self):
         difference_df = self.test.multiple_difference(
-            level="control", groupby="days_since_reg", level_as_reference=True
+            level="control", groupby="days_since_reg", level_as_reference=True, verbose=True
         )
         assert len(difference_df) == (
             (self.data.variation_name.unique().size - 1) * self.data.days_since_reg.unique().size
         )
         n_comp = len(difference_df)
         assert np.allclose(
-            difference_df["p-value"].map(lambda p: min(1, n_comp * p)), difference_df["adjusted p-value"], rtol=0.01
+            difference_df.apply(
+                lambda row: min(row[P_VALUE] * n_comp * (1 + (row[PREFERENCE_TEST] == "two-sided")), 1), axis=1
+            ),
+            difference_df["adjusted p-value"],
+            rtol=0.01,
         )
 
     def test_summary_plot(self):
