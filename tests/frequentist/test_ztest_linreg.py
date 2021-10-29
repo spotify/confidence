@@ -72,8 +72,9 @@ class TestUnivariateMultiMetric(object):
         d = np.random.randint(2, size=n)
         x = np.random.standard_normal(size=n)
         y = 0.5 * d + 0.5 * x + np.random.standard_normal(size=n)
+        m = np.random.randint(2, size=n)
         data = pd.DataFrame({"variation_name": list(map(str, d)),
-                             "metric_name": list(map(str, np.random.randint(2, size=n))),
+                             "metric_name": list(map(str, m)),
                              "y": y, "x": x})
         data = (
             data.assign(xy=y * x)
@@ -90,6 +91,7 @@ class TestUnivariateMultiMetric(object):
         self.x = x
         self.y = y
         self.d = d
+        self.m = m
         self.data = data
 
         self.test = spotify_confidence.ZTestLinreg(
@@ -115,14 +117,17 @@ class TestUnivariateMultiMetric(object):
         def linreg(X, y):
             return np.matmul(np.linalg.inv(np.matmul(np.transpose(X), X)), np.matmul(np.transpose(X), y))
 
+        # TODO: Do this metric by metric
         summary_df = self.test.summary(verbose=True)
-        X = np.ones((self.n, 2))
-        X[:, 1] = self.x
-        b0 = linreg(X, self.y)
-        y_adj = self.y - np.matmul(X, b0)
-        X[:, 1] = self.d
+        n0 = self.m[self.m == 0].size
+        n1 = self.n - n0
+        X = np.ones((n0, 2))
+        X[:, 1] = self.x[self.m == 0]
+        b0 = linreg(X, self.y[self.m == 0])
+        y_adj = self.y[self.m == 0] - np.matmul(X, b0)
+        X[:, 1] = self.d[self.m == 0]
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0], rtol=0.0001)
 
-        diff = self.test.difference(level_1='0', level_2='1')
+        diff = self.test.difference(level_1=('0', '0'), level_2=('1', '0'))
         assert np.allclose(b1[1], diff['difference'])
