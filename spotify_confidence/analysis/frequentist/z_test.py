@@ -42,26 +42,6 @@ class ZTest(GenericTest):
         confidence_grapher: ConfidenceGrapherABC = None,
     ):
 
-        if confidence_computer is None:
-            confidence_computer = GenericComputer(
-                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test"}),
-                numerator_column=numerator_column,
-                numerator_sum_squares_column=numerator_sum_squares_column,
-                denominator_column=denominator_column,
-                categorical_group_columns=listify(categorical_group_columns),
-                ordinal_group_column=ordinal_group_column,
-                metric_column=metric_column,
-                treatment_column=treatment_column,
-                interval_size=interval_size,
-                power=power,
-                correction_method=correction_method.lower(),
-                method_column=METHOD_COLUMN_NAME,
-                bootstrap_samples_column=None,
-                feature_column=None,
-                feature_cross_sum_column=None,
-                feature_sum_squares_column=None,
-            )
-
         super(ZTest, self).__init__(
             data_frame.assign(**{METHOD_COLUMN_NAME: "z-test"}),
             numerator_column,
