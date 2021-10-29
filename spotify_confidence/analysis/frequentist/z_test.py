@@ -41,7 +41,6 @@ class ZTest(GenericTest):
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
     ):
-
         super(ZTest, self).__init__(
             data_frame.assign(**{METHOD_COLUMN_NAME: "z-test"}),
             numerator_column,
