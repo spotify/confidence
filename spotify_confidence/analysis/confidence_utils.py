@@ -263,6 +263,7 @@ def unlist():
         x1 = x1.transpose()
     return x1
 
+
 def dfmatmul(x, y, outer=True):
 
     x = np.atleast_2d(x)

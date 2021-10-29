@@ -184,7 +184,7 @@ class TestCategorical(object):
         assert np.allclose(diff["p-value"], np.array([0.380282, 0.000000]))
 
     def test_difference_with_interval_sizes(self):
-        """ '
+        """'
         https: // www.quantitativeskills.com / sisa / statistics / t - test.htm
         was used to validate results
         """

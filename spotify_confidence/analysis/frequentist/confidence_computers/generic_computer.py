@@ -79,7 +79,8 @@ from spotify_confidence.analysis.constants import (
     CHI2,
     TTEST,
     ZTEST,
-    BOOTSTRAP, ZTESTLINREG,
+    BOOTSTRAP,
+    ZTESTLINREG,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
@@ -103,8 +104,7 @@ class GenericComputer(ConfidenceComputerABC):
         bootstrap_samples_column: str,
         feature_column: str,
         feature_sum_squares_column: str,
-        feature_cross_sum_column: str
-
+        feature_cross_sum_column: str,
     ):
 
         self._df = data_frame
@@ -131,7 +131,6 @@ class GenericComputer(ConfidenceComputerABC):
         self._feature_ssq = feature_sum_squares_column
         self._feature_cross = feature_cross_sum_column
 
-
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
         self._correction_method = correction_method
@@ -140,8 +139,6 @@ class GenericComputer(ConfidenceComputerABC):
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
         self._bootstrap_samples_column = bootstrap_samples_column
-
-
 
         columns_that_must_exist = []
         if (
@@ -512,14 +509,18 @@ class GenericComputer(ConfidenceComputerABC):
             ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
             ci_df = DataFrame(index=ci.index, columns=[CI_LOWER, CI_UPPER], data=list(ci.values))
 
-            if self._correction_method in [
-                HOLM,
-                HOMMEL,
-                SIMES_HOCHBERG,
-                SPOT_1_HOLM,
-                SPOT_1_HOMMEL,
-                SPOT_1_SIMES_HOCHBERG,
-            ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
+            if (
+                self._correction_method
+                in [
+                    HOLM,
+                    HOMMEL,
+                    SIMES_HOCHBERG,
+                    SPOT_1_HOLM,
+                    SPOT_1_HOMMEL,
+                    SPOT_1_SIMES_HOCHBERG,
+                ]
+                and all(df[PREFERENCE_TEST] != TWO_SIDED)
+            ):
                 adjusted_ci = self._ci_for_multiple_comparison_methods(
                     df,
                     correction_method=self._correction_method,

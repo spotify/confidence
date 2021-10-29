@@ -26,5 +26,14 @@ from .options import options
 
 __version__ = _require("spotify_confidence")[0].version
 
-__all__ = ["BetaBinomial", "ChiSquared", "StudentsTTest", "ZTest", "ZTestLinreg",
-           "Experiment", "examples", "options", "SampleSize"]
+__all__ = [
+    "BetaBinomial",
+    "ChiSquared",
+    "StudentsTTest",
+    "ZTest",
+    "ZTestLinreg",
+    "Experiment",
+    "examples",
+    "options",
+    "SampleSize",
+]
