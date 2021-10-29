@@ -65,39 +65,34 @@ class ZTestLinregComputer(ZTestComputer):
 
         return outseries.apply(lambda x: out)
 
-    def _adjusted_point_estimate(self, df: DataFrame) -> Series:
+    def _point_estimate(self, row: Series) -> float:
 
-        if (df[self._denominator] == 0).any():
+        if (row[self._denominator] == 0):
             raise ValueError(
                 """Can't compute point estimate:
                                 denominator is 0"""
             )
-        out1 = df[self._numerator] / df[self._denominator]
-        out2 = df.apply(lambda z: dfmatmul(z[REGRESSION_PARAM], z[self._feature], outer=False), axis=1)
-        out3 = out2 / df[self._denominator]
+        out1 = row[self._numerator] / row[self._denominator]
+        out2 = dfmatmul(row[REGRESSION_PARAM], row[self._feature], outer=False)
+        out3 = out2 / row[self._denominator]
         return out1 - out3
 
-    def _adjusted_variance(self, df: DataFrame) -> Series:
-        def regression_variance(row):
-            XX = unlist(row[self._feature_ssq])
-            X = unlist(row[self._feature])
-            Xy = unlist(row[self._feature_cross])
-            y = row[self._numerator]
-            yy = row[self._numerator_sumsq]
-            n = row[self._denominator]
+    def _variance(self, row: DataFrame) -> Series:
+        XX = unlist(row[self._feature_ssq])
+        X = unlist(row[self._feature])
+        Xy = unlist(row[self._feature_cross])
+        y = row[self._numerator]
+        yy = row[self._numerator_sumsq]
+        n = row[self._denominator]
 
-            sample_var = XX / n - dfmatmul(X / n, X / n)
-            sample_cov = Xy / n - dfmatmul(X / n, y / n)
-            variance1 = yy / n - (y / n) ** 2
-            b = np.atleast_2d(row[REGRESSION_PARAM])
-            variance2 = np.matmul(np.transpose(b), np.matmul(sample_var, b)).item()
-            variance3 = -2 * np.matmul(np.transpose(b), sample_cov).item()
+        sample_var = XX / n - dfmatmul(X / n, X / n)
+        sample_cov = Xy / n - dfmatmul(X / n, y / n)
+        variance1 = yy / n - (y / n) ** 2
+        b = np.atleast_2d(row[REGRESSION_PARAM])
+        variance2 = np.matmul(np.transpose(b), np.matmul(sample_var, b)).item()
+        variance3 = -2 * np.matmul(np.transpose(b), sample_cov).item()
 
-            return variance1 + variance2 + variance3
-
-        outseries = df.apply(regression_variance, axis=1)
-
-        return outseries
+        return variance1 + variance2 + variance3
 
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:

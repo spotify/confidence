@@ -80,7 +80,7 @@ from spotify_confidence.analysis.constants import (
     TTEST,
     ZTEST,
     BOOTSTRAP,
-    ZTESTLINREG,
+    ZTESTLINREG, REGRESSION_PARAM,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
@@ -211,7 +211,9 @@ class GenericComputer(ConfidenceComputerABC):
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
             self._sufficient = (
-                self._df.assign(**{POINT_ESTIMATE: self._point_estimate})
+                self._df
+                .assign(**{REGRESSION_PARAM: self._estimate_slope})
+                .assign(**{POINT_ESTIMATE: self._point_estimate})
                 .assign(**{VARIANCE: self._variance})
                 .pipe(self._add_point_estimate_ci)
             )
@@ -638,6 +640,10 @@ class GenericComputer(ConfidenceComputerABC):
 
     def _variance(self, df: DataFrame) -> Series:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._variance(row), axis=1)
+
+    def _estimate_slope(self, df: DataFrame) -> Series:
+        if all(df[self._method_column]== ZTESTLINREG):
+            return self._confidence_computers[ZTESTLINREG]._estimate_slope(df)  # TODO: Should be .groupby(_metric_column)!!!
 
     def _std_err(self, df: DataFrame) -> Series:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._std_err(row), axis=1)
