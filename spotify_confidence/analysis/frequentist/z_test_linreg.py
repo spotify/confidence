@@ -12,48 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (Union, Iterable)
+from typing import Union, Iterable
 
 from pandas import DataFrame
 
-
-from .confidence_computers.generic_computer import ZTestLinregComputer
-from ..abstract_base_classes.confidence_computer_abc import \
-    ConfidenceComputerABC
-from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from .generic_test import GenericTest
-from ..confidence_utils import listify
 from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
-
+from .confidence_computers.generic_computer import GenericComputer
+from .generic_test import GenericTest
+from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
+from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
+from ..confidence_utils import listify
 
 
 class ZTestLinreg(GenericTest):
+    def __init__(
+        self,
+        data_frame: DataFrame,
+        numerator_column: str,
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: str,
+        feature_column: str,
+        feature_sum_squares_column: str,
+        feature_cross_sum_column: str,
+        categorical_group_columns: Union[str, Iterable],
+        ordinal_group_column: Union[str, None] = None,
+        interval_size: float = 0.95,
+        correction_method: str = BONFERRONI,
+        confidence_computer: ConfidenceComputerABC = None,
+        confidence_grapher: ConfidenceGrapherABC = None,
+    ):
 
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 numerator_sum_squares_column: Union[str, None],
-                 denominator_column: str,
-                 feature_column: str,
-                 feature_sum_squares_column: str,
-                 feature_cross_sum_column: str,
-                 categorical_group_columns: Union[str, Iterable],
-                 ordinal_group_column: Union[str, None] = None,
-                 interval_size: float = 0.95,
-                 correction_method: str = BONFERRONI,
-                 confidence_computer: ConfidenceComputerABC = None,
-                 confidence_grapher: ConfidenceGrapherABC = None):
-
-        computer = ZTestLinregComputer(
-            numerator=numerator_column,
-            numerator_sumsq=numerator_sum_squares_column,
-            denominator=denominator_column,
+        computer = GenericComputer(
+            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test-linreg"}),
+            numerator_column=numerator_column,
+            numerator_sum_squares_column=numerator_sum_squares_column,
+            denominator_column=denominator_column,
+            categorical_group_columns=listify(categorical_group_columns),
             feature_column=feature_column,
             feature_sum_squares_column=feature_sum_squares_column,
             feature_cross_sum_column=feature_cross_sum_column,
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
-            method_column=METHOD_COLUMN_NAME
+            correction_method=correction_method.lower(),
+            method_column=METHOD_COLUMN_NAME,
+            bootstrap_samples_column=None,
         )
 
         super().__init__(
@@ -67,6 +69,5 @@ class ZTestLinreg(GenericTest):
             correction_method,
             computer,
             confidence_grapher,
-            METHOD_COLUMN_NAME
+            METHOD_COLUMN_NAME,
         )
-
