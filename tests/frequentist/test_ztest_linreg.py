@@ -62,8 +62,15 @@ class TestUnivariateSingleMetric(object):
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0], rtol=0.0001)
 
-        diff = self.test.difference(level_1='0', level_2='1')
+        diff = self.test.difference(level_1='0', level_2='1', verbose=True)
         assert np.allclose(b1[1], diff['difference'])
+
+        v0 = np.var(y_adj[self.d == 0])
+        v1 = np.var(y_adj[self.d == 1])
+        n0 = y_adj[self.d == 0].size
+        n1 = y_adj[self.d == 1].size
+        assert np.allclose(diff['std_err'], np.sqrt(v0/n0+v1/n1))
+
 
 class TestUnivariateMultiMetric(object):
     def setup(self):
@@ -117,11 +124,10 @@ class TestUnivariateMultiMetric(object):
         def linreg(X, y):
             return np.matmul(np.linalg.inv(np.matmul(np.transpose(X), X)), np.matmul(np.transpose(X), y))
 
-        # TODO: Do this metric by metric
         summary_df = self.test.summary(verbose=True)
-        n0 = self.m[self.m == 0].size
-        n1 = self.n - n0
-        X = np.ones((n0, 2))
+        N0 = self.m[self.m == 0].size
+        N1 = self.n - N0
+        X = np.ones((N0, 2))
         X[:, 1] = self.x[self.m == 0]
         b0 = linreg(X, self.y[self.m == 0])
         y_adj = self.y[self.m == 0] - np.matmul(X, b0)
@@ -129,5 +135,31 @@ class TestUnivariateMultiMetric(object):
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0], rtol=0.0001)
 
-        diff = self.test.difference(level_1=('0', '0'), level_2=('1', '0'))
+        diff = self.test.difference(level_1=('0', '0'), level_2=('1', '0'), verbose=True)
         assert np.allclose(b1[1], diff['difference'])
+
+        idx = self.d[self.m == 0]
+        v0 = np.var(y_adj[idx == 0])
+        v1 = np.var(y_adj[idx == 1])
+        n0 = y_adj[idx == 0].size
+        n1 = y_adj[idx == 1].size
+        assert np.allclose(diff['std_err'], np.sqrt(v0/n0+v1/n1))
+
+        X = np.ones((N1, 2))
+        X[:, 1] = self.x[self.m == 1]
+        b0 = linreg(X, self.y[self.m == 1])
+        y_adj = self.y[self.m == 1] - np.matmul(X, b0)
+        X[:, 1] = self.d[self.m == 1]
+        b1 = linreg(X, y_adj)
+        assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][1], rtol=0.0001)
+
+        diff = self.test.difference(level_1=('0', '1'), level_2=('1', '1'), verbose=True)
+        assert np.allclose(b1[1], diff['difference'])
+
+        idx = self.d[self.m == 1]
+        v0 = np.var(y_adj[idx == 0])
+        v1 = np.var(y_adj[idx == 1])
+        n0 = y_adj[idx == 0].size
+        n1 = y_adj[idx == 1].size
+        assert np.allclose(diff['std_err'], np.sqrt(v0/n0+v1/n1))
+
