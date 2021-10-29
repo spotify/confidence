@@ -80,6 +80,8 @@ from spotify_confidence.analysis.constants import (
     TTEST,
     ZTEST,
     BOOTSTRAP,
+    NIM_TYPE,
+    CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     ZTESTLINREG, REGRESSION_PARAM,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
@@ -88,6 +90,11 @@ from spotify_confidence.analysis.frequentist.confidence_computers.t_test_compute
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer import ZTestLinregComputer
 
+from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
+
+
+def sequential_bounds(t: np.array, alpha: float, sides: int):
+    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
 
 class GenericComputer(ConfidenceComputerABC):
     def __init__(
@@ -102,6 +109,9 @@ class GenericComputer(ConfidenceComputerABC):
         correction_method: str,
         method_column: str,
         bootstrap_samples_column: str,
+        metric_column: Union[str, None],
+        treatment_column: Union[str, None],
+        power: float,
         feature_column: str,
         feature_sum_squares_column: str,
         feature_cross_sum_column: str,
