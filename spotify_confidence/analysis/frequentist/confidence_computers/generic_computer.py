@@ -87,12 +87,14 @@ from spotify_confidence.analysis.constants import (
     CHI2,
     TTEST,
     ZTEST,
+    BOOTSTRAP,
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     BOOTSTRAP,
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
-    ZTESTLINREG, REGRESSION_PARAM,
+    ZTESTLINREG,
+    REGRESSION_PARAM,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
@@ -101,7 +103,6 @@ from spotify_confidence.analysis.frequentist.confidence_computers.z_test_compute
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer import ZTestLinregComputer
 
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
-
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
