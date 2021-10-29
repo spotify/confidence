@@ -47,9 +47,12 @@ class ConfidenceABC(ABC):
         numerator_column: str,
         numerator_sum_squares_column: Union[str, None],
         denominator_column: str,
-        categorical_group_columns: Union[str, Iterable],
+        categorical_group_columns: Union[str, Iterable, None],
         ordinal_group_column: Union[str, None],
+        metric_column: Union[str, None],
+        treatment_column: Union[str, None],
         interval_size: float,
+        power: float,
         correction_method: str,
     ):
         pass

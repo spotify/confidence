@@ -3,6 +3,7 @@ from typing import Tuple, Union
 import numpy as np
 from pandas import DataFrame, Series
 from scipy import stats as st
+from scipy import optimize
 from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
@@ -26,6 +27,10 @@ from spotify_confidence.analysis.constants import (
     SIMES_HOCHBERG,
     SPOT_1_HOMMEL,
     SPOT_1_SIMES_HOCHBERG,
+    NIM,
+    ADJUSTED_ALPHA,
+    ADJUSTED_POWER,
+    ALTERNATIVE_HYPOTHESIS,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -214,3 +219,349 @@ class ZTestComputer(object):
             return lower, upper
 
         return df.apply(_compute_ci_for_row, axis=1)
+
+    def _powered_effect(
+        self,
+        df: Series,
+        kappa: float,
+        proportion_of_total: float,
+        z_alpha: float,
+        z_power: float,
+        binary: bool,
+        current_number_of_units: int,
+        non_inferiority: bool,
+    ) -> Series:
+
+        if binary and not non_inferiority:
+            effect = self._search_MDE_binary_local_search(
+                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_var=df[VARIANCE + SFX1],
+                non_inferiority=False,
+                kappa=kappa,
+                proportion_of_total=proportion_of_total,
+                current_number_of_units=current_number_of_units,
+                z_alpha=z_alpha,
+                z_power=z_power,
+            )[0]
+        else:
+            treatment_var = self._get_hypothetical_treatment_var(
+                binary_metric=binary,
+                non_inferiority=df[NIM] is not None,
+                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_var=df[VARIANCE + SFX1],
+                hypothetical_effect=0,
+            )
+            n2_partial = np.power((z_alpha + z_power), 2) * (df[VARIANCE + SFX1] / kappa + treatment_var)
+            effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (n2_partial + kappa * n2_partial))
+
+        return effect
+
+    def _required_sample_size(
+        self,
+        binary: Union[Series, bool],
+        non_inferiority: Union[Series, bool],
+        hypothetical_effect: Union[Series, float],
+        control_avg: Union[Series, float],
+        control_var: Union[Series, float],
+        z_alpha: float = None,
+        kappa: float = None,
+        proportion_of_total: Union[Series, float] = None,
+        z_power: float = None,
+    ) -> Union[Series, float]:
+
+        if kappa is None:
+            raise ValueError("kappa is None, must be postive float")
+        if proportion_of_total is None:
+            raise ValueError("proportion_of_total is None, must be between 0 and 1")
+
+        treatment_var = np.vectorize(self._get_hypothetical_treatment_var)(
+            binary, non_inferiority, control_avg, control_var, hypothetical_effect
+        )
+
+        n2 = self._treatment_group_sample_size(
+            z_alpha=z_alpha,
+            z_power=z_power,
+            hypothetical_effect=hypothetical_effect,
+            control_var=control_var,
+            treatment_var=treatment_var,
+            kappa=kappa,
+        )
+        required_sample_size = np.ceil((n2 + n2 * kappa) / proportion_of_total)
+        return required_sample_size
+
+    def _powered_effect_and_required_sample_size(
+        self,
+        row: Series,
+    ) -> Series:
+        proportion_of_total = 1  # TODO
+        z_alpha = st.norm.ppf(1 - row[ADJUSTED_ALPHA])
+        z_power = st.norm.ppf(row[ADJUSTED_POWER])
+        n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
+        kappa = n2 / n1
+        binary = row[self._numerator_sumsq + SFX1] == row[self._numerator + SFX1]
+        current_number_of_units = n1 + n2
+
+        if isinstance(row[NIM], float):
+            non_inferiority = not np.isnan(row[NIM])
+        elif row[NIM] is None:
+            non_inferiority = row[NIM] is not None
+        else:
+            raise ValueError("NIM has to be type float or None.")
+
+        row["powered_effect"] = self._powered_effect(
+            df=row,
+            kappa=kappa,
+            proportion_of_total=proportion_of_total,
+            z_alpha=z_alpha,
+            z_power=z_power,
+            binary=binary,
+            current_number_of_units=current_number_of_units,
+            non_inferiority=non_inferiority,
+        )
+
+        if (ALTERNATIVE_HYPOTHESIS + SFX1) in row and NULL_HYPOTHESIS in row:
+            row["required_sample_size"] = self._required_sample_size(
+                proportion_of_total=proportion_of_total,
+                z_alpha=z_alpha,
+                z_power=z_power,
+                binary=binary,
+                non_inferiority=non_inferiority,
+                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS + SFX1] - row[NULL_HYPOTHESIS],
+                control_avg=row[POINT_ESTIMATE + SFX1],
+                control_var=row[VARIANCE + SFX1],
+                kappa=kappa,
+            )
+        else:
+            row["required_sample_size"] = None
+
+        return row
+
+    def _currently_powered_effect(
+        self,
+        control_avg: float,
+        control_var: float,
+        binary_metric: bool,
+        non_inferiority: bool = False,
+        power: float = None,
+        alpha: float = None,
+        kappa: float = None,
+        proportion_of_total: float = None,
+        current_number_of_units: float = None,
+    ):
+        z_alpha = st.norm.ppf(1 - alpha)
+        z_power = st.norm.ppf(power)
+
+        if binary_metric and not non_inferiority:
+            effect = self._search_MDE_binary_local_search(
+                control_avg=control_avg,
+                control_var=control_var,
+                non_inferiority=non_inferiority,
+                kappa=kappa,
+                proportion_of_total=proportion_of_total,
+                current_number_of_units=current_number_of_units,
+                z_alpha=z_alpha,
+                z_power=z_power,
+            )[0]
+        else:
+            treatment_var = self._get_hypothetical_treatment_var(
+                binary_metric, non_inferiority, control_avg, control_var, hypothetical_effect=0
+            )
+            n2_partial = np.power((z_alpha + z_power), 2) * (control_var / kappa + treatment_var)
+            effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (n2_partial + kappa * n2_partial))
+
+        return effect
+
+    def _search_MDE_binary_local_search(
+        self,
+        control_avg: float,
+        control_var: float,
+        non_inferiority: bool,
+        kappa: float,
+        proportion_of_total: float,
+        current_number_of_units: float,
+        z_alpha: float = None,
+        z_power: float = None,
+    ):
+        def f(x):
+            return self.find_current_powered_effect(
+                hypothetical_effect=x,
+                control_avg=control_avg,
+                control_var=control_var,
+                binary=True,
+                non_inferiority=non_inferiority,
+                kappa=kappa,
+                proportion_of_total=proportion_of_total,
+                current_number_of_units=current_number_of_units,
+                z_alpha=z_alpha,
+                z_power=z_power,
+            )
+
+        max_val = 1 - control_avg
+        min_val = min(10e-9, max_val)
+
+        if min_val == max_val:
+            # corner case that crashes the optimizer
+            return min_val, f(min_val)
+
+        max_iter = 100  # max number of iterations before falling back to slow grid search
+
+        # we stop immediately if a solution was found that is "good enough". A threshold of
+        # 1 indicates that
+        # the approximated number of units (based on the current effect candidate) is off by
+        # at most 1.0
+        goodness_threshold = 1.0
+
+        curr_iter = 0
+        best_x = None
+        best_fun = float("inf")
+
+        bounds_queue = [(min_val, max_val)]
+
+        while curr_iter < max_iter and best_fun > goodness_threshold:
+
+            # take next value from queue
+            interval = bounds_queue.pop(0)
+
+            # conduct a bounded local search, using a very small tol value improved
+            # performance during tests
+            # result = optimize.minimize_scalar(f, bounds=(interval[0], interval[1]),
+            # method='bounded', tol=10e-14)
+            result = optimize.minimize_scalar(
+                f, bounds=(interval[0], interval[1]), method="bounded", options={"xatol": 10e-14, "maxiter": 50}
+            )
+
+            if result.fun < best_fun:
+                best_x = result.x
+                best_fun = result.fun
+
+            curr_iter += 1
+
+            # add new bounds to the queue
+            interval_split = (interval[0] + interval[1]) / 2
+            bounds_queue.append((interval[0], interval_split))
+            bounds_queue.append((interval_split, interval[1]))
+
+        if best_fun <= goodness_threshold:
+            return best_x, best_fun
+        else:  # check if grid search finds a better solution
+            alt_result_x, alt_result_fun = self.search_MDE_binary(
+                control_avg,
+                control_var,
+                non_inferiority,
+                kappa,
+                proportion_of_total,
+                current_number_of_units,
+                z_alpha,
+                z_power,
+                return_cost_val=True,
+            )
+
+            return (alt_result_x, alt_result_fun) if alt_result_fun < best_fun else (best_x, best_fun)
+
+    def search_MDE_binary(
+        self,
+        control_avg: float,
+        control_var: float,
+        non_inferiority: bool,
+        kappa: float,
+        proportion_of_total: float,
+        current_number_of_units: float,
+        z_alpha: float = None,
+        z_power: float = None,
+        return_cost_val=False,
+    ):
+        candidate_effects = np.linspace(10e-9, 1 - control_avg, num=2000)
+        for i in range(2):
+            test = []
+            for effect in candidate_effects:
+                test.append(
+                    self.find_current_powered_effect(
+                        hypothetical_effect=effect,
+                        control_avg=control_avg,
+                        control_var=control_var,
+                        binary=True,
+                        non_inferiority=non_inferiority,
+                        kappa=kappa,
+                        proportion_of_total=proportion_of_total,
+                        current_number_of_units=current_number_of_units,
+                        z_alpha=z_alpha,
+                        z_power=z_power,
+                    )
+                )
+
+            test = np.array(test)
+            index = [idx for idx, element in enumerate(test) if element == test.min()]
+            if len(index) != 1:
+                index = [index[int(np.ceil(len(index) / 2))]]
+            if i == 0:
+                if index[0] == 9999:
+                    return np.inf
+                lower_effect_bound = 10e-9 if index[0] == 0 else candidate_effects[index[0] - 1]
+                candidate_effects = np.linspace(lower_effect_bound, candidate_effects[index[0]], num=10000)
+
+        index = [idx for idx, element in enumerate(test) if element == test.min()]
+
+        return candidate_effects[index[0]], test[index[0]] if return_cost_val else candidate_effects[index[0]]
+
+    def _treatment_group_sample_size(
+        self,
+        z_alpha: float,
+        z_power: float,
+        hypothetical_effect: float,
+        control_var: float,
+        treatment_var: float,
+        kappa: float,
+    ) -> float:
+        return np.ceil(
+            np.power((z_alpha + z_power) / abs(hypothetical_effect), 2) * (control_var / kappa + treatment_var)
+        )
+
+    def find_current_powered_effect(
+        self,
+        hypothetical_effect: float,
+        control_avg: float,
+        control_var: float,
+        binary: bool,
+        non_inferiority: bool,
+        kappa: float,
+        proportion_of_total: float,
+        current_number_of_units: float,
+        z_power: float = None,
+        z_alpha: float = None,
+    ) -> float:
+
+        treatment_var = self._get_hypothetical_treatment_var(
+            binary_metric=binary,
+            non_inferiority=non_inferiority,
+            control_avg=control_avg,
+            control_var=control_var,
+            hypothetical_effect=hypothetical_effect,
+        )
+        n2 = self._treatment_group_sample_size(
+            z_alpha,
+            z_power,
+            hypothetical_effect,
+            control_var,
+            treatment_var,
+            kappa,
+        )
+
+        return np.power(current_number_of_units - ((n2 + n2 * kappa) / proportion_of_total), 2)
+
+    def _get_hypothetical_treatment_var(
+        self,
+        binary_metric: bool,
+        non_inferiority: bool,
+        control_avg: float,
+        control_var: float,
+        hypothetical_effect: float,
+    ) -> float:
+        if binary_metric and not non_inferiority:
+            # For binary metrics, the variance can be derived from the average. However,
+            # we do *not* do this for
+            # non-inferiority tests because for non-inferiority tests, the basic assumption
+            # is that the
+            # mean of the control group and treatment group are identical.
+            return (control_avg + hypothetical_effect) * (1 - (control_avg + hypothetical_effect))
+        else:
+            return control_var
