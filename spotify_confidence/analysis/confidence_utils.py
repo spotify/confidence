@@ -106,14 +106,13 @@ def validate_levels(df: DataFrame, level_columns: Union[str, Iterable], levels: 
 
 def add_mde_columns(df: DataFrame, mde_column: str) -> DataFrame:
     def _mde_2_signed_mde(mde: Tuple[float, str]) -> Tuple[float, float, str]:
-        mde_value = 0 if mde[0] is None or  (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
+        mde_value = 0 if mde[0] is None or (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
         if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
             return (mde[0], mde_value, TWO_SIDED)
         elif mde[1].lower() == INCREASE_PREFFERED:
             return (mde[0], -mde_value, "larger")
         elif mde[1].lower() == DECREASE_PREFFERED:
             return (mde[0], mde_value, "smaller")
-
 
     if mde_column is not None:
         return (
@@ -337,6 +336,7 @@ def unlist():
     if x1.shape[0] < x1.shape[1]:
         x1 = x1.transpose()
     return x1
+
 
 def dfmatmul(x, y, outer=True):
 
