@@ -59,9 +59,9 @@ class ZTestLinreg(GenericTest):
             correction_method=correction_method.lower(),
             method_column=METHOD_COLUMN_NAME,
             bootstrap_samples_column=None,
-            metric_column=None,
-            treatment_column=None,
-            power=0.8
+            metric_column=metric_column,
+            treatment_column=treatment_column,
+            power=power
         )
 
         super().__init__(

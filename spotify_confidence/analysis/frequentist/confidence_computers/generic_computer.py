@@ -173,6 +173,8 @@ class GenericComputer(ConfidenceComputerABC):
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
+        self._regression_group_columns = get_all_group_columns(self._metric_column, self._ordinal_group_column)
+
         self._bootstrap_samples_column = bootstrap_samples_column
 
         columns_that_must_exist = []
@@ -246,9 +248,10 @@ class GenericComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
+            if self._regression_group_columns is not None:
+                self._df = self._df.groupby(self._regression_group_columns).apply(self._estimate_slope)
             self._sufficient = (
                 self._df
-                .assign(**{REGRESSION_PARAM: self._estimate_slope})
                 .assign(**{POINT_ESTIMATE: self._point_estimate})
                 .assign(**{VARIANCE: self._variance})
                 .pipe(self._add_point_estimate_ci)
@@ -764,7 +767,8 @@ class GenericComputer(ConfidenceComputerABC):
 
     def _estimate_slope(self, df: DataFrame) -> Series:
         if all(df[self._method_column]== ZTESTLINREG):
-            return self._confidence_computers[ZTESTLINREG]._estimate_slope(df)  # TODO: Should be .groupby(_metric_column)!!!
+            if self._metric_column is not None:
+                return self._confidence_computers[ZTESTLINREG]._estimate_slope(df)  # TODO: Should be .groupby(_metric_column)!!!
 
     def _std_err(self, df: DataFrame) -> Series:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._std_err(row), axis=1)

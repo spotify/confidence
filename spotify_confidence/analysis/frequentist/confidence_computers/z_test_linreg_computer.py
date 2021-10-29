@@ -32,7 +32,7 @@ class ZTestLinregComputer(ZTestComputer):
         self._feature_cross = feature_cross_sum_column
         self._method_column = method_column
 
-    def _estimate_slope(self, df) -> Series:
+    def _estimate_slope(self, df) -> DataFrame:
         def col_sum(x):
             out = reduce(lambda x, y: x + y, x)
             return out
@@ -40,7 +40,7 @@ class ZTestLinregComputer(ZTestComputer):
         def dimension(x):
             return x.shape[0] if isinstance(x, np.ndarray) and x.size > 1 else 1
 
-        k = df[self._feature_ssq].apply(dimension)[0]
+        k = df[self._feature_ssq].apply(dimension).iloc[0]
 
         XX0 = np.zeros((k + 1, k + 1))
         XX0[1 : (k + 1), 1 : (k + 1)] = col_sum(df[self._feature_ssq])
@@ -62,8 +62,8 @@ class ZTestLinregComputer(ZTestComputer):
             out = out.item()
 
         outseries = Series(index=df.index, dtype=df[self._feature].dtype)
-
-        return outseries.apply(lambda x: out)
+        df[REGRESSION_PARAM] = outseries.apply(lambda x: out)
+        return df
 
     def _point_estimate(self, row: Series) -> float:
 
