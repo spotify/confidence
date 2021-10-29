@@ -90,4 +90,8 @@ ENV/
 
 .DS_store
 
+<<<<<<< HEAD
 .idea/
+=======
+.idea/
+>>>>>>> 66396f9 (fixing merge conflicts)

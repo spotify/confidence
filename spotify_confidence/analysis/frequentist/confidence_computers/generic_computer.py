@@ -90,6 +90,8 @@ from spotify_confidence.analysis.constants import (
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     BOOTSTRAP,
+    NIM_TYPE,
+    CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     ZTESTLINREG, REGRESSION_PARAM,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
@@ -103,7 +105,6 @@ from spotify_confidence.analysis.frequentist.sequential_bound_solver import boun
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
-
 
 class GenericComputer(ConfidenceComputerABC):
     def __init__(
