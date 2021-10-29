@@ -330,7 +330,7 @@ def power_calculation(mde: float, baseline_var: float, alpha: float, n1: int, n2
     return norm.cdf(z_stat - z_alpha) + norm.cdf(-z_stat - z_alpha)
 
 
-def unlist():
+def unlist(x):
     x0 = x[0] if isinstance(x, list) else x
     x1 = np.atleast_2d(x0)
     if x1.shape[0] < x1.shape[1]:

@@ -23,7 +23,9 @@ class Test(object):
         )
 
         data.columns = data.columns.map("_".join).str.strip("_")
+        data.assign(**{"metric_name": "metricA"})
         self.data = data
+
 
         self.test = spotify_confidence.ZTestLinreg(
             data_frame=data,
@@ -39,6 +41,6 @@ class Test(object):
         )
 
     def test_summary(self):
-        summary_df = self.test.summary()
+        summary_df = self.test.summary(verbose=True)
         print(summary_df)
         assert len(summary_df) == len(self.data)
