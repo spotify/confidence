@@ -46,6 +46,7 @@ from spotify_confidence.analysis.constants import (
     STD_ERR,
     ALPHA,
     ADJUSTED_ALPHA,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
     POWER,
     POWERED_EFFECT,
     ADJUSTED_POWER,
@@ -428,9 +429,9 @@ class GenericComputer(ConfidenceComputerABC):
                 final_expected_sample_size_column=final_expected_sample_size_column,
                 filtered_sufficient_statistics=filtered_sufficient_statistics,
             )
-            .pipe(self._adjust_if_absolute, absolute=absolute)
             .pipe(self._add_adjusted_power)
             .apply(self._powered_effect_and_required_sample_size, mde_column=mde_column, axis=1)
+            .pipe(self._adjust_if_absolute, absolute=absolute)
             .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
         )
 
@@ -449,6 +450,7 @@ class GenericComputer(ConfidenceComputerABC):
                 .assign(**{ADJUSTED_LOWER: df[ADJUSTED_LOWER] / df[POINT_ESTIMATE + SFX1]})
                 .assign(**{ADJUSTED_UPPER: df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
                 .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
             )
 
     def _corrections_power(self, number_of_success_metrics: int, number_of_guardrail_metrics: int) -> int:
@@ -525,6 +527,7 @@ class GenericComputer(ConfidenceComputerABC):
                 df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(
                     df, final_expected_sample_size_column, filtered_sufficient_statistics, n_comparisons
                 )
+                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
                 df[P_VALUE] = None
                 df[ADJUSTED_P] = None
@@ -555,6 +558,7 @@ class GenericComputer(ConfidenceComputerABC):
 
                 groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
                 df[ADJUSTED_ALPHA] = df[ALPHA] / self._get_num_comparisons(df, self._correction_method, groupby)
+                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
                 is_significant, adjusted_p, _, _ = multipletests(
                     pvals=df[P_VALUE], alpha=1 - self._interval_size, method=correction_method
                 )
@@ -569,6 +573,7 @@ class GenericComputer(ConfidenceComputerABC):
                 groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
                 n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
                 df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
                 df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
             else:
@@ -756,8 +761,8 @@ class GenericComputer(ConfidenceComputerABC):
         if row[self._method_column] != ZTEST and mde_column in row:
             raise ValueError("Minimum detectable effects only supported for ZTest.")
         elif row[self._method_column] != ZTEST or row[ADJUSTED_POWER] is None:
-            row["powered_effect"] = None
-            row["required_sample_size"] = None
+            row[POWERED_EFFECT] = None
+            row[REQUIRED_SAMPLE_SIZE] = None
             return row
         else:
             return self._confidence_computers[row[self._method_column]]._powered_effect_and_required_sample_size(row)
