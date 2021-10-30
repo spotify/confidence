@@ -295,7 +295,6 @@ class ZTestComputer(object):
         self,
         row: Series,
     ) -> Series:
-        proportion_of_total = 1  # TODO
         z_alpha = st.norm.ppf(
             1 - row[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] / (2 if row[PREFERENCE_TEST] == TWO_SIDED else 1)
         )
@@ -304,6 +303,8 @@ class ZTestComputer(object):
         kappa = n1 / n2
         binary = row[self._numerator_sumsq + SFX1] == row[self._numerator + SFX1]
         current_number_of_units = n1 + n2
+        # TODO: use proportion_of_total = current_number_of_units / row[f"current_total_{self._denominator}"]
+        proportion_of_total = 1
 
         if isinstance(row[NIM], float):
             non_inferiority = not np.isnan(row[NIM])

@@ -364,10 +364,25 @@ class GenericComputer(ConfidenceComputerABC):
             (level2str(l[0]), level2str(l[1])) if level_as_reference else (level2str(l[1]), level2str(l[0]))
             for l in levels
         ]
+
+        def assign_total_denominator(df, groupby):
+            if len(groupby) == 0:
+                return df.assign(
+                    **{f"current_total_{self._denominator}": self._sufficient_statistics[self._denominator].sum()}
+                )
+            else:
+                return df.merge(
+                    df.groupby(groupby)[self._denominator]
+                    .sum()
+                    .reset_index()
+                    .rename(columns={self._denominator: f"current_total_{self._denominator}"})
+                )
+
         return (
             self._sufficient_statistics.assign(
                 level=self._sufficient_statistics[level_columns].agg(level2str, axis="columns")
             )
+            .pipe(assign_total_denominator, groupby)
             .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
             .pipe(
                 self._create_comparison_df,
@@ -427,9 +442,16 @@ class GenericComputer(ConfidenceComputerABC):
                 columns={
                     NULL_HYPOTHESIS + SFX1: NULL_HYPOTHESIS,
                     ALTERNATIVE_HYPOTHESIS + SFX1: ALTERNATIVE_HYPOTHESIS,
+                    f"current_total_{self._denominator}{SFX1}": f"current_total_{self._denominator}",
                 }
             )
-            .drop(columns=[NULL_HYPOTHESIS + SFX2, ALTERNATIVE_HYPOTHESIS + SFX2])
+            .drop(
+                columns=[
+                    NULL_HYPOTHESIS + SFX2,
+                    ALTERNATIVE_HYPOTHESIS + SFX2,
+                    f"current_total_{self._denominator}{SFX2}",
+                ]
+            )
             .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
             .assign(**{STD_ERR: self._std_err})
             .pipe(
@@ -765,7 +787,7 @@ class GenericComputer(ConfidenceComputerABC):
     def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
-    def _powered_effect_and_required_sample_size(self, row, mde_column) -> DataFrame:
+    def _powered_effect_and_required_sample_size(self, row: Series, mde_column: str) -> DataFrame:
         if row[self._method_column] != ZTEST and mde_column in row:
             raise ValueError("Minimum detectable effects only supported for ZTest.")
         elif row[self._method_column] != ZTEST or row[ADJUSTED_POWER] is None:
