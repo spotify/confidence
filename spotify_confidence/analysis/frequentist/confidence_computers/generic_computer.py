@@ -26,8 +26,7 @@ from spotify_confidence.analysis.confidence_utils import (
     level2str,
     listify,
     add_nim_columns,
-    validate_and_rename_nims,
-    validate_and_rename_column,
+    validate_and_rename_columns,
     add_mde_columns,
     get_all_categorical_group_columns,
     get_all_group_columns,
@@ -56,6 +55,7 @@ from spotify_confidence.analysis.constants import (
     IS_SIGNIFICANT,
     REQUIRED_SAMPLE_SIZE,
     NULL_HYPOTHESIS,
+    ALTERNATIVE_HYPOTHESIS,
     NIM,
     PREFERENCE,
     PREFERENCE_TEST,
@@ -418,10 +418,18 @@ class GenericComputer(ConfidenceComputerABC):
                 + "and level_1 != level_2"
             )
             # TODO: validate_and_rename_mdes
-            .pipe(validate_and_rename_nims)
-            .pipe(validate_and_rename_column, final_expected_sample_size_column)
-            .pipe(validate_and_rename_column, mde_column)
-            .pipe(validate_and_rename_column, self._method_column)
+            .pipe(validate_and_rename_columns, NIM)
+            .pipe(validate_and_rename_columns, mde_column)
+            .pipe(validate_and_rename_columns, PREFERENCE)
+            .pipe(validate_and_rename_columns, final_expected_sample_size_column)
+            .pipe(validate_and_rename_columns, self._method_column)
+            .rename(
+                columns={
+                    NULL_HYPOTHESIS + SFX1: NULL_HYPOTHESIS,
+                    ALTERNATIVE_HYPOTHESIS + SFX1: ALTERNATIVE_HYPOTHESIS,
+                }
+            )
+            .drop(columns=[NULL_HYPOTHESIS + SFX2, ALTERNATIVE_HYPOTHESIS + SFX2])
             .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
             .assign(**{STD_ERR: self._std_err})
             .pipe(

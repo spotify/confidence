@@ -323,14 +323,14 @@ class ZTestComputer(object):
             non_inferiority=non_inferiority,
         )
 
-        if (ALTERNATIVE_HYPOTHESIS + SFX1) in row and NULL_HYPOTHESIS in row:
+        if ALTERNATIVE_HYPOTHESIS in row and NULL_HYPOTHESIS in row and row[ALTERNATIVE_HYPOTHESIS] is not None:
             row[REQUIRED_SAMPLE_SIZE] = self._required_sample_size(
                 proportion_of_total=proportion_of_total,
                 z_alpha=z_alpha,
                 z_power=z_power,
                 binary=binary,
                 non_inferiority=non_inferiority,
-                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS + SFX1] - row[NULL_HYPOTHESIS],
+                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS],
                 control_avg=row[POINT_ESTIMATE + SFX1],
                 control_var=row[VARIANCE + SFX1],
                 kappa=kappa,
