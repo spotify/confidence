@@ -19,10 +19,10 @@ from pandas import DataFrame
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
-from spotify_confidence.analysis.frequentist.generic_test import GenericTest
+from spotify_confidence.analysis.frequentist.experiment import Experiment
 
 
-class StudentsTTest(GenericTest):
+class StudentsTTest(Experiment):
     def __init__(
         self,
         data_frame: DataFrame,
