@@ -366,6 +366,9 @@ class GenericComputer(ConfidenceComputerABC):
         ]
 
         def assign_total_denominator(df, groupby):
+            if self._denominator is None:
+                return df.assign(**{f"current_total_{self._denominator}": None})
+
             if len(groupby) == 0:
                 return df.assign(
                     **{f"current_total_{self._denominator}": self._sufficient_statistics[self._denominator].sum()}
