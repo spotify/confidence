@@ -16,7 +16,7 @@ from typing import Union, Iterable, List, Tuple, Dict
 from warnings import warn
 
 import numpy as np
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, concat
 from statsmodels.stats.multitest import multipletests
 from scipy import stats as st
 from numpy import isnan
@@ -25,6 +25,7 @@ import spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_co
 import spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer as chi_squared_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer as t_test_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer as z_test_computers
+import spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer as z_test_linreg_computer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.confidence_utils import (
     get_remaning_groups,
@@ -119,6 +120,7 @@ from spotify_confidence.analysis.constants import (
     PREFERRED_DIRECTION_COLUMN_DEFAULT,
     INCREASE_PREFFERED,
     DECREASE_PREFFERED,
+    ZTESTLINREG,
 )
 
 confidence_computers = {
@@ -126,6 +128,7 @@ confidence_computers = {
     TTEST: t_test_computer,
     ZTEST: z_test_computers,
     BOOTSTRAP: bootstrap_computer,
+    ZTESTLINREG: z_test_linreg_computer,
 }
 
 
@@ -133,21 +136,24 @@ class GenericComputer(ConfidenceComputerABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
-        numerator_sum_squares_column: str,
-        denominator_column: str,
+        numerator_column: Union[str, None],
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: Union[str, None],
         categorical_group_columns: Union[str, Iterable],
-        ordinal_group_column: str,
+        ordinal_group_column: Union[str, None],
         interval_size: float,
         correction_method: str,
         method_column: str,
-        bootstrap_samples_column: str,
+        bootstrap_samples_column: Union[str, None],
         metric_column: Union[str, None],
         treatment_column: Union[str, None],
         power: float,
         point_estimate_column: str,
         var_column: str,
         is_binary_column: str,
+        feature_column: Union[str, None],
+        feature_sum_squares_column: Union[str, None],
+        feature_cross_sum_column: Union[str, None],
     ):
 
         self._df = data_frame.reset_index(drop=True)
@@ -179,6 +185,9 @@ class GenericComputer(ConfidenceComputerABC):
         self._interval_size = interval_size
         self._power = power
         self._treatment_column = treatment_column
+        self._feature = feature_column
+        self._feature_ssq = feature_sum_squares_column
+        self._feature_cross = feature_cross_sum_column
 
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
@@ -190,7 +199,7 @@ class GenericComputer(ConfidenceComputerABC):
             self._single_metric = True
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
-
+        self._regression_group_columns = get_all_group_columns(self._metric_column, self._ordinal_group_column)
         self._bootstrap_samples_column = bootstrap_samples_column
 
         columns_that_must_exist = []
@@ -206,6 +215,8 @@ class GenericComputer(ConfidenceComputerABC):
                 columns_that_must_exist += [self._point_estimate_column, self._var_column]
         if BOOTSTRAP in self._df[self._method_column]:
             columns_that_must_exist += [self._bootstrap_samples_column]
+        if ZTESTLINREG in self._df[self._method_column]:
+            columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
@@ -226,6 +237,8 @@ class GenericComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
+            if self._regression_group_columns is not None and len(self._regression_group_columns) > 0:
+                self._df = self._df.groupby(self._regression_group_columns).apply(self._estimate_slope)
             arg_dict = {
                 NUMERATOR: self._numerator,
                 NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
@@ -262,6 +275,13 @@ class GenericComputer(ConfidenceComputerABC):
                 .reset_index(drop=True)
             )
         return self._sufficient
+
+    def _estimate_slope(self, df: DataFrame) -> Series:
+        if all(df[self._method_column] == ZTESTLINREG):
+            if self._metric_column is not None:
+                # TODO: Should be .groupby(_metric_column)!!!
+                return self._confidence_computers[ZTESTLINREG]._estimate_slope(df)
+        return df
 
     def compute_difference(
         self,
