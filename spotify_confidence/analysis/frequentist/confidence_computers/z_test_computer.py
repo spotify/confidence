@@ -32,7 +32,9 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_POWER,
     ALTERNATIVE_HYPOTHESIS,
     POWERED_EFFECT,
+    POWERED_EFFECT_METRIC,
     REQUIRED_SAMPLE_SIZE,
+    REQUIRED_SAMPLE_SIZE_METRIC,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -303,8 +305,7 @@ class ZTestComputer(object):
         kappa = n1 / n2
         binary = row[self._numerator_sumsq + SFX1] == row[self._numerator + SFX1]
         current_number_of_units = n1 + n2
-        # TODO: use proportion_of_total = current_number_of_units / row[f"current_total_{self._denominator}"]
-        proportion_of_total = 1
+        proportion_of_total = current_number_of_units / row[f"current_total_{self._denominator}"]
 
         if isinstance(row[NIM], float):
             non_inferiority = not np.isnan(row[NIM])
@@ -314,6 +315,17 @@ class ZTestComputer(object):
             raise ValueError("NIM has to be type float or None.")
 
         row[POWERED_EFFECT] = self._powered_effect(
+            df=row,
+            kappa=kappa,
+            proportion_of_total=1,
+            z_alpha=z_alpha,
+            z_power=z_power,
+            binary=binary,
+            current_number_of_units=current_number_of_units,
+            non_inferiority=non_inferiority,
+        )
+
+        row[POWERED_EFFECT_METRIC] = self._powered_effect(
             df=row,
             kappa=kappa,
             proportion_of_total=proportion_of_total,
@@ -326,6 +338,17 @@ class ZTestComputer(object):
 
         if ALTERNATIVE_HYPOTHESIS in row and NULL_HYPOTHESIS in row and row[ALTERNATIVE_HYPOTHESIS] is not None:
             row[REQUIRED_SAMPLE_SIZE] = self._required_sample_size(
+                proportion_of_total=1,
+                z_alpha=z_alpha,
+                z_power=z_power,
+                binary=binary,
+                non_inferiority=non_inferiority,
+                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS],
+                control_avg=row[POINT_ESTIMATE + SFX1],
+                control_var=row[VARIANCE + SFX1],
+                kappa=kappa,
+            )
+            row[REQUIRED_SAMPLE_SIZE_METRIC] = self._required_sample_size(
                 proportion_of_total=proportion_of_total,
                 z_alpha=z_alpha,
                 z_power=z_power,
