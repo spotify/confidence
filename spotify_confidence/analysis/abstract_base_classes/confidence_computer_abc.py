@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import (Union, Iterable)
+from typing import Union, Iterable, List, Tuple
 
 from pandas import DataFrame
 
@@ -21,59 +21,66 @@ from ..constants import NIM_TYPE
 
 
 class ConfidenceComputerABC(ABC):
-
-    @abstractmethod
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 numerator_sum_squares_column: str,
-                 denominator_column: str,
-                 categorical_group_columns: str,
-                 ordinal_group_column: str,
-                 interval_size: float,
-                 correction_method: str):
-        pass
-
     @abstractmethod
     def compute_summary(self, verbose: bool) -> DataFrame:
-        """Return Pandas DataFrame with summary statistics.
-        """
+        """Return Pandas DataFrame with summary statistics."""
         pass
 
     @abstractmethod
-    def compute_difference(self,
-                           level_1: Union[str, Iterable],
-                           level_2: Union[str, Iterable],
-                           absolute: bool,
-                           groupby: Union[str, Iterable],
-                           nims: NIM_TYPE,
-                           final_expected_sample_size_column: str,
-                           verbose: bool
-                           ) -> DataFrame:
+    def compute_difference(
+        self,
+        level_1: Union[str, Iterable],
+        level_2: Union[str, Iterable],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        nims: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        mde_column: str,
+    ) -> DataFrame:
         """Return dataframe containing the difference in means between
-            group 1 and 2, p-value and confidence interval
+        group 1 and 2, p-value and confidence interval
         """
         pass
 
     @abstractmethod
-    def compute_multiple_difference(self,
-                                    level: Union[str, Iterable],
-                                    absolute: bool,
-                                    groupby: Union[str, Iterable],
-                                    level_as_reference: bool,
-                                    nims: NIM_TYPE,
-                                    final_expected_sample_size_column: str,
-                                    verbose: bool
-                                    ) -> DataFrame:
-        """The pairwise probability that the specific group
-        is greater than all other groups.
+    def compute_multiple_difference(
+        self,
+        level: Union[str, Iterable],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        level_as_reference: bool,
+        nims: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        mde_column: str,
+    ) -> DataFrame:
+        """Return dataframe containing the difference in means between
+        level and all other groups, with p-value and confidence interval
         """
         pass
 
-    def achieved_power(self,
-                       level_1: Union[str, Iterable],
-                       level_2: Union[str, Iterable],
-                       mde: float,
-                       alpha: float,
-                       groupby: Union[str, Iterable]) -> DataFrame:
+    def compute_differences(
+        self,
+        levels: List[Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        nims: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        mde_column: str,
+    ) -> DataFrame:
+        """Return dataframe containing the difference in means between
+        level and all other groups, with p-value and confidence interval
+        """
+        pass
+
+    def achieved_power(
+        self,
+        level_1: Union[str, Iterable],
+        level_2: Union[str, Iterable],
+        mde: float,
+        alpha: float,
+        groupby: Union[str, Iterable],
+    ) -> DataFrame:
         pass

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import (Union, Iterable, Tuple, List)
+from typing import Union, Iterable, Tuple, List
 
 from pandas import DataFrame
 
@@ -24,7 +24,6 @@ from ..constants import NIM_TYPE
 
 
 class ConfidenceABC(ABC):
-
     @property
     def _confidence_computer(self) -> ConfidenceComputerABC:
         return self._computer
@@ -42,15 +41,20 @@ class ConfidenceABC(ABC):
         self._grapher = grapher
 
     @abstractmethod
-    def __init__(self,
-                 data_frame: DataFrame,
-                 numerator_column: str,
-                 numerator_sum_squares_column: Union[str, None],
-                 denominator_column: str,
-                 categorical_group_columns: Union[str, Iterable],
-                 ordinal_group_column: Union[str, None],
-                 interval_size: float,
-                 correction_method: str):
+    def __init__(
+        self,
+        data_frame: DataFrame,
+        numerator_column: str,
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: str,
+        categorical_group_columns: Union[str, Iterable, None],
+        ordinal_group_column: Union[str, None],
+        interval_size: float,
+        correction_method: str,
+        metric_column: Union[str, None],
+        treatment_column: Union[str, None],
+        power: float,
+    ):
         pass
 
     @abstractmethod
@@ -63,15 +67,17 @@ class ConfidenceABC(ABC):
         pass
 
     @abstractmethod
-    def difference(self,
-                   level_1: Union[str, Tuple],
-                   level_2: Union[str, Tuple],
-                   absolute: bool,
-                   groupby: Union[str, Iterable],
-                   non_inferiority_margins: NIM_TYPE,
-                   final_expected_sample_size_column: str,
-                   verbose: bool
-                   ) -> DataFrame:
+    def difference(
+        self,
+        level_1: Union[str, Tuple],
+        level_2: Union[str, Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        non_inferiority_margins: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        minimum_detectable_effects_column: str,
+    ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
                 If specified, will plot a separate chart for each level of the
@@ -95,6 +101,8 @@ class ConfidenceABC(ABC):
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
             verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+            minimum_detectable_effects_column (str): The minimum detectable effect, used for calculating required
+            sample size.
 
         Returns:
             Dataframe containing the difference in means between
@@ -104,14 +112,16 @@ class ConfidenceABC(ABC):
         pass
 
     @abstractmethod
-    def differences(self,
-                    levels: List[Tuple],
-                    absolute: bool,
-                    groupby: Union[str, Iterable],
-                    non_inferiority_margins: NIM_TYPE,
-                    final_expected_sample_size_column: str,
-                    verbose: bool
-                    ) -> DataFrame:
+    def differences(
+        self,
+        levels: List[Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        non_inferiority_margins: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        minimum_detectable_effects_column: str,
+    ) -> DataFrame:
         """Args:
             levels: (list(tuple)): list of levels to compare
             groupby (str): Name of column.
@@ -136,6 +146,8 @@ class ConfidenceABC(ABC):
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
             verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+            minimum_detectable_effects_column (str): The minimum detectable effect, used for calculating required
+            sample size.
 
         Returns:
             Dataframe containing the difference in means between
@@ -145,15 +157,17 @@ class ConfidenceABC(ABC):
         pass
 
     @abstractmethod
-    def multiple_difference(self,
-                            level: Union[str, Tuple],
-                            absolute: bool,
-                            groupby: Union[str, Iterable],
-                            level_as_reference: bool,
-                            non_inferiority_margins: NIM_TYPE,
-                            final_expected_sample_size_column: str,
-                            verbose: bool
-                            ) -> DataFrame:
+    def multiple_difference(
+        self,
+        level: Union[str, Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        level_as_reference: bool,
+        non_inferiority_margins: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        minimum_detectable_effects_column: str,
+    ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
                 If specified, will plot a separate chart for each level of the
@@ -181,6 +195,8 @@ class ConfidenceABC(ABC):
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
             verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+            minimum_detectable_effects_column (str): The minimum detectable effect, used for calculating required
+            sample size.
 
         Returns:
             Dataframe containing the difference in means between
@@ -190,8 +206,7 @@ class ConfidenceABC(ABC):
         pass
 
     @abstractmethod
-    def summary_plot(self,
-                     groupby: Union[str, Iterable]) -> ChartGrid:
+    def summary_plot(self, groupby: Union[str, Iterable]) -> ChartGrid:
         """Plot for each group in the data_frame:
 
         if ordinal level exists:
@@ -210,15 +225,16 @@ class ConfidenceABC(ABC):
         pass
 
     @abstractmethod
-    def difference_plot(self,
-                        level_1: Union[str, Tuple],
-                        level_2: Union[str, Tuple],
-                        absolute: bool,
-                        groupby: Union[str, Iterable],
-                        non_inferiority_margins: NIM_TYPE,
-                        use_adjusted_intervals: bool,
-                        final_expected_sample_size_column: str
-                        ) -> ChartGrid:
+    def difference_plot(
+        self,
+        level_1: Union[str, Tuple],
+        level_2: Union[str, Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        non_inferiority_margins: NIM_TYPE,
+        use_adjusted_intervals: bool,
+        final_expected_sample_size_column: str,
+    ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2.
         - Difference in means or proportions, depending
             on the response variable type.
@@ -262,14 +278,15 @@ class ConfidenceABC(ABC):
         """
 
     @abstractmethod
-    def differences_plot(self,
-                         levels: List[Tuple],
-                         absolute: bool,
-                         groupby: Union[str, Iterable],
-                         non_inferiority_margins: NIM_TYPE,
-                         use_adjusted_intervals: bool,
-                         final_expected_sample_size_column: str
-                         ) -> ChartGrid:
+    def differences_plot(
+        self,
+        levels: List[Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        non_inferiority_margins: NIM_TYPE,
+        use_adjusted_intervals: bool,
+        final_expected_sample_size_column: str,
+    ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2.
         - Difference in means or proportions, depending
             on the response variable type.
@@ -312,15 +329,16 @@ class ConfidenceABC(ABC):
         """
 
     @abstractmethod
-    def multiple_difference_plot(self,
-                                 level: Union[str, Tuple],
-                                 absolute: bool,
-                                 groupby: Union[str, Iterable],
-                                 level_as_reference: bool,
-                                 non_inferiority_margins: NIM_TYPE,
-                                 use_adjusted_intervals: bool,
-                                 final_expected_sample_size_column: str
-                                 ) -> ChartGrid:
+    def multiple_difference_plot(
+        self,
+        level: Union[str, Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        level_as_reference: bool,
+        non_inferiority_margins: NIM_TYPE,
+        use_adjusted_intervals: bool,
+        final_expected_sample_size_column: str,
+    ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
 

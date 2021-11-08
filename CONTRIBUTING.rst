@@ -76,8 +76,9 @@ Ready to contribute? Here's how to set up `confidence` for local development.
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
+5. When you're done making changes, format using `make black`, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
 
+    $ make black
     $ flake8 confidence tests
     $ python setup.py test or py.test
     $ tox

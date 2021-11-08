@@ -90,3 +90,6 @@ install-test: clean
 
 install-prod: clean
 	pip3 install confidence-spotify
+
+black:
+	black spotify_confidence tests --line-length 119
