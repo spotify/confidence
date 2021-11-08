@@ -2,8 +2,8 @@ from typing import Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
-from scipy import stats as st
 from scipy import optimize
+from scipy import stats as st
 from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
@@ -28,9 +28,13 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_HOMMEL,
     SPOT_1_SIMES_HOCHBERG,
     NIM,
-    ADJUSTED_ALPHA,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
     ADJUSTED_POWER,
     ALTERNATIVE_HYPOTHESIS,
+    POWERED_EFFECT,
+    POWERED_EFFECT_METRIC,
+    REQUIRED_SAMPLE_SIZE,
+    REQUIRED_SAMPLE_SIZE_METRIC,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -293,13 +297,15 @@ class ZTestComputer(object):
         self,
         row: Series,
     ) -> Series:
-        proportion_of_total = 1  # TODO
-        z_alpha = st.norm.ppf(1 - row[ADJUSTED_ALPHA] / (2 if row[PREFERENCE_TEST] == TWO_SIDED else 1))
+        z_alpha = st.norm.ppf(
+            1 - row[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] / (2 if row[PREFERENCE_TEST] == TWO_SIDED else 1)
+        )
         z_power = st.norm.ppf(row[ADJUSTED_POWER])
         n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
-        kappa = n2 / n1
+        kappa = n1 / n2
         binary = row[self._numerator_sumsq + SFX1] == row[self._numerator + SFX1]
         current_number_of_units = n1 + n2
+        proportion_of_total = current_number_of_units / row[f"current_total_{self._denominator}"]
 
         if isinstance(row[NIM], float):
             non_inferiority = not np.isnan(row[NIM])
@@ -308,7 +314,18 @@ class ZTestComputer(object):
         else:
             raise ValueError("NIM has to be type float or None.")
 
-        row["powered_effect"] = self._powered_effect(
+        row[POWERED_EFFECT] = self._powered_effect(
+            df=row,
+            kappa=kappa,
+            proportion_of_total=1,
+            z_alpha=z_alpha,
+            z_power=z_power,
+            binary=binary,
+            current_number_of_units=current_number_of_units,
+            non_inferiority=non_inferiority,
+        )
+
+        row[POWERED_EFFECT_METRIC] = self._powered_effect(
             df=row,
             kappa=kappa,
             proportion_of_total=proportion_of_total,
@@ -319,20 +336,31 @@ class ZTestComputer(object):
             non_inferiority=non_inferiority,
         )
 
-        if (ALTERNATIVE_HYPOTHESIS + SFX1) in row and NULL_HYPOTHESIS in row:
-            row["required_sample_size"] = self._required_sample_size(
+        if ALTERNATIVE_HYPOTHESIS in row and NULL_HYPOTHESIS in row and row[ALTERNATIVE_HYPOTHESIS] is not None:
+            row[REQUIRED_SAMPLE_SIZE] = self._required_sample_size(
+                proportion_of_total=1,
+                z_alpha=z_alpha,
+                z_power=z_power,
+                binary=binary,
+                non_inferiority=non_inferiority,
+                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS],
+                control_avg=row[POINT_ESTIMATE + SFX1],
+                control_var=row[VARIANCE + SFX1],
+                kappa=kappa,
+            )
+            row[REQUIRED_SAMPLE_SIZE_METRIC] = self._required_sample_size(
                 proportion_of_total=proportion_of_total,
                 z_alpha=z_alpha,
                 z_power=z_power,
                 binary=binary,
                 non_inferiority=non_inferiority,
-                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS + SFX1] - row[NULL_HYPOTHESIS],
+                hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS],
                 control_avg=row[POINT_ESTIMATE + SFX1],
                 control_var=row[VARIANCE + SFX1],
                 kappa=kappa,
             )
         else:
-            row["required_sample_size"] = None
+            row[REQUIRED_SAMPLE_SIZE] = None
 
         return row
 

@@ -18,13 +18,13 @@ from pandas import DataFrame
 
 from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
 from .confidence_computers.generic_computer import GenericComputer
-from .generic_test import GenericTest
+from .experiment import Experiment
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import listify
 
 
-class ZTestLinreg(GenericTest):
+class ZTestLinreg(Experiment):
     def __init__(
         self,
         data_frame: DataFrame,
@@ -44,26 +44,6 @@ class ZTestLinreg(GenericTest):
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
     ):
-
-        computer = GenericComputer(
-            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test-linreg"}),
-            numerator_column=numerator_column,
-            numerator_sum_squares_column=numerator_sum_squares_column,
-            denominator_column=denominator_column,
-            categorical_group_columns=listify(categorical_group_columns),
-            feature_column=feature_column,
-            feature_sum_squares_column=feature_sum_squares_column,
-            feature_cross_sum_column=feature_cross_sum_column,
-            ordinal_group_column=ordinal_group_column,
-            interval_size=interval_size,
-            correction_method=correction_method.lower(),
-            method_column=METHOD_COLUMN_NAME,
-            bootstrap_samples_column=None,
-            metric_column=metric_column,
-            treatment_column=treatment_column,
-            power=power
-        )
-
         super().__init__(
             data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test-linreg"}),
             numerator_column=numerator_column,
@@ -73,10 +53,13 @@ class ZTestLinreg(GenericTest):
             ordinal_group_column=ordinal_group_column,
             interval_size=interval_size,
             correction_method=correction_method,
-            confidence_computer=computer,
+            confidence_computer=confidence_computer,
             confidence_grapher=confidence_grapher,
             method_column=METHOD_COLUMN_NAME,
             metric_column=metric_column,
             treatment_column=treatment_column,
             power=power,
+            feature_column=feature_column,
+            feature_sum_squares_column=feature_sum_squares_column,
+            feature_cross_sum_column=feature_cross_sum_column
         )

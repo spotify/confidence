@@ -93,6 +93,9 @@ class TestCategorical(object):
             metric_column=None,
             treatment_column=None,
             power=0.8,
+            feature_column=None,
+            feature_sum_squares_column=None,
+            feature_cross_sum_column=None,
         )
         diff_se = comp._std_err(
             pd.DataFrame(

@@ -105,6 +105,9 @@ class TestCategorical(object):
             correction_method="Bonferroni",
             method_column="method",
             bootstrap_samples_column=None,
+            feature_column=None,
+            feature_sum_squares_column=None,
+            feature_cross_sum_column=None,
         )
         diff_se = comp._std_err(
             pd.DataFrame(

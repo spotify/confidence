@@ -67,7 +67,7 @@ class ZTestLinregComputer(ZTestComputer):
 
     def _point_estimate(self, row: Series) -> float:
 
-        if (row[self._denominator] == 0):
+        if row[self._denominator] == 0:
             raise ValueError(
                 """Can't compute point estimate:
                                 denominator is 0"""

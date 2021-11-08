@@ -26,8 +26,7 @@ from spotify_confidence.analysis.confidence_utils import (
     level2str,
     listify,
     add_nim_columns,
-    validate_and_rename_nims,
-    validate_and_rename_column,
+    validate_and_rename_columns,
     add_mde_columns,
     get_all_categorical_group_columns,
     get_all_group_columns,
@@ -46,6 +45,7 @@ from spotify_confidence.analysis.constants import (
     STD_ERR,
     ALPHA,
     ADJUSTED_ALPHA,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
     POWER,
     POWERED_EFFECT,
     ADJUSTED_POWER,
@@ -55,6 +55,7 @@ from spotify_confidence.analysis.constants import (
     IS_SIGNIFICANT,
     REQUIRED_SAMPLE_SIZE,
     NULL_HYPOTHESIS,
+    ALTERNATIVE_HYPOTHESIS,
     NIM,
     PREFERENCE,
     PREFERENCE_TEST,
@@ -87,10 +88,6 @@ from spotify_confidence.analysis.constants import (
     CHI2,
     TTEST,
     ZTEST,
-    BOOTSTRAP,
-    NIM_TYPE,
-    CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
-    BOOTSTRAP,
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     ZTESTLINREG,
@@ -101,31 +98,32 @@ from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_co
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer import ZTestLinregComputer
-
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
+
 
 def sequential_bounds(t: np.array, alpha: float, sides: int):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
+
 
 class GenericComputer(ConfidenceComputerABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
-        numerator_sum_squares_column: str,
-        denominator_column: str,
+        numerator_column: Union[str, None],
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: Union[str, None],
         categorical_group_columns: Union[str, Iterable],
-        ordinal_group_column: str,
+        ordinal_group_column: Union[str, None],
         interval_size: float,
         correction_method: str,
         method_column: str,
-        bootstrap_samples_column: str,
+        bootstrap_samples_column: Union[str, None],
         metric_column: Union[str, None],
         treatment_column: Union[str, None],
         power: float,
-        feature_column: str,
-        feature_sum_squares_column: str,
-        feature_cross_sum_column: str,
+        feature_column: Union[str, None],
+        feature_sum_squares_column: Union[str, None],
+        feature_cross_sum_column: Union[str, None],
     ):
 
         self._df = data_frame
@@ -154,7 +152,6 @@ class GenericComputer(ConfidenceComputerABC):
         self._interval_size = interval_size
         self._power = power
         self._treatment_column = treatment_column
-
         self._feature = feature_column
         self._feature_ssq = feature_sum_squares_column
         self._feature_cross = feature_cross_sum_column
@@ -172,9 +169,7 @@ class GenericComputer(ConfidenceComputerABC):
             )
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
-
         self._regression_group_columns = get_all_group_columns(self._metric_column, self._ordinal_group_column)
-
         self._bootstrap_samples_column = bootstrap_samples_column
 
         columns_that_must_exist = []
@@ -248,11 +243,10 @@ class GenericComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
-            if self._regression_group_columns is not None:
+            if self._regression_group_columns is not None and len(self._regression_group_columns) > 0:
                 self._df = self._df.groupby(self._regression_group_columns).apply(self._estimate_slope)
             self._sufficient = (
-                self._df
-                .assign(**{POINT_ESTIMATE: self._point_estimate})
+                self._df.assign(**{POINT_ESTIMATE: self._point_estimate})
                 .assign(**{VARIANCE: self._variance})
                 .pipe(self._add_point_estimate_ci)
             )
@@ -394,10 +388,28 @@ class GenericComputer(ConfidenceComputerABC):
             (level2str(l[0]), level2str(l[1])) if level_as_reference else (level2str(l[1]), level2str(l[0]))
             for l in levels
         ]
+
+        def assign_total_denominator(df, groupby):
+            if self._denominator is None:
+                return df.assign(**{f"current_total_{self._denominator}": None})
+
+            if len(groupby) == 0:
+                return df.assign(
+                    **{f"current_total_{self._denominator}": self._sufficient_statistics[self._denominator].sum()}
+                )
+            else:
+                return df.merge(
+                    df.groupby(groupby)[self._denominator]
+                    .sum()
+                    .reset_index()
+                    .rename(columns={self._denominator: f"current_total_{self._denominator}"})
+                )
+
         return (
             self._sufficient_statistics.assign(
                 level=self._sufficient_statistics[level_columns].agg(level2str, axis="columns")
             )
+            .pipe(assign_total_denominator, groupby)
             .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
             .pipe(
                 self._create_comparison_df,
@@ -448,10 +460,25 @@ class GenericComputer(ConfidenceComputerABC):
                 + "and level_1 != level_2"
             )
             # TODO: validate_and_rename_mdes
-            .pipe(validate_and_rename_nims)
-            .pipe(validate_and_rename_column, final_expected_sample_size_column)
-            .pipe(validate_and_rename_column, mde_column)
-            .pipe(validate_and_rename_column, self._method_column)
+            .pipe(validate_and_rename_columns, NIM)
+            .pipe(validate_and_rename_columns, mde_column)
+            .pipe(validate_and_rename_columns, PREFERENCE)
+            .pipe(validate_and_rename_columns, final_expected_sample_size_column)
+            .pipe(validate_and_rename_columns, self._method_column)
+            .rename(
+                columns={
+                    NULL_HYPOTHESIS + SFX1: NULL_HYPOTHESIS,
+                    ALTERNATIVE_HYPOTHESIS + SFX1: ALTERNATIVE_HYPOTHESIS,
+                    f"current_total_{self._denominator}{SFX1}": f"current_total_{self._denominator}",
+                }
+            )
+            .drop(
+                columns=[
+                    NULL_HYPOTHESIS + SFX2,
+                    ALTERNATIVE_HYPOTHESIS + SFX2,
+                    f"current_total_{self._denominator}{SFX2}",
+                ]
+            )
             .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
             .assign(**{STD_ERR: self._std_err})
             .pipe(
@@ -459,9 +486,9 @@ class GenericComputer(ConfidenceComputerABC):
                 final_expected_sample_size_column=final_expected_sample_size_column,
                 filtered_sufficient_statistics=filtered_sufficient_statistics,
             )
-            .pipe(self._adjust_if_absolute, absolute=absolute)
             .pipe(self._add_adjusted_power)
             .apply(self._powered_effect_and_required_sample_size, mde_column=mde_column, axis=1)
+            .pipe(self._adjust_if_absolute, absolute=absolute)
             .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
         )
 
@@ -480,6 +507,7 @@ class GenericComputer(ConfidenceComputerABC):
                 .assign(**{ADJUSTED_LOWER: df[ADJUSTED_LOWER] / df[POINT_ESTIMATE + SFX1]})
                 .assign(**{ADJUSTED_UPPER: df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
                 .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
             )
 
     def _corrections_power(self, number_of_success_metrics: int, number_of_guardrail_metrics: int) -> int:
@@ -556,6 +584,7 @@ class GenericComputer(ConfidenceComputerABC):
                 df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(
                     df, final_expected_sample_size_column, filtered_sufficient_statistics, n_comparisons
                 )
+                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
                 df[P_VALUE] = None
                 df[ADJUSTED_P] = None
@@ -586,6 +615,7 @@ class GenericComputer(ConfidenceComputerABC):
 
                 groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
                 df[ADJUSTED_ALPHA] = df[ALPHA] / self._get_num_comparisons(df, self._correction_method, groupby)
+                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
                 is_significant, adjusted_p, _, _ = multipletests(
                     pvals=df[P_VALUE], alpha=1 - self._interval_size, method=correction_method
                 )
@@ -600,6 +630,7 @@ class GenericComputer(ConfidenceComputerABC):
                 groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
                 n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
                 df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
                 df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
             else:
@@ -766,9 +797,12 @@ class GenericComputer(ConfidenceComputerABC):
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._variance(row), axis=1)
 
     def _estimate_slope(self, df: DataFrame) -> Series:
-        if all(df[self._method_column]== ZTESTLINREG):
+        if all(df[self._method_column] == ZTESTLINREG):
             if self._metric_column is not None:
-                return self._confidence_computers[ZTESTLINREG]._estimate_slope(df)  # TODO: Should be .groupby(_metric_column)!!!
+                return self._confidence_computers[ZTESTLINREG]._estimate_slope(
+                    df
+                )  # TODO: Should be .groupby(_metric_column)!!!
+        return df
 
     def _std_err(self, df: DataFrame) -> Series:
         return df.apply(lambda row: self._confidence_computers[row[self._method_column]]._std_err(row), axis=1)
@@ -788,12 +822,12 @@ class GenericComputer(ConfidenceComputerABC):
     def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
         return self._confidence_computers[row[self._method_column]]._ci(row, alpha_column=alpha_column)
 
-    def _powered_effect_and_required_sample_size(self, row, mde_column) -> DataFrame:
+    def _powered_effect_and_required_sample_size(self, row: Series, mde_column: str) -> DataFrame:
         if row[self._method_column] != ZTEST and mde_column in row:
             raise ValueError("Minimum detectable effects only supported for ZTest.")
         elif row[self._method_column] != ZTEST or row[ADJUSTED_POWER] is None:
-            row["powered_effect"] = None
-            row["required_sample_size"] = None
+            row[POWERED_EFFECT] = None
+            row[REQUIRED_SAMPLE_SIZE] = None
             return row
         else:
             return self._confidence_computers[row[self._method_column]]._powered_effect_and_required_sample_size(row)
