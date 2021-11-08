@@ -12,19 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, Tuple
+from typing import Union, Iterable
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from spotify_confidence.analysis.frequentist.generic_test import GenericTest
-from spotify_confidence.analysis.confidence_utils import listify
-from spotify_confidence.analysis.constants import BONFERRONI, NIM_TYPE, METHOD_COLUMN_NAME
+from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
+from spotify_confidence.analysis.frequentist.experiment import Experiment
 
 
-class ChiSquared(GenericTest):
+class ChiSquared(Experiment):
     def __init__(
         self,
         data_frame: DataFrame,
@@ -36,66 +34,22 @@ class ChiSquared(GenericTest):
         correction_method: str = BONFERRONI,
         confidence_computer: ConfidenceComputerABC = None,
         confidence_grapher: ConfidenceGrapherABC = None,
+        metric_column: Union[str, None] = None,
+        treatment_column: Union[str, None] = None,
     ):
-
-        if confidence_computer is None:
-            confidence_computer = GenericComputer(
-                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
-                numerator_column=numerator_column,
-                numerator_sum_squares_column=numerator_column,
-                denominator_column=denominator_column,
-                categorical_group_columns=listify(categorical_group_columns),
-                ordinal_group_column=ordinal_group_column,
-                interval_size=interval_size,
-                correction_method=correction_method.lower(),
-                method_column=METHOD_COLUMN_NAME,
-                bootstrap_samples_column=None,
-            )
-
         super(ChiSquared, self).__init__(
-            data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
-            numerator_column,
-            numerator_column,
-            denominator_column,
-            categorical_group_columns,
-            ordinal_group_column,
-            interval_size,
-            correction_method,
-            confidence_computer,
-            confidence_grapher,
-            METHOD_COLUMN_NAME,
-        )
-
-    def difference(
-        self,
-        level_1: Union[str, Tuple],
-        level_2: Union[str, Tuple],
-        absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
-    ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError(
-                "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
-            )
-        return super(ChiSquared, self).difference(
-            level_1, level_2, absolute, groupby, None, final_expected_sample_size_column
-        )
-
-    def multiple_difference(
-        self,
-        level: Union[str, Tuple],
-        absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        level_as_reference: bool = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
-    ) -> DataFrame:
-        if non_inferiority_margins is not None:
-            raise ValueError(
-                "Non-inferiority margins not supported in " "ChiSquared. Use StudentsTTest or ZTest instead."
-            )
-        return super(ChiSquared, self).multiple_difference(
-            level, absolute, groupby, level_as_reference, None, final_expected_sample_size_column
+            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "chi-squared"}),
+            numerator_column=numerator_column,
+            numerator_sum_squares_column=numerator_column,
+            denominator_column=denominator_column,
+            categorical_group_columns=categorical_group_columns,
+            ordinal_group_column=ordinal_group_column,
+            interval_size=interval_size,
+            correction_method=correction_method,
+            confidence_computer=confidence_computer,
+            confidence_grapher=confidence_grapher,
+            method_column=METHOD_COLUMN_NAME,
+            metric_column=metric_column,
+            treatment_column=treatment_column,
+            power=0.8,
         )
