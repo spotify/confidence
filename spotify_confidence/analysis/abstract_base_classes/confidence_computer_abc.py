@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Union, Iterable
+from typing import Union, Iterable, List, Tuple
 
 from pandas import DataFrame
 
@@ -36,6 +36,7 @@ class ConfidenceComputerABC(ABC):
         nims: NIM_TYPE,
         final_expected_sample_size_column: str,
         verbose: bool,
+        mde_column: str,
     ) -> DataFrame:
         """Return dataframe containing the difference in means between
         group 1 and 2, p-value and confidence interval
@@ -52,9 +53,25 @@ class ConfidenceComputerABC(ABC):
         nims: NIM_TYPE,
         final_expected_sample_size_column: str,
         verbose: bool,
+        mde_column: str,
     ) -> DataFrame:
-        """The pairwise probability that the specific group
-        is greater than all other groups.
+        """Return dataframe containing the difference in means between
+        level and all other groups, with p-value and confidence interval
+        """
+        pass
+
+    def compute_differences(
+        self,
+        levels: List[Tuple],
+        absolute: bool,
+        groupby: Union[str, Iterable],
+        nims: NIM_TYPE,
+        final_expected_sample_size_column: str,
+        verbose: bool,
+        mde_column: str,
+    ) -> DataFrame:
+        """Return dataframe containing the difference in means between
+        level and all other groups, with p-value and confidence interval
         """
         pass
 

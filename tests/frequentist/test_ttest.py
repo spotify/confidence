@@ -98,7 +98,10 @@ class TestCategorical(object):
             denominator_column="n",
             categorical_group_columns=["group"],
             ordinal_group_column=None,
+            metric_column=None,
+            treatment_column=None,
             interval_size=None,
+            power=0.8,
             correction_method="Bonferroni",
             method_column="method",
             bootstrap_samples_column=None,
@@ -184,7 +187,7 @@ class TestCategorical(object):
         assert np.allclose(diff["p-value"], np.array([0.380282, 0.000000]))
 
     def test_difference_with_interval_sizes(self):
-        """ '
+        """
         https: // www.quantitativeskills.com / sisa / statistics / t - test.htm
         was used to validate results
         """

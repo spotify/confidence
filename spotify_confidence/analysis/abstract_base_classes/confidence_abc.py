@@ -47,10 +47,13 @@ class ConfidenceABC(ABC):
         numerator_column: str,
         numerator_sum_squares_column: Union[str, None],
         denominator_column: str,
-        categorical_group_columns: Union[str, Iterable],
+        categorical_group_columns: Union[str, Iterable, None],
         ordinal_group_column: Union[str, None],
         interval_size: float,
         correction_method: str,
+        metric_column: Union[str, None],
+        treatment_column: Union[str, None],
+        power: float,
     ):
         pass
 
@@ -73,6 +76,7 @@ class ConfidenceABC(ABC):
         non_inferiority_margins: NIM_TYPE,
         final_expected_sample_size_column: str,
         verbose: bool,
+        minimum_detectable_effects_column: str,
     ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
@@ -97,6 +101,8 @@ class ConfidenceABC(ABC):
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
             verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+            minimum_detectable_effects_column (str): The minimum detectable effect, used for calculating required
+            sample size.
 
         Returns:
             Dataframe containing the difference in means between
@@ -114,6 +120,7 @@ class ConfidenceABC(ABC):
         non_inferiority_margins: NIM_TYPE,
         final_expected_sample_size_column: str,
         verbose: bool,
+        minimum_detectable_effects_column: str,
     ) -> DataFrame:
         """Args:
             levels: (list(tuple)): list of levels to compare
@@ -139,6 +146,8 @@ class ConfidenceABC(ABC):
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
             verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+            minimum_detectable_effects_column (str): The minimum detectable effect, used for calculating required
+            sample size.
 
         Returns:
             Dataframe containing the difference in means between
@@ -157,6 +166,7 @@ class ConfidenceABC(ABC):
         non_inferiority_margins: NIM_TYPE,
         final_expected_sample_size_column: str,
         verbose: bool,
+        minimum_detectable_effects_column: str,
     ) -> DataFrame:
         """Args:
             groupby (str): Name of column.
@@ -185,6 +195,8 @@ class ConfidenceABC(ABC):
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
             verbose (bool): include columns used in intermediate steps in the calculations in returned dataframe.
+            minimum_detectable_effects_column (str): The minimum detectable effect, used for calculating required
+            sample size.
 
         Returns:
             Dataframe containing the difference in means between

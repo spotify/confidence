@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from typing import Union, Iterable, Tuple, List
-from pandas import DataFrame, concat, Series
+
 import numpy as np
+from pandas import DataFrame, concat, Series
 from scipy.stats import norm
 
 from spotify_confidence.analysis.constants import (
@@ -27,16 +29,23 @@ from spotify_confidence.analysis.constants import (
     NIM,
     NULL_HYPOTHESIS,
     PREFERENCE,
+    ALTERNATIVE_HYPOTHESIS,
     SFX1,
     SFX2,
     POINT_ESTIMATE,
 )
 
 
-def get_all_group_columns(categorical_columns: Iterable, ordinal_column: str) -> Iterable:
-    all_columns = categorical_columns + [ordinal_column]
-    all_columns = [col for col in all_columns if col is not None]
-    return all_columns
+def get_all_group_columns(categorical_columns: Iterable, additional_column: str) -> Iterable:
+    all_columns = listify(categorical_columns) + listify(additional_column)
+    return list(OrderedDict.fromkeys(all_columns))
+
+
+def remove_group_columns(categorical_columns: Iterable, additional_column: str) -> Iterable:
+    od = OrderedDict.fromkeys(categorical_columns)
+    if additional_column is not None:
+        del od[additional_column]
+    return list(od)
 
 
 def validate_categorical_columns(categorical_group_columns: Union[str, Iterable]) -> Iterable:
@@ -69,6 +78,15 @@ def get_remaning_groups(all_groups: Iterable, some_groups: Iterable) -> Iterable
     return remaining_groups
 
 
+def get_all_categorical_group_columns(
+    categorical_columns: Union[str, Iterable, None],
+    metric_column: Union[str, None],
+    treatment_column: Union[str, None],
+) -> Iterable:
+    all_columns = listify(treatment_column) + listify(categorical_columns) + listify(metric_column)
+    return list(OrderedDict.fromkeys(all_columns))
+
+
 def validate_levels(df: DataFrame, level_columns: Union[str, Iterable], levels: Iterable):
     for level in levels:
         try:
@@ -86,6 +104,47 @@ def validate_levels(df: DataFrame, level_columns: Union[str, Iterable], levels: 
             )
 
 
+def add_mde_columns(df: DataFrame, mde_column: str) -> DataFrame:
+    def _mde_2_signed_mde(mde: Tuple[float, str]) -> Tuple[float, float, str]:
+        mde_value = None if (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
+        if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
+            return (mde[0], mde_value, TWO_SIDED)
+        elif mde[1].lower() == INCREASE_PREFFERED:
+            return (mde[0], None if mde_value is None else -mde_value, "larger")
+        elif mde[1].lower() == DECREASE_PREFFERED:
+            return (mde[0], mde_value, "smaller")
+
+    if mde_column is not None:
+        return (
+            df.assign(
+                tmp_alt_hyp_dir=df.apply(
+                    lambda row: _mde_2_signed_mde(
+                        (
+                            row[mde_column],
+                            (row[PREFERRED_DIRECTION_INPUT_NAME] if PREFERRED_DIRECTION_INPUT_NAME in row else np.nan),
+                        )
+                    ),
+                    axis=1,
+                )
+            )
+            .assign(
+                **{
+                    ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
+                        lambda row: None
+                        if row["tmp_alt_hyp_dir"][1] is None
+                        else row[POINT_ESTIMATE] * row["tmp_alt_hyp_dir"][1],
+                        axis=1,
+                    )
+                }
+            )
+            .assign(**{PREFERENCE: lambda df: df.apply(lambda row: row["tmp_alt_hyp_dir"][2], axis=1)})
+            .drop(columns=[mde_column, "tmp_alt_hyp_dir"])
+            .assign(**{NULL_HYPOTHESIS: 0})
+        )
+    else:
+        return df
+
+
 def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
     def _nim_2_signed_nim(nim: Tuple[float, str]) -> Tuple[float, float, str]:
         nim_value = 0 if nim[0] is None or (type(nim[0]) is float and np.isnan(nim[0])) else nim[0]
@@ -99,12 +158,18 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             raise ValueError(f"{nim[1].lower()} not in " f"{[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
 
     if nims is None:
-        return df.assign(**{NIM: None}).assign(**{NULL_HYPOTHESIS: 0}).assign(**{PREFERENCE: TWO_SIDED})
+        return (
+            df.assign(**{NIM: None})
+            .assign(**{NULL_HYPOTHESIS: 0})
+            .assign(**{PREFERENCE: TWO_SIDED})
+            .assign(**{ALTERNATIVE_HYPOTHESIS: None})
+        )
     elif type(nims) is tuple:
         return (
             df.assign(**{NIM: _nim_2_signed_nim((nims[0], nims[1]))[0]})
             .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * _nim_2_signed_nim((nims[0], nims[1]))[1]})
             .assign(**{PREFERENCE: _nim_2_signed_nim((nims[0], nims[1]))[2]})
+            .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     elif type(nims) is dict:
         sgnd_nims = {group: _nim_2_signed_nim(nim) for group, nim in nims.items()}
@@ -115,6 +180,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             df.assign(**{NIM: nim_df[NIM]})
             .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * nim_df[NULL_HYPOTHESIS]})
             .assign(**{PREFERENCE: nim_df[PREFERENCE]})
+            .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     elif type(nims) is bool:
         return (
@@ -135,6 +201,7 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
                     )
                 }
             )
+            .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
         )
     else:
         raise ValueError(f"non_inferiority_margins must be None, tuple, dict," f"or DataFrame, but is {type(nims)}.")
@@ -150,26 +217,14 @@ def equals_none_or_nan(x, y):
     )
 
 
-def validate_and_rename_nims(df: DataFrame) -> DataFrame:
-    if (
-        df.apply(lambda row: equals_none_or_nan(row[NIM + SFX1], row[NIM + SFX2]), axis=1).all()
-        and df.apply(lambda row: equals_none_or_nan(row[PREFERENCE + SFX1], row[PREFERENCE + SFX2]), axis=1).all()
-    ):
-        return df.rename(
-            columns={NIM + SFX1: NIM, NULL_HYPOTHESIS + SFX1: NULL_HYPOTHESIS, PREFERENCE + SFX1: PREFERENCE}
-        ).drop(columns=[NIM + SFX2, NULL_HYPOTHESIS + SFX2, PREFERENCE + SFX2])
-
-    raise ValueError("Non-inferiority margins do not agree across levels")
-
-
-def validate_and_rename_column(df: DataFrame, column: str) -> DataFrame:
-    if column is None:
+def validate_and_rename_columns(df: DataFrame, column: str) -> DataFrame:
+    if column is None or column + SFX1 not in df.columns or column + SFX2 not in df.columns:
         return df
 
     if df.apply(lambda row: equals_none_or_nan(row[column + SFX1], row[column + SFX2]), axis=1).all():
         return df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])
 
-    raise ValueError(f"Values of {column} do not agree across levels")
+    raise ValueError(f"Values of {column} do not agree across levels: {df[[column + SFX1, column + SFX2]]}")
 
 
 def select_levels(
