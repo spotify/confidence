@@ -2,6 +2,13 @@
 History
 =======
 
+2.4.0 (2021-11-08)
+------------------
+
+* Introduce Experiment class for mixed method testing: the method_column argument specifies which column in the input dataframe that contain method names, including "z-test", "t-test" etc.
+* For confidence developers: you can (and must!) now use `make black` to auto-format the code before committing.
+* Support for bootstrap. Pass in a "bootstrap_samples_column" to specify which column that contain bootstrap point estimates and get CIs using the usual difference methods.
+
 2.3.7 (2021-10-22)
 ------------------
 
