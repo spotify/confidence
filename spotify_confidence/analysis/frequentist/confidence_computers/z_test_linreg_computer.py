@@ -1,11 +1,10 @@
 from functools import reduce
 
-from pandas import DataFrame, Series
 import numpy as np
-from spotify_confidence.analysis.constants import REGRESSION_PARAM, POINT_ESTIMATE, CI_LOWER, CI_UPPER, VARIANCE
+from pandas import DataFrame, Series
 
-from spotify_confidence.analysis.confidence_utils import unlist, dfmatmul, get_all_group_columns
-
+from spotify_confidence.analysis.confidence_utils import unlist, dfmatmul
+from spotify_confidence.analysis.constants import REGRESSION_PARAM, POINT_ESTIMATE, VARIANCE
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
 
 

@@ -17,11 +17,9 @@ from typing import Union, Iterable
 from pandas import DataFrame
 
 from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
-from .confidence_computers.generic_computer import GenericComputer
 from .experiment import Experiment
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from ..confidence_utils import listify
 
 
 class ZTestLinreg(Experiment):
@@ -61,5 +59,5 @@ class ZTestLinreg(Experiment):
             power=power,
             feature_column=feature_column,
             feature_sum_squares_column=feature_sum_squares_column,
-            feature_cross_sum_column=feature_cross_sum_column
+            feature_cross_sum_column=feature_cross_sum_column,
         )

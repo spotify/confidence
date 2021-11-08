@@ -91,7 +91,6 @@ from spotify_confidence.analysis.constants import (
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     ZTESTLINREG,
-    REGRESSION_PARAM,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer import BootstrapComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
