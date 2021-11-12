@@ -32,7 +32,6 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_POWER,
     ALTERNATIVE_HYPOTHESIS,
     POWERED_EFFECT,
-    POWERED_EFFECT_METRIC,
     REQUIRED_SAMPLE_SIZE,
     REQUIRED_SAMPLE_SIZE_METRIC,
 )
@@ -321,17 +320,6 @@ class ZTestComputer(object):
             z_power=z_power,
             binary=binary,
             current_number_of_units=n1 + n2,
-            non_inferiority=non_inferiority,
-        )
-
-        row[POWERED_EFFECT_METRIC] = self._powered_effect(
-            df=row,
-            kappa=kappa,
-            proportion_of_total=proportion_of_total,
-            z_alpha=z_alpha,
-            z_power=z_power,
-            binary=binary,
-            current_number_of_units=row[f"current_total_{self._denominator}"],
             non_inferiority=non_inferiority,
         )
 
