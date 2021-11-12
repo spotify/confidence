@@ -2,6 +2,11 @@
 History
 =======
 
+2.4.1 (2021-11-12)
+------------------
+
+* Bugfix: The field "powered_effect_for_metric" in the output of the difference methods (when verbose=True) was computed using incorrect current_number_of_units
+
 2.4.0 (2021-11-08)
 ------------------
 

@@ -304,8 +304,7 @@ class ZTestComputer(object):
         n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
         kappa = n1 / n2
         binary = row[self._numerator_sumsq + SFX1] == row[self._numerator + SFX1]
-        current_number_of_units = n1 + n2
-        proportion_of_total = current_number_of_units / row[f"current_total_{self._denominator}"]
+        proportion_of_total = (n1 + n2) / row[f"current_total_{self._denominator}"]
 
         if isinstance(row[NIM], float):
             non_inferiority = not np.isnan(row[NIM])
@@ -321,7 +320,7 @@ class ZTestComputer(object):
             z_alpha=z_alpha,
             z_power=z_power,
             binary=binary,
-            current_number_of_units=current_number_of_units,
+            current_number_of_units=n1 + n2,
             non_inferiority=non_inferiority,
         )
 
@@ -332,7 +331,7 @@ class ZTestComputer(object):
             z_alpha=z_alpha,
             z_power=z_power,
             binary=binary,
-            current_number_of_units=current_number_of_units,
+            current_number_of_units=row[f"current_total_{self._denominator}"],
             non_inferiority=non_inferiority,
         )
 
@@ -363,41 +362,6 @@ class ZTestComputer(object):
             row[REQUIRED_SAMPLE_SIZE] = None
 
         return row
-
-    def _currently_powered_effect(
-        self,
-        control_avg: float,
-        control_var: float,
-        binary_metric: bool,
-        non_inferiority: bool = False,
-        power: float = None,
-        alpha: float = None,
-        kappa: float = None,
-        proportion_of_total: float = None,
-        current_number_of_units: float = None,
-    ):
-        z_alpha = st.norm.ppf(1 - alpha)
-        z_power = st.norm.ppf(power)
-
-        if binary_metric and not non_inferiority:
-            effect = self._search_MDE_binary_local_search(
-                control_avg=control_avg,
-                control_var=control_var,
-                non_inferiority=non_inferiority,
-                kappa=kappa,
-                proportion_of_total=proportion_of_total,
-                current_number_of_units=current_number_of_units,
-                z_alpha=z_alpha,
-                z_power=z_power,
-            )[0]
-        else:
-            treatment_var = self._get_hypothetical_treatment_var(
-                binary_metric, non_inferiority, control_avg, control_var, hypothetical_effect=0
-            )
-            n2_partial = np.power((z_alpha + z_power), 2) * (control_var / kappa + treatment_var)
-            effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (n2_partial + kappa * n2_partial))
-
-        return effect
 
     def _search_MDE_binary_local_search(
         self,
