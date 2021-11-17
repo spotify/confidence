@@ -39,8 +39,8 @@ from spotify_confidence.analysis.constants import (
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
 
-def sequential_bounds(t: np.array, alpha: float, sides: int):
-    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
+def sequential_bounds(t: np.array, alpha: float, sides: int, state=None):
+    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
 class ZTestComputer(object):
