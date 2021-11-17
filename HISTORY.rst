@@ -2,12 +2,13 @@
 History
 =======
 
-2.4.2 (2021-11-12)
+2.4.2 (2021-11-24)
 ------------------
 
 * Bugfix: When you had some metrics with NIMs and some with MDEs, one of them overrid the other
-* Switching to using N-1 instead of N in denominator of variance estimate to get unbiased estimator for smaller sample sizes
+* Switching to using N-1 instead of N in denominator of variance estimate to get unbiased estimator for smaller sample sizes. For binary metrics we still use the old formula, equivalent to p*(1-p).
 * Removing powered_effect_metric column because it's identical to powered_effect after bugfix in 2.4.1
+* Minor performace and robustness tweaks to sequential bounds solver.
 
 2.4.1 (2021-11-12)
 ------------------

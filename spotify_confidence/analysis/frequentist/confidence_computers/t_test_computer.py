@@ -34,9 +34,15 @@ class TTestComputer(object):
         return row[self._numerator] / row[self._denominator]
 
     def _variance(self, row: Series) -> float:
-        variance = (row[self._numerator_sumsq] - np.power(row[self._numerator], 2) / row[self._denominator]) / (
-            row[self._denominator] - 1
-        )
+        binary = row[self._numerator_sumsq] == row[self._numerator]
+        if binary:
+            # This equals row[POINT_ESTIMATE]*(1-row[POINT_ESTIMATE]) when the data is binary,
+            # and also gives a robust fallback in case it's not
+            variance = row[self._numerator_sumsq] / row[self._denominator] - row[POINT_ESTIMATE] ** 2
+        else:
+            variance = (row[self._numerator_sumsq] - np.power(row[self._numerator], 2) / row[self._denominator]) / (
+                row[self._denominator] - 1
+            )
         if variance < 0:
             raise ValueError("Computed variance is negative. " "Please check your inputs.")
         return variance

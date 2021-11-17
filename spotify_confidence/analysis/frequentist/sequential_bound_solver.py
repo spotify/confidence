@@ -38,11 +38,10 @@ def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: floa
 def _bsearch(
     last: np.array,
     nints: int,
-    i: float,
     pd: float,
     stdv: float,
-    ya: np.array,
-    yb: np.array,
+    ya: float,
+    yb: float,
 ) -> np.array:
     """
     Note: function signature slightly modified in comparison to R implementation (which takes complete nints
@@ -51,8 +50,8 @@ def _bsearch(
     max_iter = 50
     tol = 1e-7
     de = 10
-    uppr = yb[i - 1]
-    q = _qp(uppr, last, nints, ya[i - 1], yb[i - 1], stdv)
+    uppr = yb
+    q = _qp(uppr, last, nints, ya, yb, stdv)
     while abs(q - pd) > tol:
         de = de / 10
         temp = 1 if q > (pd + tol) else 0
@@ -60,7 +59,7 @@ def _bsearch(
         j = 1
         while j <= max_iter:
             uppr = uppr + incr * de
-            q = _qp(uppr, last, nints, ya[i - 1], yb[i - 1], stdv)
+            q = _qp(uppr, last, nints, ya, yb, stdv)
             if abs(q - pd) > tol and j >= max_iter:
                 break
             elif (incr == 1 and q <= (pd + tol)) or (incr == -1 and q >= (pd - tol)):
@@ -75,19 +74,14 @@ _NORM_CONSTANT = 1 / np.sqrt(2 * np.pi)
 
 
 def _fast_norm_pdf_prescaled(x: np.array, scale):
-    norm_constant2 = 1 / (scale * np.sqrt(2 * np.pi))
+    norm_constant2 = _NORM_CONSTANT / scale
     pdf_val = norm_constant2 * np.exp(-0.5 * np.power(x, 2))
     return pdf_val
 
 
 def _fcab(last: np.array, nints: int, yam1: float, h: float, x: np.array, stdv: float):
-    nints = int(nints)
-    x_tiled = np.tile(x, nints + 1)
-    x_reshaped = x_tiled.reshape(nints + 1, len(x))
-    lin_calc_transposed = np.transpose(
-        np.tile((h * np.linspace(0, nints, nints + 1) + yam1), len(x)).reshape(len(x), nints + 1)
-    )
-    scaled_x = (lin_calc_transposed - x_reshaped) / stdv
+    X, Y = np.meshgrid(x / stdv, (h * np.linspace(0, nints, nints + 1) + yam1) / stdv)
+    scaled_x = Y - X
     pdf_prescaled = _fast_norm_pdf_prescaled(scaled_x, stdv)
     last_transposed = np.transpose(np.tile(last, len(x)).reshape(len(x), nints + 1))
 
@@ -172,7 +166,7 @@ def landem(
     zninf = -ztrun
     tol = 1e-7
 
-    t2 = t  # ldbounds:::bounds() rescales t2=t/t.max() by default. We omit this because impact on bounds unclear
+    # t2 = t  # ldbounds:::bounds() rescales t2=t/t.max() by default. We omit this because impact on bounds unclear
 
     if df.isnull().all().all():
         # start at index 0 if df was not yet initialized
@@ -183,11 +177,13 @@ def landem(
         start = zb_null_arr[0][0] - 1 if len(zb_null_arr[0]) > 0 else len(df) - 1
 
     rangestart = start + 1
-    for j in range(start, len(t)):
-        df.at[j, "stdv"] = np.sqrt(t2[j]) if j == 0 else np.sqrt(t2[j] - t2[j - 1])
+    if start == 0:
+        df.loc[0, "stdv"] = np.sqrt(t[0])
+
+    df.loc[start + 1 : len(t), "stdv"] = np.sqrt(t[start + 1 : len(t)] - t[start : len(t) - 1])
 
     df["pe"], df["pd"] = _alphas(alpha, phi, t)
-    df.loc[start:, "sdproc"] = np.sqrt(t2[start:])
+    df.loc[start:, "sdproc"] = np.sqrt(t[start:])
     df.loc[start:, "information_ratio"] = t[start:]
 
     if df.isnull().all(axis=0)[0]:
@@ -216,17 +212,18 @@ def landem(
 
     if len(t) >= 2:
         for i in range(rangestart, len(t)):
-            if t[i] - df["information_ratio"][i - 1] == 0:
+            if df["information_ratio"][i] - df["information_ratio"][i - 1] <= 1e-5:
                 # If information ratio difference between time steps is 0, re-use result calculated for the previous
                 # time step. Normally, it means that no data was added. We have to catch this case because nints
-                # becomes float("inf") and makes the procedure crash.
+                # becomes float("inf") and makes the procedure crash. We check against 10e-6 instead of against 0
+                # because an almost-zero information gain can cause pretty big numerical inaccuracy in practice.
                 df.iloc[i] = df.iloc[i - 1]
                 continue
 
-            if df.at[i, "pd"] < 0 or df.at[i, "pd"] > 1:
-                # Possible error in spending function.  May be due to truncation.
-                df.at[i, "pd"] = min(1, df.at[i, "pd"])
-                df.at[i, "pd"] = max(0, df.at[i, "pd"])
+            # Possible error in spending function.  May be due to truncation.
+            if df.at[i, "pd"] != 1.0:
+                df.at[i, "pd"] = df.at[i, "pe"] - df.at[i - 1, "pe"]
+            df.at[i, "pd"] = df.at[i, "pd"].clip(0, 1)
 
             if df.at[i, "pd"] < tol:
                 df.at[i, "zb"] = -zninf
@@ -241,22 +238,20 @@ def landem(
                         df.at[i, "stdv"],
                     )
                     df.at[i, "pe"] = df.at[i, "pd"] + df.at[i - 1, "pe"]
-                    if i < len(t) - 1:
-                        df.at[i + 1, "pd"] = df.at[i + 1, "pe"] - df.at[i, "pe"]
+
                 df.at[i, "yb"] = df.at[i, "zb"] * df.at[i, "sdproc"]
             elif df.at[i, "pd"] == 1.0:
                 df.at[i, "zb"] = 0.0
-                df.at[i, "zb"] = 0.0
+                df.at[i, "yb"] = 0.0
             elif tol <= df.at[i, "pd"] < 1:
 
                 df.at[i, "yb"] = _bsearch(
                     last_fcab,
                     int(df.loc[i - 1]["nints"]),  # differs from R because we modified signature of bsearch
-                    i,
                     df.at[i, "pd"],
                     df.at[i, "stdv"],
-                    df["ya"],
-                    df["yb"],
+                    df.at[i - 1, "ya"],
+                    df.at[i - 1, "yb"],
                 )
 
                 df.at[i, "zb"] = df.at[i, "yb"] / df.at[i, "sdproc"]
@@ -272,8 +267,7 @@ def landem(
                         df.at[i, "stdv"],
                     )
                     df.at[i, "pe"] = df.at[i, "pd"] + df.at[i - 1, "pe"]
-                    if i < len(t) - 1:
-                        df.at[i + 1, "pd"] = df.at[i + 1, "pe"] - df.at[i, "pe"]
+
                 df.at[i, "yb"] = df.at[i, "zb"] * df.at[i, "sdproc"]
 
             # in landem.R, the following two statements are in side==1 if clause
@@ -292,7 +286,9 @@ def landem(
                     df.at[i, "yb"],
                     int(df.at[i, "nints"] + 1),
                 )
-                last_fcab = _fcab(last_fcab, df.at[i - 1, "nints"], df.at[i - 1, "ya"], hlast, x, df.at[i, "stdv"])
+                last_fcab = _fcab(
+                    last_fcab, int(df.at[i - 1, "nints"]), df.at[i - 1, "ya"], hlast, x, df.at[i, "stdv"]
+                )
     return df, ComputationState(df, last_fcab)
 
 
@@ -339,7 +335,7 @@ def bounds(
     def get_input_str():
         return (
             f"input params: t={t}, alpha={alpha}, sides={sides}, rho={rho}, ztrun={ztrun},"
-            f"state_df={state.df.to_json()}, state_fcab={state.last_fcab}"
+            f"state_df={state.df.to_json()}, state_fcab={state.last_fcab}, max_nints={max_nints}"
         )
 
     if any(t == 0.0):
@@ -357,7 +353,12 @@ def bounds(
     df_result, new_state = landem(t, alph, rho, ztrun, state, max_nints)
 
     # guardrail check
-    if norm.ppf(1 - alph) > df_result["zb"].values[-1]:
-        raise Exception(f"Last bound is less conservative than fixed horizon bound, {get_input_str()}")
+    fixed_horizon_bound = norm.ppf(1 - alph)
+    last_sequential_bound = df_result["zb"].values[-1]
+    if fixed_horizon_bound > last_sequential_bound:
+        raise Exception(
+            f"Last bound ({last_sequential_bound}) is less conservative than fixed horizon bound "
+            f"({fixed_horizon_bound}), {get_input_str()} "
+        )
 
     return CalculationResult(df_result, new_state)

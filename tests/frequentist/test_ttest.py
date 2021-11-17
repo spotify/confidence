@@ -852,10 +852,10 @@ class TestCategoricalBinomialData(object):
         assert np.array_equal(summary.country, np.array(["us", "us", "us", "gb", "gb", "gb"]))
         assert np.array_equal(summary.point_estimate, self.data.success / self.data.total)
         assert np.allclose(
-            summary["ci_lower"], np.array([0.464638, 0.307962, 0.645285, 0.400289, 0.030591, 0.590355]), rtol=1e-3
+            summary["ci_lower"], np.array([0.464653, 0.308424, 0.645293, 0.400789, 0.049548, 0.590610]), rtol=1e-3
         )
         assert np.allclose(
-            summary["ci_upper"], np.array([0.526443, 0.499731, 0.692931, 0.599711, 0.769409, 0.742978]), rtol=1e-3
+            summary["ci_upper"], np.array([0.526427, 0.499269, 0.692923, 0.599211, 0.750452, 0.742723]), rtol=1e-3
         )
 
     def test_multiple_difference(self):
@@ -865,38 +865,28 @@ class TestCategoricalBinomialData(object):
         diff = self.test.multiple_difference(("us", "control"), level_as_reference=False)
         assert np.allclose(
             diff["adjusted p-value"],
-            np.array([1.00000000e00, 8.47296785e-01, 1.60789003e-04, 3.68641436e-01, 2.53362343e-06]),
+            np.array([1e00, 8.36850129e-01, 1.49172324e-04, 3.62369184e-01, 2.27154393e-06]),
             rtol=1e-3,
         )
         assert np.allclose(
             diff["p-value"],
-            np.array([9.82400227e-01, 1.69459357e-01, 3.21578005e-05, 7.37282872e-02, 5.06724687e-07]),
+            np.array([9.81516149e-01, 1.67370026e-01, 2.98344648e-05, 7.24738369e-02, 4.54308787e-07]),
             rtol=1e-3,
         )
         assert np.allclose(
-            diff["adjusted ci_lower"],
-            np.array([-0.52870939, -0.27749219, -0.42362922, -0.22468195, -0.39580312]),
-            rtol=1e-3,
+            diff["adjusted ci_lower"], np.array([-0.501747, -0.276600, -0.422946, -0.224093, -0.395207]), rtol=1e-3
         )
         assert np.allclose(
-            diff["adjusted ci_upper"],
-            np.array([0.5364017, 0.0851845, -0.10201181, 0.04129398, -0.13472028]),
-            rtol=1e-3,
+            diff["adjusted ci_upper"], np.array([0.509440, 0.084292, -0.102695, 0.040705, -0.135317]), rtol=1e-3
         )
 
         diff = self.test.multiple_difference("test", groupby="country", level_as_reference=False)
+        assert np.allclose(diff["adjusted p-value"], np.array([1, 0.035594, 0.289895, 0.0]), rtol=1e-3)
+        assert np.allclose(diff["p-value"], np.array([0.55155672, 0.00889848, 0.07247384, 0.0]), rtol=1e-3)
         assert np.allclose(
-            diff["adjusted p-value"], np.array([1.000000e00, 3.679225e-02, 2.949131e-01, 0.0]), rtol=1e-3
+            diff["adjusted ci_lower"], np.array([-0.385571, -0.325682, -0.036587, -0.223262]), rtol=1e-3
         )
-        assert np.allclose(
-            diff["p-value"], np.array([5.70407366e-01, 9.19806264e-03, 7.37282872e-02, 0.000]), rtol=1e-3
-        )
-        assert np.allclose(
-            diff["adjusted ci_lower"], np.array([-0.41130848, -0.32638507, -0.03715783, -0.22328344]), rtol=1e-3
-        )
-        assert np.allclose(
-            diff["adjusted ci_upper"], np.array([0.61130848, -0.00694826, 0.2205458, -0.123852]), rtol=1e-3
-        )
+        assert np.allclose(diff["adjusted ci_upper"], np.array([0.585571, -0.0076513, 0.219975, -0.123874]), rtol=1e-3)
 
 
 class TestWithNims(object):
