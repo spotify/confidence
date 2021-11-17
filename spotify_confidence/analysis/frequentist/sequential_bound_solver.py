@@ -85,7 +85,7 @@ def _fcab(last: np.array, nints: int, yam1: float, h: float, x: np.array, stdv: 
     x_tiled = np.tile(x, nints + 1)
     x_reshaped = x_tiled.reshape(nints + 1, len(x))
     lin_calc_transposed = np.transpose(
-        np.tile((h * np.linspace(0, nints, nints + 1) + yam1), len(x)).reshape(len(x), nints + 1)
+      np.tile((h * np.linspace(0, nints, nints + 1) + yam1), len(x)).reshape(len(x), nints + 1)
     )
     scaled_x = (lin_calc_transposed - x_reshaped) / stdv
     pdf_prescaled = _fast_norm_pdf_prescaled(scaled_x, stdv)
@@ -216,10 +216,11 @@ def landem(
 
     if len(t) >= 2:
         for i in range(rangestart, len(t)):
-            if t[i] - df["information_ratio"][i - 1] == 0:
+            if t[i] - df["information_ratio"][i - 1] <= 10e-6:
                 # If information ratio difference between time steps is 0, re-use result calculated for the previous
                 # time step. Normally, it means that no data was added. We have to catch this case because nints
-                # becomes float("inf") and makes the procedure crash.
+                # becomes float("inf") and makes the procedure crash. We check against 10e-6 instead of against 0
+                # because an almost-zero information gain can cause pretty big numerical inaccuracy in practice.
                 df.iloc[i] = df.iloc[i - 1]
                 continue
 
@@ -339,7 +340,7 @@ def bounds(
     def get_input_str():
         return (
             f"input params: t={t}, alpha={alpha}, sides={sides}, rho={rho}, ztrun={ztrun},"
-            f"state_df={state.df.to_json()}, state_fcab={state.last_fcab}"
+            f"state_df={state.df.to_json()}, state_fcab={state.last_fcab}, max_nints={max_nints}"
         )
 
     if any(t == 0.0):
@@ -357,7 +358,12 @@ def bounds(
     df_result, new_state = landem(t, alph, rho, ztrun, state, max_nints)
 
     # guardrail check
-    if norm.ppf(1 - alph) > df_result["zb"].values[-1]:
-        raise Exception(f"Last bound is less conservative than fixed horizon bound, {get_input_str()}")
+    fixed_horizon_bound = norm.ppf(1 - alph)
+    last_sequential_bound = df_result["zb"].values[-1]
+    if fixed_horizon_bound > last_sequential_bound:
+        raise Exception(
+            f"Last bound ({last_sequential_bound}) is less conservative than fixed horizon bound "
+            f"({fixed_horizon_bound}), {get_input_str()} "
+        )
 
     return CalculationResult(df_result, new_state)
