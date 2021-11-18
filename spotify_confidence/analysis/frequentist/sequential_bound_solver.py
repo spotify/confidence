@@ -38,11 +38,10 @@ def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: floa
 def _bsearch(
     last: np.array,
     nints: int,
-    i: float,
     pd: float,
     stdv: float,
-    ya: np.array,
-    yb: np.array,
+    ya: float,
+    yb: float,
 ) -> np.array:
     """
     Note: function signature slightly modified in comparison to R implementation (which takes complete nints
@@ -51,8 +50,8 @@ def _bsearch(
     max_iter = 50
     tol = 1e-7
     de = 10
-    uppr = yb[i - 1]
-    q = _qp(uppr, last, nints, ya[i - 1], yb[i - 1], stdv)
+    uppr = yb
+    q = _qp(uppr, last, nints, ya, yb, stdv)
     while abs(q - pd) > tol:
         de = de / 10
         temp = 1 if q > (pd + tol) else 0
@@ -60,7 +59,7 @@ def _bsearch(
         j = 1
         while j <= max_iter:
             uppr = uppr + incr * de
-            q = _qp(uppr, last, nints, ya[i - 1], yb[i - 1], stdv)
+            q = _qp(uppr, last, nints, ya, yb, stdv)
             if abs(q - pd) > tol and j >= max_iter:
                 break
             elif (incr == 1 and q <= (pd + tol)) or (incr == -1 and q >= (pd - tol)):
@@ -213,7 +212,7 @@ def landem(
 
     if len(t) >= 2:
         for i in range(rangestart, len(t)):
-            if t[i] - df["information_ratio"][i - 1] <= 1e-5:
+            if df["information_ratio"][i] - df["information_ratio"][i - 1] <= 1e-5:
                 # If information ratio difference between time steps is 0, re-use result calculated for the previous
                 # time step. Normally, it means that no data was added. We have to catch this case because nints
                 # becomes float("inf") and makes the procedure crash. We check against 10e-6 instead of against 0
@@ -222,6 +221,8 @@ def landem(
                 continue
 
             # Possible error in spending function.  May be due to truncation.
+            if df.at[i, "pd"] != 1.0:
+                df.at[i, "pd"] = df.at[i, "pe"] - df.at[i - 1, "pe"]
             df.at[i, "pd"] = df.at[i, "pd"].clip(0, 1)
 
             if df.at[i, "pd"] < tol:
@@ -237,8 +238,7 @@ def landem(
                         df.at[i, "stdv"],
                     )
                     df.at[i, "pe"] = df.at[i, "pd"] + df.at[i - 1, "pe"]
-                    if i < len(t) - 1:
-                        df.at[i + 1, "pd"] = df.at[i + 1, "pe"] - df.at[i, "pe"]
+
                 df.at[i, "yb"] = df.at[i, "zb"] * df.at[i, "sdproc"]
             elif df.at[i, "pd"] == 1.0:
                 df.at[i, "zb"] = 0.0
@@ -248,11 +248,10 @@ def landem(
                 df.at[i, "yb"] = _bsearch(
                     last_fcab,
                     int(df.loc[i - 1]["nints"]),  # differs from R because we modified signature of bsearch
-                    i,
                     df.at[i, "pd"],
                     df.at[i, "stdv"],
-                    df["ya"],
-                    df["yb"],
+                    df.at[i-1, "ya"],
+                    df.at[i-1, "yb"],
                 )
 
                 df.at[i, "zb"] = df.at[i, "yb"] / df.at[i, "sdproc"]
@@ -268,8 +267,7 @@ def landem(
                         df.at[i, "stdv"],
                     )
                     df.at[i, "pe"] = df.at[i, "pd"] + df.at[i - 1, "pe"]
-                    if i < len(t) - 1:
-                        df.at[i + 1, "pd"] = df.at[i + 1, "pe"] - df.at[i, "pe"]
+
                 df.at[i, "yb"] = df.at[i, "zb"] * df.at[i, "sdproc"]
 
             # in landem.R, the following two statements are in side==1 if clause
