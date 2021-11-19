@@ -67,14 +67,15 @@ class TestCategorical(object):
         x = np.random.randn(n)
         var = x.var()
 
+        sum = np.sum(x)
         sum_squared = np.sum(x * x)
 
         comp = TTestComputer(
-            numerator=None, numerator_sumsq="sumsq", denominator="n", ordinal_group_column=None, interval_size=None
+            numerator="sum", numerator_sumsq="sumsq", denominator="n", ordinal_group_column=None, interval_size=None
         )
-        var_to_verify = pd.DataFrame({"sumsq": [sum_squared], POINT_ESTIMATE: [x.mean()], "n": [n]}).apply(
-            lambda row: comp._variance(row), axis=1
-        )
+        var_to_verify = pd.DataFrame(
+            {"sum": [sum], "sumsq": [sum_squared], POINT_ESTIMATE: [x.mean()], "n": [n]}
+        ).apply(lambda row: comp._variance(row), axis=1)
 
         assert np.allclose(var_to_verify, var)
 
