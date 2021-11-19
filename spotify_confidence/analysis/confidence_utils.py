@@ -110,9 +110,9 @@ def add_mde_columns(df: DataFrame, mde_column: str) -> DataFrame:
         if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
             return (mde[0], mde_value, TWO_SIDED)
         elif mde[1].lower() == INCREASE_PREFFERED:
-            return (mde[0], None if mde_value is None else -mde_value, "larger")
+            return (mde[0], mde_value, "larger")
         elif mde[1].lower() == DECREASE_PREFFERED:
-            return (mde[0], mde_value, "smaller")
+            return (mde[0], None if mde_value is None else -mde_value, "smaller")
 
     if mde_column is not None:
         return (
