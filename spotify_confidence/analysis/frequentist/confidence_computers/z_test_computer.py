@@ -56,7 +56,9 @@ class ZTestComputer(object):
         return row[self._numerator] / row[self._denominator]
 
     def _variance(self, row: Series) -> float:
-        variance = row[self._numerator_sumsq] / row[self._denominator] - row[POINT_ESTIMATE] ** 2
+        variance = (row[self._numerator_sumsq] - np.power(row[self._numerator], 2) / row[self._denominator]) / (
+            row[self._denominator] - 1
+        )
         if variance < 0:
             raise ValueError("Computed variance is negative. " "Please check your inputs.")
         return variance
