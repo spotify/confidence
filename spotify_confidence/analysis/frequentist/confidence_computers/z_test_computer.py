@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 
 import numpy as np
+import pandas as pd
 from pandas import DataFrame, Series
 from scipy import optimize
 from scipy import stats as st
@@ -39,7 +40,7 @@ from spotify_confidence.analysis.constants import (
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
 
-def sequential_bounds(t: np.array, alpha: float, sides: int, state=None):
+def sequential_bounds(t: np.array, alpha: float, sides: int, state: pd.DataFrame = None):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 

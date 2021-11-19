@@ -74,7 +74,7 @@ _NORM_CONSTANT = 1 / np.sqrt(2 * np.pi)
 
 
 def _fast_norm_pdf_prescaled(x: np.array, scale):
-    norm_constant2 = _NORM_CONSTANT/scale
+    norm_constant2 = _NORM_CONSTANT / scale
     pdf_val = norm_constant2 * np.exp(-0.5 * np.power(x, 2))
     return pdf_val
 
@@ -250,8 +250,8 @@ def landem(
                     int(df.loc[i - 1]["nints"]),  # differs from R because we modified signature of bsearch
                     df.at[i, "pd"],
                     df.at[i, "stdv"],
-                    df.at[i-1, "ya"],
-                    df.at[i-1, "yb"],
+                    df.at[i - 1, "ya"],
+                    df.at[i - 1, "yb"],
                 )
 
                 df.at[i, "zb"] = df.at[i, "yb"] / df.at[i, "sdproc"]
@@ -286,7 +286,9 @@ def landem(
                     df.at[i, "yb"],
                     int(df.at[i, "nints"] + 1),
                 )
-                last_fcab = _fcab(last_fcab, int(df.at[i - 1, "nints"]), df.at[i - 1, "ya"], hlast, x, df.at[i, "stdv"])
+                last_fcab = _fcab(
+                    last_fcab, int(df.at[i - 1, "nints"]), df.at[i - 1, "ya"], hlast, x, df.at[i, "stdv"]
+                )
     return df, ComputationState(df, last_fcab)
 
 
