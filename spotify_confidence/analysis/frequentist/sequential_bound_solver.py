@@ -242,7 +242,7 @@ def landem(
                 df.at[i, "yb"] = df.at[i, "zb"] * df.at[i, "sdproc"]
             elif df.at[i, "pd"] == 1.0:
                 df.at[i, "zb"] = 0.0
-                df.at[i, "zb"] = 0.0
+                df.at[i, "yb"] = 0.0
             elif tol <= df.at[i, "pd"] < 1:
 
                 df.at[i, "yb"] = _bsearch(
