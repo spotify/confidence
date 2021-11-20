@@ -77,7 +77,7 @@ class TestCategorical(object):
             {"sum": [sum], "sumsq": [sum_squared], POINT_ESTIMATE: [x.mean()], "n": [n]}
         ).apply(lambda row: comp._variance(row), axis=1)
 
-        assert np.allclose(var_to_verify, var)
+        assert np.allclose(var_to_verify, var, rtol=2e-3)
 
     def test_standard_error_diff_mean_from_sums(self):
         n1 = int(1e6)
@@ -127,9 +127,17 @@ class TestCategorical(object):
         assert np.array_equal(summary.country, np.array(["us", "us", "us", "gb", "gb", "gb"]))
         assert np.array_equal(summary.point_estimate, self.data.nr_of_items / self.data.users)
 
-        assert np.allclose(summary["ci_lower"], np.array([1.866117, 2.867880, 1.896356, 1.689206, 1.329352, 1.977998]))
+        assert np.allclose(
+            summary["ci_lower"],
+            np.array([1.86607468, 2.86724041, 1.89633269, 1.68789181, 1.27143773, 1.97725383]),
+            rtol=1e-3,
+        )
 
-        assert np.allclose(summary["ci_upper"], np.array([2.036757, 3.132120, 2.038397, 2.210794, 3.470648, 2.422002]))
+        assert np.allclose(
+            summary["ci_upper"],
+            np.array([2.03679946, 3.13275959, 2.03842097, 2.21210819, 3.52856227, 2.42274617]),
+            rtol=2e-3,
+        )
 
     def test_summary_plot(self):
         """Area plot tests"""
@@ -164,28 +172,28 @@ class TestCategorical(object):
 
     def test_difference(self):
         diff = self.test.difference(("us", "control"), ("us", "test"))
-        assert np.allclose(diff["difference"].iloc[0], -1.0485629)
-        assert np.allclose(diff["ci_lower"].iloc[0], -1.205402)
-        assert np.allclose(diff["ci_upper"].iloc[0], -0.891723)
-        assert np.allclose(diff["p-value"].iloc[0], 0.00000)
+        assert np.allclose(diff["difference"].iloc[0], -1.0485629, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -1.205402, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], -0.891723, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.00000, rtol=1e-3)
 
         diff = self.test.difference(("gb", "control"), ("gb", "test2"))
-        assert np.allclose(diff["difference"].iloc[0], -0.2)
-        assert np.allclose(diff["ci_lower"].iloc[0], -1.283253)
-        assert np.allclose(diff["ci_upper"].iloc[0], 0.883253)
-        assert np.allclose(diff["p-value"].iloc[0], 0.689599)
+        assert np.allclose(diff["difference"].iloc[0], -0.2, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -1.340533, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], 0.940533, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.704021, rtol=1e-3)
 
         diff = self.test.difference(("us", "control"), ("us", "test"), absolute=False)
-        assert np.allclose(diff["difference"].iloc[0], -0.349520)
-        assert np.allclose(diff["ci_lower"].iloc[0], -0.4018008)
-        assert np.allclose(diff["ci_upper"].iloc[0], -0.297241)
-        assert np.allclose(diff["p-value"].iloc[0], 0.00000)
+        assert np.allclose(diff["difference"].iloc[0], -0.349520, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -0.4018008, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], -0.297241, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.00000, rtol=1e-3)
 
         diff = self.test.difference("control", "test", groupby="country")
-        assert np.allclose(diff["difference"], np.array([-0.450000, -1.048563]))
-        assert np.allclose(diff["ci_lower"], np.array([-1.538289, -1.205402]))
-        assert np.allclose(diff["ci_upper"], np.array([0.638289, -0.891723]))
-        assert np.allclose(diff["p-value"], np.array([0.380282, 0.000000]))
+        assert np.allclose(diff["difference"], np.array([-0.450000, -1.048563]), rtol=1e-3)
+        assert np.allclose(diff["ci_lower"], np.array([-1.595350, -1.205963]), rtol=1e-3)
+        assert np.allclose(diff["ci_upper"], np.array([0.695350, -0.891163]), rtol=1e-3)
+        assert np.allclose(diff["p-value"], np.array([0.4030961, 0.000000]), rtol=1e-3)
 
     def test_difference_with_interval_sizes(self):
         """
@@ -195,17 +203,17 @@ class TestCategorical(object):
         self.test._confidence_computer._interval_size = 0.99
 
         diff = self.test.difference(("us", "control"), ("us", "test"))
-        assert np.allclose(diff["difference"].iloc[0], -1.0485629)
-        assert np.allclose(diff["ci_lower"].iloc[0], -1.255391)
-        assert np.allclose(diff["ci_upper"].iloc[0], -0.841735)
-        assert np.allclose(diff["p-value"].iloc[0], 0.00000)
+        assert np.allclose(diff["difference"].iloc[0], -1.0485629, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -1.255391, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], -0.841735, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.00000, rtol=1e-3)
 
         self.test._confidence_computer._interval_size = 0.999
         diff = self.test.difference(("us", "control"), ("us", "test"))
-        assert np.allclose(diff["difference"].iloc[0], -1.0485629)
-        assert np.allclose(diff["ci_lower"].iloc[0], -1.314140)
-        assert np.allclose(diff["ci_upper"].iloc[0], -0.782986)
-        assert np.allclose(diff["p-value"].iloc[0], 0.00000)
+        assert np.allclose(diff["difference"].iloc[0], -1.0485629, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -1.314140, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], -0.782024, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.00000, rtol=1e-3)
 
     def test_difference_plot(self):
         with pytest.raises(ValueError):
@@ -295,46 +303,48 @@ class TestOrdinal(object):
             summary["ci_lower"],
             np.array(
                 [
-                    0.402840,
-                    0.078624,
-                    0.546410,
-                    0.416920,
-                    0.072390,
-                    0.542033,
-                    0.414337,
-                    0.099428,
-                    0.557913,
-                    0.436937,
-                    -0.020737,
-                    0.539399,
-                    0.419921,
-                    0.023464,
-                    0.589596,
+                    0.40279383,
+                    0.07191692,
+                    0.54600746,
+                    0.41687347,
+                    0.06387915,
+                    0.54166658,
+                    0.41429269,
+                    0.09286814,
+                    0.5575301,
+                    0.43689002,
+                    -0.03036827,
+                    0.53897297,
+                    0.4198777,
+                    0.01463557,
+                    0.58935338,
                 ]
             ),
+            rtol=1e-3,
         )
 
         assert np.allclose(
             summary["ci_upper"],
             np.array(
                 [
-                    0.587260,
-                    0.648649,
-                    0.786923,
-                    0.603080,
-                    0.727610,
-                    0.765157,
-                    0.595372,
-                    0.683181,
-                    0.792736,
-                    0.623063,
-                    0.720737,
-                    0.793934,
-                    0.599310,
-                    0.738441,
-                    0.739436,
+                    0.58730518,
+                    0.6553558,
+                    0.78732587,
+                    0.60312653,
+                    0.73612085,
+                    0.76552296,
+                    0.59541605,
+                    0.68974056,
+                    0.79311926,
+                    0.62310998,
+                    0.73036827,
+                    0.79436036,
+                    0.59935306,
+                    0.7472692,
+                    0.73967887,
                 ]
             ),
+            rtol=1e-3,
         )
 
     def test_summary_plot(self):
@@ -350,19 +360,19 @@ class TestOrdinal(object):
             self.test.difference(("control", "us"), ("test", "usf"))
 
         diff = self.test.difference(("control", 1), ("test", 1))
-        assert np.allclose(diff["difference"].iloc[0], 0.131413)
-        assert np.allclose(diff["ci_lower"].iloc[0], -0.166276)
-        assert np.allclose(diff["ci_upper"].iloc[0], 0.429102)
-        assert np.allclose(diff["p-value"].iloc[0], 0.372650)
+        assert np.allclose(diff["difference"].iloc[0], 0.131413, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -0.172704, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], 0.435531, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.382552, rtol=1e-3)
 
         diff = self.test.difference(("control", 1), ("test", 1), absolute=False)
-        assert np.allclose(diff["difference"].iloc[0], 0.361386)
-        assert np.allclose(diff["ci_lower"].iloc[0], -0.457258)
-        assert np.allclose(diff["ci_upper"].iloc[0], 1.1800302)
-        assert np.allclose(diff["p-value"].iloc[0], 0.37265075)
+        assert np.allclose(diff["difference"].iloc[0], 0.361386, rtol=1e-3)
+        assert np.allclose(diff["ci_lower"].iloc[0], -0.474938, rtol=1e-3)
+        assert np.allclose(diff["ci_upper"].iloc[0], 1.19771, rtol=1e-3)
+        assert np.allclose(diff["p-value"].iloc[0], 0.382552, rtol=1e-3)
 
         diff = self.test.difference("control", "test", groupby="days_since_reg")
-        assert np.allclose(diff["difference"], np.array([0.13141314, 0.11, 0.11355002, 0.18, 0.128663]))
+        assert np.allclose(diff["difference"], np.array([0.13141314, 0.11, 0.11355002, 0.18, 0.128663]), rtol=1e-3)
 
     def test_difference_plot(self):
         with pytest.raises(ValueError):
@@ -841,8 +851,12 @@ class TestCategoricalBinomialData(object):
         summary = self.test.summary()
         assert np.array_equal(summary.country, np.array(["us", "us", "us", "gb", "gb", "gb"]))
         assert np.array_equal(summary.point_estimate, self.data.success / self.data.total)
-        assert np.allclose(summary["ci_lower"], np.array([0.464653, 0.308424, 0.645293, 0.400789, 0.049548, 0.590610]))
-        assert np.allclose(summary["ci_upper"], np.array([0.526427, 0.499269, 0.692923, 0.599211, 0.750452, 0.742723]))
+        assert np.allclose(
+            summary["ci_lower"], np.array([0.464638, 0.307962, 0.645285, 0.400289, 0.030591, 0.590355]), rtol=1e-3
+        )
+        assert np.allclose(
+            summary["ci_upper"], np.array([0.526443, 0.499731, 0.692931, 0.599711, 0.769409, 0.742978]), rtol=1e-3
+        )
 
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
@@ -850,21 +864,39 @@ class TestCategoricalBinomialData(object):
 
         diff = self.test.multiple_difference(("us", "control"), level_as_reference=False)
         assert np.allclose(
-            diff["adjusted p-value"], np.array([1e00, 8.36850129e-01, 1.49172324e-04, 3.62369184e-01, 2.27154393e-06])
+            diff["adjusted p-value"],
+            np.array([1.00000000e00, 8.47296785e-01, 1.60789003e-04, 3.68641436e-01, 2.53362343e-06]),
+            rtol=1e-3,
         )
         assert np.allclose(
-            diff["p-value"], np.array([9.81516149e-01, 1.67370026e-01, 2.98344648e-05, 7.24738369e-02, 4.54308787e-07])
+            diff["p-value"],
+            np.array([9.82400227e-01, 1.69459357e-01, 3.21578005e-05, 7.37282872e-02, 5.06724687e-07]),
+            rtol=1e-3,
         )
         assert np.allclose(
-            diff["adjusted ci_lower"], np.array([-0.501747, -0.276600, -0.422946, -0.224093, -0.395207])
+            diff["adjusted ci_lower"],
+            np.array([-0.52870939, -0.27749219, -0.42362922, -0.22468195, -0.39580312]),
+            rtol=1e-3,
         )
-        assert np.allclose(diff["adjusted ci_upper"], np.array([0.509440, 0.084292, -0.102695, 0.040705, -0.135317]))
+        assert np.allclose(
+            diff["adjusted ci_upper"],
+            np.array([0.5364017, 0.0851845, -0.10201181, 0.04129398, -0.13472028]),
+            rtol=1e-3,
+        )
 
         diff = self.test.multiple_difference("test", groupby="country", level_as_reference=False)
-        assert np.allclose(diff["adjusted p-value"], np.array([1, 0.035594, 0.289895, 0.0]))
-        assert np.allclose(diff["p-value"], np.array([0.55155672, 0.00889848, 0.07247384, 0.0]))
-        assert np.allclose(diff["adjusted ci_lower"], np.array([-0.385571, -0.325682, -0.036587, -0.223262]))
-        assert np.allclose(diff["adjusted ci_upper"], np.array([0.585571, -0.0076513, 0.219975, -0.123874]))
+        assert np.allclose(
+            diff["adjusted p-value"], np.array([1.000000e00, 3.679225e-02, 2.949131e-01, 0.0]), rtol=1e-3
+        )
+        assert np.allclose(
+            diff["p-value"], np.array([5.70407366e-01, 9.19806264e-03, 7.37282872e-02, 0.000]), rtol=1e-3
+        )
+        assert np.allclose(
+            diff["adjusted ci_lower"], np.array([-0.41130848, -0.32638507, -0.03715783, -0.22328344]), rtol=1e-3
+        )
+        assert np.allclose(
+            diff["adjusted ci_upper"], np.array([0.61130848, -0.00694826, 0.2205458, -0.123852]), rtol=1e-3
+        )
 
 
 class TestWithNims(object):
