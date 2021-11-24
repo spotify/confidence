@@ -110,9 +110,9 @@ def add_mde_columns(df: DataFrame, mde_column: str) -> DataFrame:
         if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
             return (mde[0], mde_value, TWO_SIDED)
         elif mde[1].lower() == INCREASE_PREFFERED:
-            return (mde[0], None if mde_value is None else -mde_value, "larger")
+            return (mde[0], mde_value, "larger")
         elif mde[1].lower() == DECREASE_PREFFERED:
-            return (mde[0], mde_value, "smaller")
+            return (mde[0], None if mde_value is None else -mde_value, "smaller")
 
     if mde_column is not None:
         return (
@@ -130,16 +130,36 @@ def add_mde_columns(df: DataFrame, mde_column: str) -> DataFrame:
             .assign(
                 **{
                     ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
-                        lambda row: None
+                        lambda row: row[ALTERNATIVE_HYPOTHESIS]
+                        if ALTERNATIVE_HYPOTHESIS in row and (row[mde_column] is None or np.isnan(row[mde_column]))
+                        else None
                         if row["tmp_alt_hyp_dir"][1] is None
                         else row[POINT_ESTIMATE] * row["tmp_alt_hyp_dir"][1],
                         axis=1,
                     )
                 }
             )
-            .assign(**{PREFERENCE: lambda df: df.apply(lambda row: row["tmp_alt_hyp_dir"][2], axis=1)})
+            .assign(
+                **{
+                    PREFERENCE: lambda df: df.apply(
+                        lambda row: row[PREFERENCE]
+                        if PREFERENCE in row and (row[mde_column] is None or np.isnan(row[mde_column]))
+                        else row["tmp_alt_hyp_dir"][2],
+                        axis=1,
+                    )
+                }
+            )
+            .assign(
+                **{
+                    NULL_HYPOTHESIS: df.apply(
+                        lambda row: row[NULL_HYPOTHESIS]
+                        if NULL_HYPOTHESIS in row and (row[mde_column] is None or np.isnan(row[mde_column]))
+                        else 0,
+                        axis=1,
+                    )
+                }
+            )
             .drop(columns=[mde_column, "tmp_alt_hyp_dir"])
-            .assign(**{NULL_HYPOTHESIS: 0})
         )
     else:
         return df
@@ -160,9 +180,11 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
     if nims is None:
         return (
             df.assign(**{NIM: None})
-            .assign(**{NULL_HYPOTHESIS: 0})
-            .assign(**{PREFERENCE: TWO_SIDED})
-            .assign(**{ALTERNATIVE_HYPOTHESIS: None})
+            .assign(**{NULL_HYPOTHESIS: 0 if NULL_HYPOTHESIS not in df else df[NULL_HYPOTHESIS]})
+            .assign(**{PREFERENCE: TWO_SIDED if PREFERENCE not in df else df[PREFERENCE]})
+            .assign(
+                **{ALTERNATIVE_HYPOTHESIS: None if ALTERNATIVE_HYPOTHESIS not in df else df[ALTERNATIVE_HYPOTHESIS]}
+            )
         )
     elif type(nims) is tuple:
         return (
@@ -188,7 +210,9 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             .assign(
                 **{
                     NULL_HYPOTHESIS: lambda df: df.apply(
-                        lambda row: row[POINT_ESTIMATE]
+                        lambda row: row[NULL_HYPOTHESIS]
+                        if NULL_HYPOTHESIS in row and (row[NIM] is None or np.isnan(row[NIM]))
+                        else row[POINT_ESTIMATE]
                         * _nim_2_signed_nim((row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[1],
                         axis=1,
                     )
@@ -197,11 +221,23 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
             .assign(
                 **{
                     PREFERENCE: lambda df: df.apply(
-                        lambda row: _nim_2_signed_nim((row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[2], axis=1
+                        lambda row: row[PREFERENCE]
+                        if PREFERENCE in row and (row[NIM] is None or np.isnan(row[NIM]))
+                        else _nim_2_signed_nim((row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[2],
+                        axis=1,
                     )
                 }
             )
-            .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
+            .assign(
+                **{
+                    ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
+                        lambda row: row[ALTERNATIVE_HYPOTHESIS]
+                        if ALTERNATIVE_HYPOTHESIS in row and (row[NIM] is None or np.isnan(row[NIM]))
+                        else 0,
+                        axis=1,
+                    )
+                }
+            )
         )
     else:
         raise ValueError(f"non_inferiority_margins must be None, tuple, dict," f"or DataFrame, but is {type(nims)}.")

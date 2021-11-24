@@ -70,15 +70,15 @@ class TestPoweredEffectContinuousSingleMetric(object):
         powered_effect = self.test.difference(
             level_1="control", level_2="test", minimum_detectable_effects_column="minimum_detectable_effect"
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.3881, atol=0.001)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 29412, atol=100)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.3972, atol=0.001)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 30792, atol=100)
 
     def test_powered_effect2(self):
         powered_effect = self.test.difference(
             level_1="control", level_2="test2", minimum_detectable_effects_column="minimum_detectable_effect"
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4111, atol=0.001)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 5498, atol=100)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4208, atol=0.001)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 5760, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
@@ -134,14 +134,14 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
             level_as_reference=True,
             minimum_detectable_effects_column="minimum_detectable_effect",
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4626, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.4900, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4626, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.4900, atol=0.001)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 41796, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][1], 7811, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 41796, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 7811, atol=100)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4735, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5016, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4735, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.5016, atol=0.001)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 43746, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][1], 8183, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 43746, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 8183, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleMetricTypes(object):
@@ -198,14 +198,14 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
         powered_effect = self.test.multiple_difference(
             level="control", groupby="metric_name", level_as_reference=True, non_inferiority_margins=True
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4880, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4490, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.4757, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5291, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4596, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.4869, atol=0.001)
         assert powered_effect[REQUIRED_SAMPLE_SIZE][0] == float("inf")
         assert powered_effect[REQUIRED_SAMPLE_SIZE][1] == float("inf")
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 15738437, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 2943671, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 16487886, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 3083846, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments(object):
@@ -320,23 +320,23 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
         powered_effect = self.test.multiple_difference(
             level="control", groupby=["metric_name", "segment"], level_as_reference=True, non_inferiority_margins=True
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.5235, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5546, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.5235, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.5546, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][4], 0.4880, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][5], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.4880, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.5358, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5676, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.5358, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.5676, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][4], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][5], 0.5291, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.5291, atol=0.001)
 
         assert powered_effect[REQUIRED_SAMPLE_SIZE][0] == float("inf")
         assert powered_effect[REQUIRED_SAMPLE_SIZE][1] == float("inf")
         assert powered_effect[REQUIRED_SAMPLE_SIZE][2] == float("inf")
         assert powered_effect[REQUIRED_SAMPLE_SIZE][3] == float("inf")
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 18590000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 3477019, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 18590000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 3477019, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 19475238, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 3642591, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 19475238, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 3642591, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
@@ -451,23 +451,23 @@ class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
         powered_effect = self.test.multiple_difference(
             level="control", groupby=["metric_name", "segment"], level_as_reference=True, non_inferiority_margins=True
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.488, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.488, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][4], 0.488, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][5], 0.5170, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.488, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.5170, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5291, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.5291, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][4], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][5], 0.5291, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.4995, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.5291, atol=0.001)
 
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 18590000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][1], 3477019, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 18590000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 3477019, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 18590000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 3477019, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 18590000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 3477019, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 19475238, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][1], 3642591, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 19475238, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 3642591, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 19475238, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 3642591, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 19475238, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 3642591, atol=100)
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
@@ -585,23 +585,23 @@ class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
             level_as_reference=True,
             minimum_detectable_effects_column="minimum_detectable_effect",
         )
-        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4626, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.4900, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4626, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.4900, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][4], 0.4626, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][5], 0.4900, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.4626, atol=0.001)
-        assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.4900, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4735, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5016, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4735, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.5016, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][4], 0.4735, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][5], 0.5016, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.4735, atol=0.001)
+        assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.5016, atol=0.001)
 
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 4175642, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][1], 781000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 4175642, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 781000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 4175642, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 781000, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 4175642, atol=100)
-        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 781000, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 4374482, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][1], 818191, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 4374482, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 818191, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 4374482, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 818191, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 4374482, atol=100)
+        assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 818191, atol=100)
 
 
 class TestPoweredEffectBinary(object):
@@ -1894,6 +1894,7 @@ class TestCategoricalBinomialData(object):
                     0.5912276177282552,
                 ]
             ),
+            rtol=1e-3,
         )
         assert np.allclose(
             summary["ci_upper"],
@@ -1907,6 +1908,7 @@ class TestCategoricalBinomialData(object):
                     0.7421057156050781,
                 ]
             ),
+            rtol=1e-3,
         )
 
     def test_multiple_difference(self):
@@ -1915,23 +1917,47 @@ class TestCategoricalBinomialData(object):
 
         diff = self.test.multiple_difference(("us", "control"), level_as_reference=False)
         assert np.allclose(
-            diff["adjusted p-value"], np.array([1e00, 8.291843e-01, 9.971992e-05, 3.504662e-01, 4.504966e-07])
+            diff["adjusted p-value"],
+            np.array([1e00, 8.291843e-01, 9.971992e-05, 3.504662e-01, 4.504966e-07]),
+            rtol=1e-3,
         )
         assert np.allclose(
-            diff["p-value"], np.array([9.81084197e-01, 1.65836862e-01, 1.99439850e-05, 7.00932382e-02, 9.00993166e-08])
+            diff["p-value"],
+            np.array([9.81084197e-01, 1.65836862e-01, 1.99439850e-05, 7.00932382e-02, 9.00993166e-08]),
+            rtol=1e-3,
         )
         assert np.allclose(
-            diff["adjusted ci_lower"], np.array([-0.41400184, -0.27489017, -0.42153065, -0.22209041, -0.39307973])
+            diff["adjusted ci_lower"],
+            np.array([-0.41400184, -0.27489017, -0.42153065, -0.22209041, -0.39307973]),
+            rtol=1e-3,
         )
         assert np.allclose(
-            diff["adjusted ci_upper"], np.array([0.42169415, 0.08258247, -0.10411038, 0.03870244, -0.13744367])
+            diff["adjusted ci_upper"],
+            np.array([0.42169415, 0.08258247, -0.10411038, 0.03870244, -0.13744367]),
+            rtol=1e-3,
         )
 
         diff = self.test.multiple_difference("test", groupby="country", level_as_reference=False)
-        assert np.allclose(diff["adjusted p-value"], np.array([1.00000000e00, 3.30302805e-02, 2.80372953e-01, 0.0]))
-        assert np.allclose(diff["p-value"], np.array([5.39020329e-01, 8.25757011e-03, 7.00932382e-02, 0.0]))
-        assert np.allclose(diff["adjusted ci_lower"], np.array([-0.30659699, -0.32426934, -0.03474758, -0.2232184]))
-        assert np.allclose(diff["adjusted ci_upper"], np.array([0.50659699, -0.00906399, 0.21813554, -0.12391703]))
+        assert np.allclose(
+            diff["adjusted p-value"],
+            np.array([1.00000000e00, 3.30302805e-02, 2.80372953e-01, 0.0]),
+            rtol=1e-3,
+        )
+        assert np.allclose(
+            diff["p-value"],
+            np.array([5.39020329e-01, 8.25757011e-03, 7.00932382e-02, 0.0]),
+            rtol=1e-3,
+        )
+        assert np.allclose(
+            diff["adjusted ci_lower"],
+            np.array([-0.30659699, -0.32426934, -0.03474758, -0.2232184]),
+            rtol=1e-3,
+        )
+        assert np.allclose(
+            diff["adjusted ci_upper"],
+            np.array([0.50659699, -0.00906399, 0.21813554, -0.12391703]),
+            rtol=1e-3,
+        )
 
 
 class TestWithNims(object):

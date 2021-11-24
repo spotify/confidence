@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 
 import numpy as np
+import pandas as pd
 from pandas import DataFrame, Series
 from scipy import optimize
 from scipy import stats as st
@@ -32,15 +33,14 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_POWER,
     ALTERNATIVE_HYPOTHESIS,
     POWERED_EFFECT,
-    POWERED_EFFECT_METRIC,
     REQUIRED_SAMPLE_SIZE,
     REQUIRED_SAMPLE_SIZE_METRIC,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
 
-def sequential_bounds(t: np.array, alpha: float, sides: int):
-    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
+def sequential_bounds(t: np.array, alpha: float, sides: int, state: pd.DataFrame = None):
+    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
 class ZTestComputer(object):
@@ -57,7 +57,15 @@ class ZTestComputer(object):
         return row[self._numerator] / row[self._denominator]
 
     def _variance(self, row: Series) -> float:
-        variance = row[self._numerator_sumsq] / row[self._denominator] - row[POINT_ESTIMATE] ** 2
+        binary = row[self._numerator_sumsq] == row[self._numerator]
+        if binary:
+            # This equals row[POINT_ESTIMATE]*(1-row[POINT_ESTIMATE]) when the data is binary,
+            # and also gives a robust fallback in case it's not
+            variance = row[self._numerator_sumsq] / row[self._denominator] - row[POINT_ESTIMATE] ** 2
+        else:
+            variance = (row[self._numerator_sumsq] - np.power(row[self._numerator], 2) / row[self._denominator]) / (
+                row[self._denominator] - 1
+            )
         if variance < 0:
             raise ValueError("Computed variance is negative. " "Please check your inputs.")
         return variance
@@ -321,17 +329,6 @@ class ZTestComputer(object):
             z_power=z_power,
             binary=binary,
             current_number_of_units=n1 + n2,
-            non_inferiority=non_inferiority,
-        )
-
-        row[POWERED_EFFECT_METRIC] = self._powered_effect(
-            df=row,
-            kappa=kappa,
-            proportion_of_total=proportion_of_total,
-            z_alpha=z_alpha,
-            z_power=z_power,
-            binary=binary,
-            current_number_of_units=row[f"current_total_{self._denominator}"],
             non_inferiority=non_inferiority,
         )
 
