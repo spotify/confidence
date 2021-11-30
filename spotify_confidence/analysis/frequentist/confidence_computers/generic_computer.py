@@ -546,9 +546,10 @@ class GenericComputer(ConfidenceComputerABC):
                     df, self._correction_method, ["level_1", "level_2"] + groups_except_ordinal
                 )
 
-                df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(
+                adjusted_alpha = self._compute_sequential_adjusted_alpha(
                     df, final_expected_sample_size_column, n_comparisons
                 )
+                df = df.merge(adjusted_alpha, left_index=True, right_index=True)
                 df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
                 df[P_VALUE] = None

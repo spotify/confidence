@@ -29,6 +29,7 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_HOMMEL,
     SPOT_1_SIMES_HOCHBERG,
     NIM,
+    ADJUSTED_ALPHA,
     ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
     ADJUSTED_POWER,
     ALTERNATIVE_HYPOTHESIS,
@@ -112,17 +113,17 @@ class ZTestComputer(object):
     ):
         groups_except_ordinal = [column for column in df.index.names if column != self._ordinal_group_column]
         max_sample_size_by_group = (
-            df[["current_total_" + self._denominator, final_expected_sample_size_column]]
-            .groupby(groups_except_ordinal)
-            .max()
-            .max(axis=1)
-        ) if len(groups_except_ordinal) > 0 else (
-            df[["current_total_" + self._denominator, final_expected_sample_size_column]]
-            .max()
-            .max()
+            (
+                df[["current_total_" + self._denominator, final_expected_sample_size_column]]
+                .groupby(groups_except_ordinal)
+                .max()
+                .max(axis=1)
+            )
+            if len(groups_except_ordinal) > 0
+            else (df[["current_total_" + self._denominator, final_expected_sample_size_column]].max().max())
         )
         sample_size_proportions = pd.Series(
-            data=df.groupby(df.index.names)["current_total_" + self._denominator].mean() / max_sample_size_by_group,
+            data=df.groupby(df.index.names)["current_total_" + self._denominator].first() / max_sample_size_by_group,
             name="sample_size_proportions",
         )
 
@@ -135,24 +136,27 @@ class ZTestComputer(object):
                 )
                 .df.set_index(grp.index)
                 .assign(
-                    adjusted_alpha=lambda df: df.apply(
-                        lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
-                        if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
-                        else 1 - st.norm.cdf(row["zb"]),
-                        axis=1,
-                    )
+                    **{
+                        ADJUSTED_ALPHA: lambda df: df.apply(
+                            lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
+                            if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
+                            else 1 - st.norm.cdf(row["zb"]),
+                            axis=1,
+                        )
+                    }
                 )
             )[["zb", "adjusted_alpha"]]
 
         return (
-            df.merge(sample_size_proportions, left_index=True, right_index=True)
-            .groupby(groups_except_ordinal + ["level_1", "level_2"])[
+            df.groupby(df.index.names)[[ALPHA, PREFERENCE_TEST]]
+            .first()
+            .merge(sample_size_proportions, left_index=True, right_index=True)
+            .assign(_dummy_group_column_=1)
+            .groupby(groups_except_ordinal if len(groups_except_ordinal) > 0 else "_dummy_group_column_")[
                 ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
             ]
             .apply(adjusted_alphas_for_group)
-            .reset_index()
-            .set_index(df.index.names)
-        )["adjusted_alpha"]
+        )[ADJUSTED_ALPHA]
 
     def _ci_for_multiple_comparison_methods(
         self,
