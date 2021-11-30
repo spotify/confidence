@@ -1,8 +1,7 @@
 from typing import Tuple, Union
-
+from concurrent.futures.thread import ThreadPoolExecutor
 import numpy as np
-import pandas as pd
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, concat
 from scipy import optimize
 from scipy import stats as st
 from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
@@ -40,8 +39,38 @@ from spotify_confidence.analysis.constants import (
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
 
-def sequential_bounds(t: np.array, alpha: float, sides: int, state: pd.DataFrame = None):
+def sequential_bounds(t: np.array, alpha: float, sides: int, state: DataFrame = None):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
+
+
+def applyParallel(dfGrouped):
+    with ThreadPoolExecutor(max_workers=16, thread_name_prefix="sequential") as p:
+        ret_list = p.map(
+            adjusted_alphas_for_group,
+            [group for name, group in dfGrouped],
+        )
+    return concat(ret_list)
+
+
+def adjusted_alphas_for_group(grp: DataFrame) -> Series:
+    return (
+        sequential_bounds(
+            t=grp["sample_size_proportions"].values,
+            alpha=grp[ALPHA].values[0] / grp["num_comparisons"].values[0],
+            sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1,
+        )
+        .df.set_index(grp.index)
+        .assign(
+            **{
+                ADJUSTED_ALPHA: lambda df: df.apply(
+                    lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
+                    if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
+                    else 1 - st.norm.cdf(row["zb"]),
+                    axis=1,
+                )
+            }
+        )
+    )[ADJUSTED_ALPHA]
 
 
 class ZTestComputer(object):
@@ -111,6 +140,7 @@ class ZTestComputer(object):
     def _compute_sequential_adjusted_alpha(
         self, df: DataFrame, final_expected_sample_size_column: str, num_comparisons: int
     ):
+        self._num_comparisons = num_comparisons
         groups_except_ordinal = [column for column in df.index.names if column != self._ordinal_group_column]
         max_sample_size_by_group = (
             (
@@ -122,41 +152,22 @@ class ZTestComputer(object):
             if len(groups_except_ordinal) > 0
             else (df[["current_total_" + self._denominator, final_expected_sample_size_column]].max().max())
         )
-        sample_size_proportions = pd.Series(
+        sample_size_proportions = Series(
             data=df.groupby(df.index.names)["current_total_" + self._denominator].first() / max_sample_size_by_group,
             name="sample_size_proportions",
         )
 
-        def adjusted_alphas_for_group(grp: DataFrame) -> Series:
-            return (
-                sequential_bounds(
-                    t=grp["sample_size_proportions"].values,
-                    alpha=grp[ALPHA].values[0] / num_comparisons,
-                    sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1,
-                )
-                .df.set_index(grp.index)
-                .assign(
-                    **{
-                        ADJUSTED_ALPHA: lambda df: df.apply(
-                            lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
-                            if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
-                            else 1 - st.norm.cdf(row["zb"]),
-                            axis=1,
-                        )
-                    }
-                )
-            )[["zb", "adjusted_alpha"]]
-
-        return (
-            df.groupby(df.index.names)[[ALPHA, PREFERENCE_TEST]]
+        return Series(
+            data=df.groupby(df.index.names)[[ALPHA, PREFERENCE_TEST]]
             .first()
             .merge(sample_size_proportions, left_index=True, right_index=True)
-            .assign(_dummy_group_column_=1)
-            .groupby(groups_except_ordinal if len(groups_except_ordinal) > 0 else "_dummy_group_column_")[
-                ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
+            .assign(num_comparisons=num_comparisons)
+            .groupby(groups_except_ordinal if len(groups_except_ordinal) > 0 else "num_comparisons")[
+                ["sample_size_proportions", PREFERENCE_TEST, ALPHA, "num_comparisons"]
             ]
-            .apply(adjusted_alphas_for_group)
-        )[ADJUSTED_ALPHA]
+            .pipe(applyParallel),
+            name=ADJUSTED_ALPHA,
+        )
 
     def _ci_for_multiple_comparison_methods(
         self,
