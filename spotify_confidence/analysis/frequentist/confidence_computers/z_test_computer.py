@@ -108,39 +108,22 @@ class ZTestComputer(object):
         return power_calculation(mde, var_pooled, alpha, n1, n2)
 
     def _compute_sequential_adjusted_alpha(
-        self,
-        df: DataFrame,
-        final_expected_sample_size_column: str,
-        filtered_sufficient_statistics: DataFrame,
-        num_comparisons: int,
+        self, df: DataFrame, final_expected_sample_size_column: str, num_comparisons: int
     ):
-        total_sample_size = (
-            filtered_sufficient_statistics.groupby(df.index.names)
-            .agg({self._denominator: sum, final_expected_sample_size_column: np.mean})
-            .rename(columns={self._denominator: f"total_{self._denominator}"})
-        )
         groups_except_ordinal = [column for column in df.index.names if column != self._ordinal_group_column]
         max_sample_size_by_group = (
-            total_sample_size[f"total_{self._denominator}"].max()
-            if len(groups_except_ordinal) == 0
-            else total_sample_size.groupby(groups_except_ordinal)[f"total_{self._denominator}"].max()
+            df[["current_total_" + self._denominator, final_expected_sample_size_column]]
+            .groupby(groups_except_ordinal)
+            .max()
+            .max(axis=1)
+        ) if len(groups_except_ordinal) > 0 else (
+            df[["current_total_" + self._denominator, final_expected_sample_size_column]]
+            .max()
+            .max()
         )
-
-        if type(max_sample_size_by_group) is not Series:
-            total_sample_size = total_sample_size.assign(
-                **{f"total_{self._denominator}_max": max_sample_size_by_group}
-            )
-        else:
-            total_sample_size = total_sample_size.merge(
-                right=max_sample_size_by_group, left_index=True, right_index=True, suffixes=("", "_max")
-            )
-
-        total_sample_size = total_sample_size.assign(
-            final_expected_sample_size=lambda df: df[
-                [f"total_{self._denominator}_max", final_expected_sample_size_column]
-            ].max(axis=1)
-        ).assign(
-            sample_size_proportions=lambda df: df["total_" + self._denominator] / df["final_expected_sample_size"]
+        sample_size_proportions = pd.Series(
+            data=df.groupby(df.index.names)["current_total_" + self._denominator].mean() / max_sample_size_by_group,
+            name="sample_size_proportions",
         )
 
         def adjusted_alphas_for_group(grp: DataFrame) -> Series:
@@ -162,7 +145,7 @@ class ZTestComputer(object):
             )[["zb", "adjusted_alpha"]]
 
         return (
-            df.merge(total_sample_size, left_index=True, right_index=True)
+            df.merge(sample_size_proportions, left_index=True, right_index=True)
             .groupby(groups_except_ordinal + ["level_1", "level_2"])[
                 ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
             ]

@@ -16,7 +16,7 @@ from typing import Union, Iterable, List, Tuple
 from warnings import warn
 
 import numpy as np
-from pandas import DataFrame, Series, concat
+from pandas import DataFrame, Series
 from statsmodels.stats.multitest import multipletests
 
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
@@ -357,9 +357,6 @@ class GenericComputer(ConfidenceComputerABC):
         unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
         validate_levels(self._sufficient_statistics, level_columns, unique_levels)
         str2level = {level2str(lv): lv for lv in unique_levels}
-        filtered_sufficient_statistics = concat(
-            [self._sufficient_statistics.groupby(level_columns).get_group(group) for group in unique_levels]
-        )
         levels = [
             (level2str(l[0]), level2str(l[1])) if level_as_reference else (level2str(l[1]), level2str(l[0]))
             for l in levels
@@ -394,7 +391,6 @@ class GenericComputer(ConfidenceComputerABC):
                 nims=nims,
                 mde_column=mde_column,
                 final_expected_sample_size_column=final_expected_sample_size_column,
-                filtered_sufficient_statistics=filtered_sufficient_statistics,
             )
             .assign(level_1=lambda df: df["level_1"].map(lambda s: str2level[s]))
             .assign(level_2=lambda df: df["level_2"].map(lambda s: str2level[s]))
@@ -410,7 +406,6 @@ class GenericComputer(ConfidenceComputerABC):
         nims: NIM_TYPE,
         mde_column: bool,
         final_expected_sample_size_column: str,
-        filtered_sufficient_statistics: DataFrame,
     ) -> DataFrame:
         def join(df: DataFrame) -> DataFrame:
             has_index = not all(idx is None for idx in df.index.names)
@@ -457,11 +452,7 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
             .assign(**{STD_ERR: self._std_err})
-            .pipe(
-                self._add_p_value_and_ci,
-                final_expected_sample_size_column=final_expected_sample_size_column,
-                filtered_sufficient_statistics=filtered_sufficient_statistics,
-            )
+            .pipe(self._add_p_value_and_ci, final_expected_sample_size_column=final_expected_sample_size_column)
             .pipe(self._add_adjusted_power)
             .apply(self._powered_effect_and_required_sample_size, mde_column=mde_column, axis=1)
             .pipe(self._adjust_if_absolute, absolute=absolute)
@@ -512,9 +503,7 @@ class GenericComputer(ConfidenceComputerABC):
         else:
             return df.assign(**{ADJUSTED_POWER: df[POWER]})
 
-    def _add_p_value_and_ci(
-        self, df: DataFrame, final_expected_sample_size_column: str, filtered_sufficient_statistics: DataFrame
-    ) -> DataFrame:
+    def _add_p_value_and_ci(self, df: DataFrame, final_expected_sample_size_column: str) -> DataFrame:
         def set_alpha_and_adjust_preference(df: DataFrame) -> DataFrame:
             alpha_0 = 1 - self._interval_size
             return (
@@ -558,7 +547,7 @@ class GenericComputer(ConfidenceComputerABC):
                 )
 
                 df[ADJUSTED_ALPHA] = self._compute_sequential_adjusted_alpha(
-                    df, final_expected_sample_size_column, filtered_sufficient_statistics, n_comparisons
+                    df, final_expected_sample_size_column, n_comparisons
                 )
                 df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
@@ -804,15 +793,11 @@ class GenericComputer(ConfidenceComputerABC):
         return self._confidence_computers[row[self._method_column]]._achieved_power(row, mde, alpha)
 
     def _compute_sequential_adjusted_alpha(
-        self,
-        df: DataFrame,
-        final_expected_sample_size_column: str,
-        filtered_sufficient_statistics: DataFrame,
-        n_comparisons: int,
+        self, df: DataFrame, final_expected_sample_size_column: str, n_comparisons: int
     ) -> Series:
         if all(df[self._method_column] == "z-test"):
             return self._confidence_computers["z-test"]._compute_sequential_adjusted_alpha(
-                df, final_expected_sample_size_column, filtered_sufficient_statistics, n_comparisons
+                df, final_expected_sample_size_column, n_comparisons
             )
         else:
             raise NotImplementedError("Sequential testing is only supported for z-tests")
