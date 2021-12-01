@@ -14,8 +14,8 @@
 
 from typing import Union, Iterable, List, Tuple
 from warnings import warn
+import time
 
-import numpy as np
 from pandas import DataFrame, Series
 from statsmodels.stats.multitest import multipletests
 
@@ -32,6 +32,8 @@ from spotify_confidence.analysis.confidence_utils import (
     get_all_group_columns,
     validate_data,
     remove_group_columns,
+    applyParallel,
+    groupbyApplyParallel,
 )
 from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE,
@@ -95,11 +97,6 @@ from spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_comp
 from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
-from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
-
-
-def sequential_bounds(t: np.array, alpha: float, sides: int):
-    return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000)
 
 
 class GenericComputer(ConfidenceComputerABC):
@@ -221,11 +218,13 @@ class GenericComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
-            self._sufficient = (
-                self._df.assign(**{POINT_ESTIMATE: self._point_estimate})
+            start_time = time.time()
+            self._sufficient = applyParallel(self._df, lambda df:
+                df.assign(**{POINT_ESTIMATE: self._point_estimate})
                 .assign(**{VARIANCE: self._variance})
                 .pipe(self._add_point_estimate_ci)
             )
+            print(f"Time passed computing sufficient stats: {time.time() - start_time}")
         return self._sufficient
 
     def compute_difference(
@@ -383,6 +382,7 @@ class GenericComputer(ConfidenceComputerABC):
                 level=self._sufficient_statistics[level_columns].agg(level2str, axis="columns")
             )
             .pipe(assign_total_denominator, groupby)
+            .query(f"level in {[l1 for l1,l2 in levels] + [l2 for l1,l2 in levels]}")
             .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
             .pipe(
                 self._create_comparison_df,
@@ -420,18 +420,41 @@ class GenericComputer(ConfidenceComputerABC):
                     .merge(right=df.assign(dummy_join_column=1), on="dummy_join_column", suffixes=(SFX1, SFX2))
                     .drop(columns="dummy_join_column")
                 )
-
+        start_time = time.time()
         comparison_df = (
-            df.pipe(add_nim_columns, nims=nims)
-            .pipe(add_mde_columns, mde_column=mde_column)
+            applyParallel(
+                df, lambda df: df.pipe(add_nim_columns, nims=nims).pipe(add_mde_columns, mde_column=mde_column)
+            )
             .pipe(join)
             .query(
                 f"level_1 in {[l1 for l1, l2 in groups_to_compare]} and "
                 + f"level_2 in {[l2 for l1, l2 in groups_to_compare]}"
                 + "and level_1 != level_2"
             )
-            # TODO: validate_and_rename_mdes
-            .pipe(validate_and_rename_columns, NIM)
+            .assign(
+                **{
+                    PREFERENCE_TEST: lambda df: df.apply(
+                        lambda row: TWO_SIDED if self._correction_method == SPOT_1 else row[PREFERENCE + SFX1], axis=1
+                    )
+                }
+            )
+            .assign(**{POWER: self._power})
+            .pipe(self._add_adjusted_power)
+        )
+        print(f"Time passed so far: {time.time() - start_time}")
+        groups_except_ordinal = [
+            column
+            for column in df.index.names
+            if column is not None
+            and (column != self._ordinal_group_column or final_expected_sample_size_column is None)
+        ]
+        n_comparisons = self._get_num_comparisons(
+            comparison_df, self._correction_method, ["level_1", "level_2"] + groups_except_ordinal
+        )
+        start_time = time.time()
+        comparison_df = groupbyApplyParallel(
+            comparison_df.assign(n_comparisons=n_comparisons).groupby(groups_except_ordinal + ["n_comparisons"]),
+            lambda df: df.pipe(validate_and_rename_columns, NIM)
             .pipe(validate_and_rename_columns, mde_column)
             .pipe(validate_and_rename_columns, PREFERENCE)
             .pipe(validate_and_rename_columns, final_expected_sample_size_column)
@@ -453,12 +476,12 @@ class GenericComputer(ConfidenceComputerABC):
             .assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
             .assign(**{STD_ERR: self._std_err})
             .pipe(self._add_p_value_and_ci, final_expected_sample_size_column=final_expected_sample_size_column)
-            .pipe(self._add_adjusted_power)
             .apply(self._powered_effect_and_required_sample_size, mde_column=mde_column, axis=1)
             .pipe(self._adjust_if_absolute, absolute=absolute)
             .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
+            .drop(columns=["n_comparisons"])
         )
-
+        print(f"Time passed computing CIs: {time.time() - start_time}")
         return comparison_df
 
     @staticmethod
@@ -487,12 +510,12 @@ class GenericComputer(ConfidenceComputerABC):
             else:
                 self._number_total_metrics = 1 if self._single_metric else df.groupby(self._metric_column).ngroups
                 if self._single_metric:
-                    if df[df[NIM].isnull()].shape[0] > 0:
+                    if df[df[NIM + SFX1].isnull()].shape[0] > 0:
                         self._number_success_metrics = 1
                     else:
                         self._number_success_metrics = 0
                 else:
-                    self._number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+                    self._number_success_metrics = df[df[NIM + SFX1].isnull()].groupby(self._metric_column).ngroups
 
                 self._number_guardrail_metrics = self._number_total_metrics - self._number_success_metrics
             power_correction = self._corrections_power(
@@ -506,28 +529,19 @@ class GenericComputer(ConfidenceComputerABC):
     def _add_p_value_and_ci(self, df: DataFrame, final_expected_sample_size_column: str) -> DataFrame:
         def set_alpha_and_adjust_preference(df: DataFrame) -> DataFrame:
             alpha_0 = 1 - self._interval_size
-            return (
-                df.assign(
-                    **{
-                        ALPHA: df.apply(
-                            lambda row: 2 * alpha_0
-                            if self._correction_method == SPOT_1 and row[PREFERENCE] != TWO_SIDED
-                            else alpha_0,
-                            axis=1,
-                        )
-                    }
-                )
-                .assign(**{POWER: self._power})
-                .assign(
-                    **{
-                        PREFERENCE_TEST: df.apply(
-                            lambda row: TWO_SIDED if self._correction_method == SPOT_1 else row[PREFERENCE], axis=1
-                        )
-                    }
-                )
+            return df.assign(
+                **{
+                    ALPHA: df.apply(
+                        lambda row: 2 * alpha_0
+                        if self._correction_method == SPOT_1 and row[PREFERENCE] != TWO_SIDED
+                        else alpha_0,
+                        axis=1,
+                    )
+                }
             )
 
         def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
+            n_comparisons = df["n_comparisons"].values[0]
             if final_expected_sample_size_column is not None:
                 if self._correction_method not in [
                     BONFERRONI,
@@ -541,14 +555,7 @@ class GenericComputer(ConfidenceComputerABC):
                         f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
                     )
 
-                groups_except_ordinal = [column for column in df.index.names if column != self._ordinal_group_column]
-                n_comparisons = self._get_num_comparisons(
-                    df, self._correction_method, ["level_1", "level_2"] + groups_except_ordinal
-                )
-
-                adjusted_alpha = self._compute_sequential_adjusted_alpha(
-                    df, final_expected_sample_size_column, n_comparisons
-                )
+                adjusted_alpha = self._compute_sequential_adjusted_alpha(df, final_expected_sample_size_column)
                 df = df.merge(adjusted_alpha, left_index=True, right_index=True)
                 df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
                 df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
@@ -578,9 +585,7 @@ class GenericComputer(ConfidenceComputerABC):
                     correction_method = self._correction_method[7:]
                 else:
                     correction_method = self._correction_method
-
-                groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
-                df[ADJUSTED_ALPHA] = df[ALPHA] / self._get_num_comparisons(df, self._correction_method, groupby)
+                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
                 df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
                 is_significant, adjusted_p, _, _ = multipletests(
                     pvals=df[P_VALUE], alpha=1 - self._interval_size, method=correction_method
@@ -593,8 +598,6 @@ class GenericComputer(ConfidenceComputerABC):
                 BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
                 SPOT_1,
             ]:
-                groupby = ["level_1", "level_2"] + [column for column in df.index.names if column is not None]
-                n_comparisons = self._get_num_comparisons(df, self._correction_method, groupby)
                 df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
                 df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
                 df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
@@ -694,15 +697,15 @@ class GenericComputer(ConfidenceComputerABC):
             SPOT_1_FDR_TSBKY,
         ]:
             if self._metric_column is None or self._treatment_column is None:
-                return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
+                return max(1, df[df[NIM + SFX1].isnull()].groupby(groupby).ngroups)
             else:
                 if self._single_metric:
-                    if df[df[NIM].isnull()].shape[0] > 0:
+                    if df[df[NIM + SFX1].isnull()].shape[0] > 0:
                         self._number_success_metrics = 1
                     else:
                         self._number_success_metrics = 0
                 else:
-                    self._number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+                    self._number_success_metrics = df[df[NIM + SFX1].isnull()].groupby(self._metric_column).ngroups
 
                 number_comparions = len(
                     (df[self._treatment_column + SFX1] + df[self._treatment_column + SFX2]).unique()
@@ -793,12 +796,10 @@ class GenericComputer(ConfidenceComputerABC):
     def _achieved_power(self, row: Series, mde: float, alpha: float) -> DataFrame:
         return self._confidence_computers[row[self._method_column]]._achieved_power(row, mde, alpha)
 
-    def _compute_sequential_adjusted_alpha(
-        self, df: DataFrame, final_expected_sample_size_column: str, n_comparisons: int
-    ) -> Series:
+    def _compute_sequential_adjusted_alpha(self, df: DataFrame, final_expected_sample_size_column: str) -> Series:
         if all(df[self._method_column] == "z-test"):
             return self._confidence_computers["z-test"]._compute_sequential_adjusted_alpha(
-                df, final_expected_sample_size_column, n_comparisons
+                df, final_expected_sample_size_column
             )
         else:
             raise NotImplementedError("Sequential testing is only supported for z-tests")

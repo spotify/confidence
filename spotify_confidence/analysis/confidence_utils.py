@@ -35,6 +35,31 @@ from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE,
 )
 
+from concurrent.futures.thread import ThreadPoolExecutor
+#from concurrent.futures import ProcessPoolExecutor
+#from multiprocessing import Pool, cpu_count
+
+def groupbyApplyParallel(dfGrouped, func_to_apply):
+    with ThreadPoolExecutor(max_workers=16, thread_name_prefix="groupbyApplyParallel") as p:
+    #with ProcessPoolExecutor(max_workers=16) as p:
+    #with Pool(processes=16) as p:
+        ret_list = p.map(
+            func_to_apply,
+            [group for name, group in dfGrouped],
+        )
+    return concat(ret_list)
+
+
+def applyParallel(df, func_to_apply, splits=128):
+    with ThreadPoolExecutor(max_workers=splits, thread_name_prefix="applyParallel") as p:
+    # with ProcessPoolExecutor(max_workers=16) as p:
+    # with Pool(processes=16) as p:
+        ret_list = p.map(
+            func_to_apply,
+            np.array_split(df, min(splits, len(df))),
+        )
+    return concat(ret_list)
+
 
 def get_all_group_columns(categorical_columns: Iterable, additional_column: str) -> Iterable:
     all_columns = listify(categorical_columns) + listify(additional_column)
@@ -249,6 +274,8 @@ def equals_none_or_nan(x, y):
         if x == y
         or (x is None and y is None)
         or (type(x) is float and type(y) is float and np.isnan(x) and np.isnan(y))
+        or (x is None and type(y) is float and np.isnan(y))
+        or (y is None and type(x) is float and np.isnan(x))
         else False
     )
 
