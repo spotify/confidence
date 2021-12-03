@@ -36,13 +36,15 @@ from spotify_confidence.analysis.constants import (
 )
 
 from concurrent.futures.thread import ThreadPoolExecutor
-#from concurrent.futures import ProcessPoolExecutor
-#from multiprocessing import Pool, cpu_count
+
+# from concurrent.futures import ProcessPoolExecutor
+# from multiprocessing import Pool, cpu_count
+
 
 def groupbyApplyParallel(dfGrouped, func_to_apply):
     with ThreadPoolExecutor(max_workers=16, thread_name_prefix="groupbyApplyParallel") as p:
-    #with ProcessPoolExecutor(max_workers=16) as p:
-    #with Pool(processes=16) as p:
+        # with ProcessPoolExecutor(max_workers=16) as p:
+        # with Pool(processes=16) as p:
         ret_list = p.map(
             func_to_apply,
             [group for name, group in dfGrouped],
@@ -50,10 +52,10 @@ def groupbyApplyParallel(dfGrouped, func_to_apply):
     return concat(ret_list)
 
 
-def applyParallel(df, func_to_apply, splits=128):
+def applyParallel(df, func_to_apply, splits=16):
     with ThreadPoolExecutor(max_workers=splits, thread_name_prefix="applyParallel") as p:
-    # with ProcessPoolExecutor(max_workers=16) as p:
-    # with Pool(processes=16) as p:
+        # with ProcessPoolExecutor(max_workers=16) as p:
+        # with Pool(processes=16) as p:
         ret_list = p.map(
             func_to_apply,
             np.array_split(df, min(splits, len(df))),
@@ -280,14 +282,23 @@ def equals_none_or_nan(x, y):
     )
 
 
-def validate_and_rename_columns(df: DataFrame, column: str) -> DataFrame:
-    if column is None or column + SFX1 not in df.columns or column + SFX2 not in df.columns:
-        return df
+def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
+    for column in columns:
+        if column is None or column + SFX1 not in df.columns or column + SFX2 not in df.columns:
+            continue
 
-    if df.apply(lambda row: equals_none_or_nan(row[column + SFX1], row[column + SFX2]), axis=1).all():
-        return df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])
+        if (df[column + SFX1].isna() == df[column + SFX1].isna()).all() and (
+            df[column + SFX1][df[column + SFX1].notna()] == df[column + SFX1][df[column + SFX1].notna()]
+        ).all():
+            df = df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])
+        else:
+            raise ValueError(f"Values of {column} do not agree across levels: {df[[column + SFX1, column + SFX2]]}")
+    return df
 
-    raise ValueError(f"Values of {column} do not agree across levels: {df[[column + SFX1, column + SFX2]]}")
+
+def drop_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
+    columns_dict = {col + SFX1: col for col in columns}
+    return df.rename(columns=columns_dict).drop(columns=[col + SFX2 for col in columns])
 
 
 def select_levels(

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -6,6 +6,11 @@ from statsmodels.stats.weightstats import _tconfint_generic, _tstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import (
+    NUMERATOR,
+    NUMERATOR_SUM_OF_SQUARES,
+    DENOMINATOR,
+    INTERVAL_SIZE,
+    ALPHA,
     POINT_ESTIMATE,
     CI_LOWER,
     CI_UPPER,
@@ -20,77 +25,83 @@ from spotify_confidence.analysis.constants import (
 )
 
 
-class TTestComputer(object):
-    def __init__(self, numerator, numerator_sumsq, denominator, ordinal_group_column, interval_size):
-        self._numerator = numerator
-        self._numerator_sumsq = numerator_sumsq
-        self._denominator = denominator
-        self._ordinal_group_column = ordinal_group_column
-        self._interval_size = interval_size
+def point_estimate(df: DataFrame, arg_dict: Dict[str, str]) -> float:
+    numerator = arg_dict[NUMERATOR]
+    denominator = arg_dict[DENOMINATOR]
+    if (df[denominator] == 0).any():
+        raise ValueError("""Can't compute point estimate: denominator is 0""")
+    return df[numerator] / df[denominator]
 
-    def _point_estimate(self, row: Series) -> float:
-        if row[self._denominator] == 0:
-            raise ValueError("""Can't compute point estimate: denominator is 0""")
-        return row[self._numerator] / row[self._denominator]
 
-    def _variance(self, row: Series) -> float:
-        binary = row[self._numerator_sumsq] == row[self._numerator]
-        if binary:
-            # This equals row[POINT_ESTIMATE]*(1-row[POINT_ESTIMATE]) when the data is binary,
-            # and also gives a robust fallback in case it's not
-            variance = row[self._numerator_sumsq] / row[self._denominator] - row[POINT_ESTIMATE] ** 2
-        else:
-            variance = (row[self._numerator_sumsq] - np.power(row[self._numerator], 2) / row[self._denominator]) / (
-                row[self._denominator] - 1
-            )
-        if variance < 0:
-            raise ValueError("Computed variance is negative. " "Please check your inputs.")
-        return variance
+def variance(df: DataFrame, arg_dict: Dict[str, str]) -> float:
+    numerator = arg_dict[NUMERATOR]
+    denominator = arg_dict[DENOMINATOR]
+    numerator_sumsq = arg_dict[NUMERATOR_SUM_OF_SQUARES]
+    binary = df[numerator_sumsq] == df[numerator]
+    if binary.all():
+        # This equals row[POINT_ESTIMATE]*(1-row[POINT_ESTIMATE]) when the data is binary,
+        # and also gives a robust fallback in case it's not
+        variance = df[numerator_sumsq] / df[denominator] - df[POINT_ESTIMATE] ** 2
+    else:
+        variance = (df[numerator_sumsq] - np.power(df[numerator], 2) / df[denominator]) / (df[denominator] - 1)
+    if (variance < 0).any():
+        raise ValueError("Computed variance is negative. " "Please check your inputs.")
+    return variance
 
-    def _std_err(self, row: Series) -> float:
-        return np.sqrt(
-            row[VARIANCE + SFX1] / row[self._denominator + SFX1] + row[VARIANCE + SFX2] / row[self._denominator + SFX2]
-        )
 
-    def _add_point_estimate_ci(self, row: DataFrame) -> Series:
-        row[CI_LOWER], row[CI_UPPER] = _tconfint_generic(
-            mean=row[POINT_ESTIMATE],
-            std_mean=np.sqrt(row[VARIANCE] / row[self._denominator]),
-            dof=row[self._denominator] - 1,
-            alpha=1 - self._interval_size,
-            alternative=TWO_SIDED,
-        )
-        return row
+def std_err(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+    denominator = arg_dict[DENOMINATOR]
+    return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
-    def _dof(self, row: Series) -> float:
-        v1, v2 = row[VARIANCE + SFX1], row[VARIANCE + SFX2]
-        n1, n2 = row[self._denominator + SFX1], row[self._denominator + SFX2]
-        return (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
 
-    def _p_value(self, row: Series) -> float:
-        _, p_value = _tstat_generic(
-            value1=row[POINT_ESTIMATE + SFX2],
-            value2=row[POINT_ESTIMATE + SFX1],
-            std_diff=row[STD_ERR],
-            dof=self._dof(row),
-            alternative=row[PREFERENCE_TEST],
-            diff=row[NULL_HYPOTHESIS],
-        )
-        return p_value
+def add_point_estimate_ci(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+    denominator = arg_dict[DENOMINATOR]
+    interval_size = arg_dict[INTERVAL_SIZE]
+    df[CI_LOWER], df[CI_UPPER] = _tconfint_generic(
+        mean=df[POINT_ESTIMATE],
+        std_mean=np.sqrt(df[VARIANCE] / df[denominator]),
+        dof=df[denominator] - 1,
+        alpha=1 - interval_size,
+        alternative=TWO_SIDED,
+    )
+    return df
 
-    def _ci(self, row: Series, alpha_column: str) -> Tuple[float, float]:
-        return _tconfint_generic(
-            mean=row[DIFFERENCE],
-            std_mean=row[STD_ERR],
-            dof=self._dof(row),
-            alpha=row[alpha_column],
-            alternative=row[PREFERENCE_TEST],
-        )
 
-    def _achieved_power(self, df: DataFrame, mde: float, alpha: float) -> DataFrame:
-        v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
+def _dof(row: Series, arg_dict: Dict[str, str]) -> float:
+    denominator = arg_dict[DENOMINATOR]
+    v1, v2 = row[VARIANCE + SFX1], row[VARIANCE + SFX2]
+    n1, n2 = row[denominator + SFX1], row[denominator + SFX2]
+    return (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
 
-        var_pooled = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2)
 
-        return power_calculation(mde, var_pooled, alpha, n1, n2)
+def p_value(row: Series, arg_dict: Dict[str, str]) -> float:
+    _, p_value = _tstat_generic(
+        value1=row[POINT_ESTIMATE + SFX2],
+        value2=row[POINT_ESTIMATE + SFX1],
+        std_diff=row[STD_ERR],
+        dof=_dof(row, arg_dict),
+        alternative=row[PREFERENCE_TEST],
+        diff=row[NULL_HYPOTHESIS],
+    )
+    return p_value
+
+
+def ci(row: Series, arg_dict: Dict[str, str]) -> Tuple[float, float]:
+    alpha_column = arg_dict[ALPHA]
+    return _tconfint_generic(
+        mean=row[DIFFERENCE],
+        std_mean=row[STD_ERR],
+        dof=_dof(row, arg_dict),
+        alpha=row[alpha_column],
+        alternative=row[PREFERENCE_TEST],
+    )
+
+
+def achieved_power(df: DataFrame, mde: float, alpha: float, arg_dict: Dict[str, str]) -> DataFrame:
+    v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
+    d1, d2 = arg_dict[DENOMINATOR] + SFX1, arg_dict[DENOMINATOR] + SFX2
+    n1, n2 = df[d1], df[d2]
+
+    var_pooled = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2)
+
+    return power_calculation(mde, var_pooled, alpha, n1, n2)

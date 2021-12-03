@@ -1,14 +1,14 @@
 """Tests for `confidence` categorical variables."""
 
-import pytest
-import spotify_confidence
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 from scipy.stats import chisquare
-from spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer import ChiSquaredComputer
-from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
-from spotify_confidence.analysis.constants import POINT_ESTIMATE, VARIANCE, SFX1, SFX2
+
+import spotify_confidence
 from spotify_confidence.analysis.confidence_utils import power_calculation
+from spotify_confidence.analysis.constants import POINT_ESTIMATE, VARIANCE, SFX1, SFX2, DENOMINATOR
+from spotify_confidence.analysis.frequentist.confidence_computers import chi_squared_computer as computer
 
 
 def chart_data(chart_object, series_name):
@@ -58,10 +58,7 @@ class TestCategorical(object):
         x = np.random.binomial(n, p, sample_size) / n
         se = x.var()
 
-        computer = ChiSquaredComputer(
-            numerator=None, numerator_sumsq=None, denominator=None, ordinal_group_column=None, interval_size=None
-        )
-        se_to_verify = pd.DataFrame({POINT_ESTIMATE: [p]}).apply(computer._variance, axis=1) / n
+        se_to_verify = pd.DataFrame({POINT_ESTIMATE: [p]}).apply(computer.variance, axis=1, arg_dict=None) / n
 
         assert np.allclose(se_to_verify, se, atol=1e-6)
 
@@ -79,22 +76,8 @@ class TestCategorical(object):
         diff = x2 - x1
         std_diff = diff.std()
 
-        comp = GenericComputer(
-            data_frame=pd.DataFrame({"group": ["control"], "success": [1], "n": [2], "method": ["chi-squared"]}),
-            numerator_column="success",
-            numerator_sum_squares_column=None,
-            denominator_column="n",
-            categorical_group_columns=["group"],
-            ordinal_group_column=None,
-            interval_size=None,
-            correction_method="Bonferroni",
-            method_column="method",
-            bootstrap_samples_column=None,
-            metric_column=None,
-            treatment_column=None,
-            power=0.8,
-        )
-        diff_se = comp._std_err(
+        arg_dict = {DENOMINATOR: "n"}
+        diff_se = computer.std_err(
             pd.DataFrame(
                 {
                     VARIANCE + SFX1: [p1 * (1 - p1)],
@@ -103,7 +86,8 @@ class TestCategorical(object):
                     "n" + SFX2: [n2],
                     "method": ["chi-squared"],
                 }
-            )
+            ),
+            arg_dict,
         )
 
         assert np.allclose(std_diff, diff_se, atol=1e-6)

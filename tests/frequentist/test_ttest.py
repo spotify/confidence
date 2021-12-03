@@ -1,14 +1,16 @@
 """Tests for `confidence` categorical variables."""
 
-import pytest
-import spotify_confidence
-import pandas as pd
 import numpy as np
-from spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer import TTestComputer
-from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
+import pandas as pd
+import pytest
+
+import spotify_confidence
 from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE,
     VARIANCE,
+    NUMERATOR,
+    NUMERATOR_SUM_OF_SQUARES,
+    DENOMINATOR,
     SFX1,
     SFX2,
     INCREASE_PREFFERED,
@@ -18,6 +20,7 @@ from spotify_confidence.analysis.constants import (
     CI_UPPER,
     CI_LOWER,
 )
+from spotify_confidence.analysis.frequentist.confidence_computers import t_test_computer as computer
 
 
 def chart_data(chart_object, series_name):
@@ -70,12 +73,10 @@ class TestCategorical(object):
         sum = np.sum(x)
         sum_squared = np.sum(x * x)
 
-        comp = TTestComputer(
-            numerator="sum", numerator_sumsq="sumsq", denominator="n", ordinal_group_column=None, interval_size=None
-        )
+        arg_dict = {NUMERATOR: "sum", NUMERATOR_SUM_OF_SQUARES: "sumsq", DENOMINATOR: "n"}
         var_to_verify = pd.DataFrame(
             {"sum": [sum], "sumsq": [sum_squared], POINT_ESTIMATE: [x.mean()], "n": [n]}
-        ).apply(lambda row: comp._variance(row), axis=1)
+        ).apply(lambda row: computer.variance(row, arg_dict), axis=1)
 
         assert np.allclose(var_to_verify, var, rtol=2e-3)
 
@@ -92,22 +93,8 @@ class TestCategorical(object):
 
         std_diff = np.sqrt(sigma1 ** 2 / n1 + sigma2 ** 2 / n2)
 
-        comp = GenericComputer(
-            data_frame=pd.DataFrame({"group": ["control"], "success": [1], "n": [2], "method": ["t-test"]}),
-            numerator_column="success",
-            numerator_sum_squares_column="sumsq",
-            denominator_column="n",
-            categorical_group_columns=["group"],
-            ordinal_group_column=None,
-            metric_column=None,
-            treatment_column=None,
-            interval_size=None,
-            power=0.8,
-            correction_method="Bonferroni",
-            method_column="method",
-            bootstrap_samples_column=None,
-        )
-        diff_se = comp._std_err(
+        arg_dict = {DENOMINATOR: "n"}
+        diff_se = computer.std_err(
             pd.DataFrame(
                 {
                     VARIANCE + SFX1: [x1.var()],
@@ -116,7 +103,8 @@ class TestCategorical(object):
                     "n" + SFX2: [n2],
                     "method": ["t-test"],
                 }
-            )
+            ),
+            arg_dict,
         )
 
         assert np.allclose(std_diff, diff_se, atol=1e-5)
