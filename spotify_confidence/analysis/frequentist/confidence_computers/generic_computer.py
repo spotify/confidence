@@ -476,7 +476,7 @@ class GenericComputer(ConfidenceComputerABC):
                 lambda df: df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
                 .assign(**{STD_ERR: confidence_computers[df[self._method_column].values[0]].std_err(df, arg_dict)})
                 .pipe(self._add_p_value_and_ci, final_expected_sample_size_column=final_expected_sample_size_column)
-                .apply(self._powered_effect_and_required_sample_size, mde_column=mde_column, axis=1)
+                .pipe(self._powered_effect_and_required_sample_size, mde_column=mde_column)
                 .pipe(self._adjust_if_absolute, absolute=absolute)
                 .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
             )
@@ -781,21 +781,21 @@ class GenericComputer(ConfidenceComputerABC):
         }
         return confidence_computers[row[self._method_column]].ci(row, arg_dict)
 
-    def _powered_effect_and_required_sample_size(self, row: Series, mde_column: str) -> DataFrame:
-        if row[self._method_column] != ZTEST and mde_column in row:
+    def _powered_effect_and_required_sample_size(self, df: DataFrame, mde_column: str) -> DataFrame:
+        if df[self._method_column].unique() != ZTEST and mde_column in df:
             raise ValueError("Minimum detectable effects only supported for ZTest.")
-        elif row[self._method_column] != ZTEST or row[ADJUSTED_POWER] is None:
-            row[POWERED_EFFECT] = None
-            row[REQUIRED_SAMPLE_SIZE] = None
-            return row
+        elif df[self._method_column].unique() != ZTEST or (df[ADJUSTED_POWER].isna()).any():
+            df[POWERED_EFFECT] = None
+            df[REQUIRED_SAMPLE_SIZE] = None
+            return df
         else:
             arg_dict = {
                 NUMERATOR: self._numerator,
                 NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
                 DENOMINATOR: self._denominator,
             }
-            return confidence_computers[row[self._method_column]].powered_effect_and_required_sample_size(
-                row, arg_dict
+            return confidence_computers[df[self._method_column].values[0]].powered_effect_and_required_sample_size(
+                df, arg_dict
             )
 
     def _achieved_power(self, row: Series, mde: float, alpha: float, arg_dict: Dict) -> DataFrame:
@@ -812,7 +812,7 @@ class GenericComputer(ConfidenceComputerABC):
             sequential_alphas = confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict)
             print(
                 f"Finished computing sequential: {time.time() - start_time:.2f}s "
-                f"for {set([m for m,d in df.index])}"
+                #   f"for {set([m for m,d in df.index])}"
             )
             return sequential_alphas
         else:

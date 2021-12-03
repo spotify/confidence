@@ -234,27 +234,27 @@ def ci_for_multiple_comparison_methods(
 
 
 def _powered_effect(
-    df: Series,
-    kappa: float,
-    proportion_of_total: float,
+    df: DataFrame,
     z_alpha: float,
     z_power: float,
     binary: bool,
-    current_number_of_units: int,
     non_inferiority: bool,
 ) -> Series:
 
     if binary and not non_inferiority:
-        effect = _search_MDE_binary_local_search(
-            control_avg=df[POINT_ESTIMATE + SFX1],
-            control_var=df[VARIANCE + SFX1],
-            non_inferiority=False,
-            kappa=kappa,
-            proportion_of_total=proportion_of_total,
-            current_number_of_units=current_number_of_units,
-            z_alpha=z_alpha,
-            z_power=z_power,
-        )[0]
+        effect = df.apply(
+            lambda row: _search_MDE_binary_local_search(
+                control_avg=row[POINT_ESTIMATE + SFX1],
+                control_var=row[VARIANCE + SFX1],
+                non_inferiority=False,
+                kappa=row["kappa"],
+                proportion_of_total=1.0,
+                current_number_of_units=row["current_number_of_units"],
+                z_alpha=z_alpha,
+                z_power=z_power,
+            )[0],
+            axis=1,
+        )
     else:
         treatment_var = _get_hypothetical_treatment_var(
             binary_metric=binary,
@@ -263,8 +263,8 @@ def _powered_effect(
             control_var=df[VARIANCE + SFX1],
             hypothetical_effect=0,
         )
-        n2_partial = np.power((z_alpha + z_power), 2) * (df[VARIANCE + SFX1] / kappa + treatment_var)
-        effect = np.sqrt((1 / (current_number_of_units * proportion_of_total)) * (n2_partial + kappa * n2_partial))
+        n2_partial = np.power((z_alpha + z_power), 2) * (df[VARIANCE + SFX1] / df["kappa"] + treatment_var)
+        effect = np.sqrt((1 / (df["current_number_of_units"])) * (n2_partial + df["kappa"] * n2_partial))
 
     return effect
 
@@ -302,63 +302,63 @@ def _required_sample_size(
     return required_sample_size
 
 
-def powered_effect_and_required_sample_size(row: Series, arg_dict: Dict[str, str]) -> Series:
+def powered_effect_and_required_sample_size(df: DataFrame, arg_dict: Dict[str, str]) -> DataFrame:
     numerator = arg_dict[NUMERATOR]
     denominator = arg_dict[DENOMINATOR]
     numerator_sumsq = arg_dict[NUMERATOR_SUM_OF_SQUARES]
 
-    z_alpha = st.norm.ppf(1 - row[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] / (2 if row[PREFERENCE_TEST] == TWO_SIDED else 1))
-    z_power = st.norm.ppf(row[ADJUSTED_POWER])
-    n1, n2 = row[denominator + SFX1], row[denominator + SFX2]
+    z_alpha = st.norm.ppf(
+        1 - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
+    )
+    z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
+    n1, n2 = df[denominator + SFX1], df[denominator + SFX2]
     kappa = n1 / n2
-    binary = row[numerator_sumsq + SFX1] == row[numerator + SFX1]
-    proportion_of_total = (n1 + n2) / row[f"current_total_{denominator}"]
+    binary = (df[numerator_sumsq + SFX1] == df[numerator + SFX1]).all()
+    proportion_of_total = (n1 + n2) / df[f"current_total_{denominator}"]
 
-    if isinstance(row[NIM], float):
-        non_inferiority = not np.isnan(row[NIM])
-    elif row[NIM] is None:
-        non_inferiority = row[NIM] is not None
+    nim = df[NIM].values[0]
+    if isinstance(nim, float):
+        non_inferiority = not np.isnan(nim)
+    elif nim is None:
+        non_inferiority = nim is not None
     else:
         raise ValueError("NIM has to be type float or None.")
 
-    row[POWERED_EFFECT] = _powered_effect(
-        df=row,
-        kappa=kappa,
-        proportion_of_total=1,
+    df[POWERED_EFFECT] = _powered_effect(
+        df=df.assign(kappa=kappa).assign(current_number_of_units=n1 + n2),
         z_alpha=z_alpha,
         z_power=z_power,
         binary=binary,
-        current_number_of_units=n1 + n2,
         non_inferiority=non_inferiority,
     )
 
-    if ALTERNATIVE_HYPOTHESIS in row and NULL_HYPOTHESIS in row and row[ALTERNATIVE_HYPOTHESIS] is not None:
-        row[REQUIRED_SAMPLE_SIZE] = _required_sample_size(
+    if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
+        df[REQUIRED_SAMPLE_SIZE] = _required_sample_size(
             proportion_of_total=1,
             z_alpha=z_alpha,
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS],
-            control_avg=row[POINT_ESTIMATE + SFX1],
-            control_var=row[VARIANCE + SFX1],
+            hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
+            control_avg=df[POINT_ESTIMATE + SFX1],
+            control_var=df[VARIANCE + SFX1],
             kappa=kappa,
         )
-        row[REQUIRED_SAMPLE_SIZE_METRIC] = _required_sample_size(
+        df[REQUIRED_SAMPLE_SIZE_METRIC] = _required_sample_size(
             proportion_of_total=proportion_of_total,
             z_alpha=z_alpha,
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            hypothetical_effect=row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS],
-            control_avg=row[POINT_ESTIMATE + SFX1],
-            control_var=row[VARIANCE + SFX1],
+            hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
+            control_avg=df[POINT_ESTIMATE + SFX1],
+            control_var=df[VARIANCE + SFX1],
             kappa=kappa,
         )
     else:
-        row[REQUIRED_SAMPLE_SIZE] = None
+        df[REQUIRED_SAMPLE_SIZE] = None
 
-    return row
+    return df
 
 
 def _search_MDE_binary_local_search(
