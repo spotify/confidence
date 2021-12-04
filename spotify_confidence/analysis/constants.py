@@ -23,6 +23,8 @@ ALPHA = "alpha"
 FINAL_EXPECTED_SAMPLE_SIZE = "final_expected_sample_size"
 ORDINAL_GROUP_COLUMN = "ordinal_group_column"
 MDE = "mde"
+METHOD = "method_column"
+CORRECTION_METHOD = "correction_method"
 
 POINT_ESTIMATE = "point_estimate"
 VARIANCE = "variance"

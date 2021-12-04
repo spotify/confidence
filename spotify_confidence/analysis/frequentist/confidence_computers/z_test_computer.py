@@ -17,6 +17,8 @@ from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE,
     CI_LOWER,
     CI_UPPER,
+    ADJUSTED_LOWER,
+    ADJUSTED_UPPER,
     VARIANCE,
     TWO_SIDED,
     SFX2,
@@ -90,21 +92,20 @@ def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(row: Series, arg_dict: Dict[str, str]) -> float:
+def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
     _, p_value = _zstat_generic(
-        value1=row[POINT_ESTIMATE + SFX2],
-        value2=row[POINT_ESTIMATE + SFX1],
-        std_diff=row[STD_ERR],
-        alternative=row[PREFERENCE_TEST],
-        diff=row[NULL_HYPOTHESIS],
+        value1=df[POINT_ESTIMATE + SFX2],
+        value2=df[POINT_ESTIMATE + SFX1],
+        std_diff=df[STD_ERR],
+        alternative=df[PREFERENCE_TEST].values[0],
+        diff=df[NULL_HYPOTHESIS],
     )
     return p_value
 
 
-def ci(row: Series, arg_dict: Dict[str, str]) -> Tuple[float, float]:
-    alpha_column = arg_dict[ALPHA]
+def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
     return _zconfint_generic(
-        mean=row[DIFFERENCE], std_mean=row[STD_ERR], alpha=row[alpha_column], alternative=row[PREFERENCE_TEST]
+        mean=df[DIFFERENCE], std_mean=df[STD_ERR], alpha=df[alpha_column], alternative=df[PREFERENCE_TEST].values[0]
     )
 
 
@@ -228,9 +229,14 @@ def ci_for_multiple_comparison_methods(
         lower = bound if row[PREFERENCE_TEST] == "larger" else -np.inf
         upper = bound if row[PREFERENCE_TEST] == "smaller" else np.inf
 
-        return lower, upper
+        row[ADJUSTED_LOWER] = lower
+        row[ADJUSTED_UPPER] = upper
 
-    return df.apply(_compute_ci_for_row, axis=1)
+        return row
+
+    ci_df = df.apply(_compute_ci_for_row, axis=1)[[ADJUSTED_LOWER, ADJUSTED_UPPER]]
+
+    return ci_df[ADJUSTED_LOWER], ci_df[ADJUSTED_UPPER]
 
 
 def _powered_effect(

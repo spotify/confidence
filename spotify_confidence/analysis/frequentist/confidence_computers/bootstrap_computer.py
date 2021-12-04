@@ -3,7 +3,7 @@ from typing import Tuple, Dict
 import numpy as np
 from pandas import DataFrame, Series
 
-from spotify_confidence.analysis.constants import CI_LOWER, CI_UPPER, SFX1, SFX2, BOOTSTRAPS, INTERVAL_SIZE, ALPHA
+from spotify_confidence.analysis.constants import CI_LOWER, CI_UPPER, SFX1, SFX2, BOOTSTRAPS, INTERVAL_SIZE
 
 
 def point_estimate(df: DataFrame, arg_dict: Dict[str, str]) -> float:
@@ -36,12 +36,20 @@ def p_value(row, arg_dict: Dict[str, str]) -> float:
     return -1
 
 
-def ci(row, arg_dict: Dict[str, str]) -> Tuple[float, float]:
-    alpha_column = arg_dict[ALPHA]
+def ci(df, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
     bootstrap_samples = arg_dict[BOOTSTRAPS]
-    differences = row[bootstrap_samples + SFX2] - row[bootstrap_samples + SFX1]
-    lower = np.percentile(differences, 100 * row[alpha_column] / 2)
-    upper = np.percentile(differences, 100 * (1 - row[alpha_column] / 2))
+    lower = df.apply(
+        lambda row: np.percentile(
+            row[bootstrap_samples + SFX2] - row[bootstrap_samples + SFX1], 100 * row[alpha_column] / 2
+        ),
+        axis=1,
+    )
+    upper = df.apply(
+        lambda row: np.percentile(
+            row[bootstrap_samples + SFX2] - row[bootstrap_samples + SFX1], 100 * (1 - row[alpha_column] / 2)
+        ),
+        axis=1,
+    )
     return lower, upper
 
 

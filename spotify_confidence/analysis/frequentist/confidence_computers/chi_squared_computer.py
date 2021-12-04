@@ -9,7 +9,6 @@ from spotify_confidence.analysis.constants import (
     NUMERATOR,
     DENOMINATOR,
     INTERVAL_SIZE,
-    ALPHA,
     POINT_ESTIMATE,
     VARIANCE,
     CI_LOWER,
@@ -51,26 +50,29 @@ def add_point_estimate_ci(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(row: Series, arg_dict: Dict[str, str]) -> float:
+def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
     n1, n2 = arg_dict[NUMERATOR] + SFX1, arg_dict[NUMERATOR] + SFX2
     d1, d2 = arg_dict[DENOMINATOR] + SFX1, arg_dict[DENOMINATOR] + SFX2
-    _, p_value, _ = proportions_chisquare(
-        count=[row[n1], row[n2]],
-        nobs=[row[d1], row[d2]],
-    )
-    return p_value
+
+    def p_value_row(row):
+        _, p_value, _ = proportions_chisquare(
+            count=[row[n1], row[n2]],
+            nobs=[row[d1], row[d2]],
+        )
+        return p_value
+
+    return df.apply(p_value_row, axis=1)
 
 
-def ci(row: Series, arg_dict: Dict[str, str]) -> Tuple[float, float]:
+def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
     n1, n2 = arg_dict[NUMERATOR] + SFX1, arg_dict[NUMERATOR] + SFX2
     d1, d2 = arg_dict[DENOMINATOR] + SFX1, arg_dict[DENOMINATOR] + SFX2
-    alpha = arg_dict[ALPHA]
     return confint_proportions_2indep(
-        count1=row[n2],
-        nobs1=row[d2],
-        count2=row[n1],
-        nobs2=row[d1],
-        alpha=row[alpha],
+        count1=df[n2],
+        nobs1=df[d2],
+        count2=df[n1],
+        nobs2=df[d1],
+        alpha=df[alpha_column],
         compare="diff",
         method="wald",
     )

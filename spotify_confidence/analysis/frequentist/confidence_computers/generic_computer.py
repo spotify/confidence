@@ -37,6 +37,8 @@ from spotify_confidence.analysis.confidence_utils import (
     get_all_group_columns,
     validate_data,
     remove_group_columns,
+    applyParallel,
+    groupbyApplyParallel,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -47,6 +49,9 @@ from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE,
     FINAL_EXPECTED_SAMPLE_SIZE,
     ORDINAL_GROUP_COLUMN,
+    MDE,
+    METHOD,
+    CORRECTION_METHOD,
     VARIANCE,
     CI_LOWER,
     CI_UPPER,
@@ -468,16 +473,27 @@ class GenericComputer(ConfidenceComputerABC):
             comparison_df, self._correction_method, ["level_1", "level_2"] + groups_except_ordinal
         )
         start_time = time.time()
-        arg_dict = {DENOMINATOR: self._denominator}
+        arg_dict = {
+            NUMERATOR: self._numerator,
+            NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
+            DENOMINATOR: self._denominator,
+            BOOTSTRAPS: self._bootstrap_samples_column,
+            FINAL_EXPECTED_SAMPLE_SIZE: final_expected_sample_size_column,
+            ORDINAL_GROUP_COLUMN: self._ordinal_group_column,
+            MDE: mde_column,
+            METHOD: self._method_column,
+            CORRECTION_METHOD: self._correction_method,
+            INTERVAL_SIZE: self._interval_size,
+        }
         comparison_df = (
             comparison_df.assign(n_comparisons=n_comparisons)
             .groupby(groups_except_ordinal + [self._method_column], as_index=False)
             .apply(
                 lambda df: df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
-                .assign(**{STD_ERR: confidence_computers[df[self._method_column].values[0]].std_err(df, arg_dict)})
-                .pipe(self._add_p_value_and_ci, final_expected_sample_size_column=final_expected_sample_size_column)
-                .pipe(self._powered_effect_and_required_sample_size, mde_column=mde_column)
-                .pipe(self._adjust_if_absolute, absolute=absolute)
+                .assign(**{STD_ERR: confidence_computers[df[arg_dict[METHOD]].values[0]].std_err(df, arg_dict)})
+                .pipe(_add_p_value_and_ci, arg_dict=arg_dict)
+                .pipe(_powered_effect_and_required_sample_size, arg_dict=arg_dict)
+                .pipe(_adjust_if_absolute, absolute=absolute)
                 .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
             )
         )
@@ -485,186 +501,53 @@ class GenericComputer(ConfidenceComputerABC):
         print(f"Time passed computing CIs: {time.time() - start_time:.2f}")
         return comparison_df
 
-    @staticmethod
-    def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
-        if absolute:
-            return df.assign(absolute_difference=absolute)
-        else:
-            return (
-                df.assign(absolute_difference=absolute)
-                .assign(**{DIFFERENCE: df[DIFFERENCE] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{CI_LOWER: df[CI_LOWER] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{CI_UPPER: df[CI_UPPER] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{ADJUSTED_LOWER: df[ADJUSTED_LOWER] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{ADJUSTED_UPPER: df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
-            )
-
-    def _corrections_power(self, number_of_success_metrics: int, number_of_guardrail_metrics: int) -> int:
-        return number_of_guardrail_metrics if number_of_success_metrics == 0 else number_of_guardrail_metrics + 1
-
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
         if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
             if self._metric_column is None or self._treatment_column is None:
                 return df.assign(**{ADJUSTED_POWER: None})
             else:
-                self._number_total_metrics = 1 if self._single_metric else df.groupby(self._metric_column).ngroups
+                number_total_metrics = 1 if self._single_metric else df.groupby(self._metric_column).ngroups
                 if self._single_metric:
                     if df[df[NIM].isnull()].shape[0] > 0:
-                        self._number_success_metrics = 1
+                        number_success_metrics = 1
                     else:
-                        self._number_success_metrics = 0
+                        number_success_metrics = 0
                 else:
-                    self._number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
 
-                self._number_guardrail_metrics = self._number_total_metrics - self._number_success_metrics
-            power_correction = self._corrections_power(
-                number_of_guardrail_metrics=self._number_guardrail_metrics,
-                number_of_success_metrics=self._number_success_metrics,
+                number_guardrail_metrics = number_total_metrics - number_success_metrics
+            power_correction = (
+                number_guardrail_metrics if number_success_metrics == 0 else number_guardrail_metrics + 1
             )
             return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
         else:
             return df.assign(**{ADJUSTED_POWER: df[POWER]})
 
-    def _add_p_value_and_ci(self, df: DataFrame, final_expected_sample_size_column: str) -> DataFrame:
-        def set_alpha_and_adjust_preference(df: DataFrame) -> DataFrame:
-            alpha_0 = 1 - self._interval_size
-            return df.assign(
-                **{
-                    ALPHA: df.apply(
-                        lambda row: 2 * alpha_0
-                        if self._correction_method == SPOT_1 and row[PREFERENCE] != TWO_SIDED
-                        else alpha_0,
-                        axis=1,
-                    )
-                }
-            )
-
-        def _add_adjusted_p_and_is_significant(df: DataFrame) -> DataFrame:
-            n_comparisons = df["n_comparisons"].values[0]
-            if final_expected_sample_size_column is not None:
-                if self._correction_method not in [
-                    BONFERRONI,
-                    BONFERRONI_ONLY_COUNT_TWOSIDED,
-                    BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-                    SPOT_1,
-                ]:
-                    raise ValueError(
-                        f"{self._correction_method} not supported for sequential tests. Use one of"
-                        f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
-                        f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
-                    )
-                adjusted_alpha = self._compute_sequential_adjusted_alpha(df, final_expected_sample_size_column)
-                df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
-                df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
-                df[P_VALUE] = None
-                df[ADJUSTED_P] = None
-            elif self._correction_method in [
-                HOLM,
-                HOMMEL,
-                SIMES_HOCHBERG,
-                SIDAK,
-                HOLM_SIDAK,
-                FDR_BH,
-                FDR_BY,
-                FDR_TSBH,
-                FDR_TSBKY,
-                SPOT_1_HOLM,
-                SPOT_1_HOMMEL,
-                SPOT_1_SIMES_HOCHBERG,
-                SPOT_1_SIDAK,
-                SPOT_1_HOLM_SIDAK,
-                SPOT_1_FDR_BH,
-                SPOT_1_FDR_BY,
-                SPOT_1_FDR_TSBH,
-                SPOT_1_FDR_TSBKY,
-            ]:
-                if self._correction_method.startswith("spot-"):
-                    correction_method = self._correction_method[7:]
-                else:
-                    correction_method = self._correction_method
-                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
-                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
-                is_significant, adjusted_p, _, _ = multipletests(
-                    pvals=df[P_VALUE], alpha=1 - self._interval_size, method=correction_method
-                )
-                df[ADJUSTED_P] = adjusted_p
-                df[IS_SIGNIFICANT] = is_significant
-            elif self._correction_method in [
-                BONFERRONI,
-                BONFERRONI_ONLY_COUNT_TWOSIDED,
-                BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-                SPOT_1,
-            ]:
-                df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
-                df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
-                df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
-                df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
-            else:
-                raise ValueError("Can't figure out which correction method to use :(")
-
-            return df
-
-        def _add_ci(df: DataFrame) -> DataFrame:
-            ci = df.apply(self._ci, axis=1, alpha_column=ALPHA)
-            ci_df = DataFrame(index=ci.index, columns=[CI_LOWER, CI_UPPER], data=list(ci.values))
-
-            if (
-                self._correction_method
-                in [
-                    HOLM,
-                    HOMMEL,
-                    SIMES_HOCHBERG,
-                    SPOT_1_HOLM,
-                    SPOT_1_HOMMEL,
-                    SPOT_1_SIMES_HOCHBERG,
-                ]
-                and all(df[PREFERENCE_TEST] != TWO_SIDED)
-            ):
-                adjusted_ci = self._ci_for_multiple_comparison_methods(
-                    df,
-                    correction_method=self._correction_method,
-                    alpha=1 - self._interval_size,
-                )
-            elif self._correction_method in [
-                BONFERRONI,
-                BONFERRONI_ONLY_COUNT_TWOSIDED,
-                BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-                SPOT_1,
-                SPOT_1_HOLM,
-                SPOT_1_HOMMEL,
-                SPOT_1_SIMES_HOCHBERG,
-                SPOT_1_SIDAK,
-                SPOT_1_HOLM_SIDAK,
-                SPOT_1_FDR_BH,
-                SPOT_1_FDR_BY,
-                SPOT_1_FDR_TSBH,
-                SPOT_1_FDR_TSBKY,
-            ]:
-                adjusted_ci = df.apply(self._ci, axis=1, alpha_column=ADJUSTED_ALPHA)
-            else:
-                warn(f"Confidence intervals not supported for {self._correction_method}")
-                adjusted_ci = Series(index=df.index, data=[(None, None) for i in range(len(df))])
-
-            adjusted_ci_df = DataFrame(
-                index=adjusted_ci.index, columns=[ADJUSTED_LOWER, ADJUSTED_UPPER], data=list(adjusted_ci.values)
-            )
-
-            return (
-                df.assign(**{CI_LOWER: ci_df[CI_LOWER]})
-                .assign(**{CI_UPPER: ci_df[CI_UPPER]})
-                .assign(**{ADJUSTED_LOWER: adjusted_ci_df[ADJUSTED_LOWER]})
-                .assign(**{ADJUSTED_UPPER: adjusted_ci_df[ADJUSTED_UPPER]})
-            )
-
+    def achieved_power(self, level_1, level_2, mde, alpha, groupby):
+        groupby = listify(groupby)
+        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        arg_dict = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
         return (
-            df.pipe(set_alpha_and_adjust_preference)
-            .assign(**{P_VALUE: lambda df: df.apply(self._p_value, axis=1)})
-            .pipe(_add_adjusted_p_and_is_significant)
-            .pipe(_add_ci)
-        )
+            self._compute_differences(
+                level_columns,
+                [(level_1, level_2)],
+                True,
+                groupby,
+                level_as_reference=True,
+                nims=None,
+                final_expected_sample_size_column=None,
+                mde_column=None,
+            )  # TODO: IS this right?
+            .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
+            .assign(
+                achieved_power=lambda df: df.apply(
+                    lambda row: confidence_computers[row[self._method_column]].achieved_power(
+                        row, mde=mde, alpha=alpha, arg_dict=arg_dict
+                    ),
+                    axis=1,
+                )
+            )
+        )[["level_1", "level_2", "achieved_power"]]
 
     def _get_num_comparisons(self, df: DataFrame, correction_method: str, groupby: Iterable) -> int:
         if correction_method == BONFERRONI:
@@ -720,112 +603,189 @@ class GenericComputer(ConfidenceComputerABC):
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
 
-    def achieved_power(self, level_1, level_2, mde, alpha, groupby):
-        """Calculated the achieved power of test of differences between
-        level 1 and level 2 given a targeted MDE.
 
-        Args:
-            level_1 (str, tuple of str): Name of first level.
-            level_2 (str, tuple of str): Name of second level.
-            mde (float): Absolute minimal detectable effect size.
-            alpha (float): Type I error rate, cutoff value for determining
-                statistical significance.
-            groupby (str): Name of column.
-                If specified, will return the difference for each level
-                of the grouped dimension.
-
-        Returns:
-            Pandas DataFrame with the following columns:
-            - level_1: Name of level 1.
-            - level_2: Name of level 2.
-            - power: 1 - B, where B is the likelihood of a Type II (false
-                negative) error.
-
-        """
-        groupby = listify(groupby)
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
-        arg_dict = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
-        return (
-            self._compute_differences(
-                level_columns,
-                [(level_1, level_2)],
-                True,
-                groupby,
-                level_as_reference=True,
-                nims=None,
-                final_expected_sample_size_column=None,
-                mde_column=None,
-            )  # TODO: IS this right?
-            .pipe(lambda df: df if groupby == [] else df.set_index(groupby))
-            .assign(
-                achieved_power=lambda df: df.apply(
-                    self._achieved_power, mde=mde, alpha=alpha, arg_dict=arg_dict, axis=1
+def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
+        alpha_0 = 1 - arg_dict[INTERVAL_SIZE]
+        return df.assign(
+            **{
+                ALPHA: df.apply(
+                    lambda row: 2 * alpha_0
+                    if arg_dict[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
+                    else alpha_0,
+                    axis=1,
                 )
-            )
-        )[["level_1", "level_2", "achieved_power"]]
-
-    def _p_value(self, row) -> float:
-        if row[self._method_column] == CHI2 and row[NIM] is not None:
-            raise ValueError(
-                "Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead."
-            )
-        arg_dict = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
-        return confidence_computers[row[self._method_column]].p_value(row, arg_dict)
-
-    def _ci(self, row, alpha_column: str) -> Tuple[float, float]:
-        arg_dict = {
-            NUMERATOR: self._numerator,
-            DENOMINATOR: self._denominator,
-            ALPHA: alpha_column,
-            BOOTSTRAPS: self._bootstrap_samples_column,
-        }
-        return confidence_computers[row[self._method_column]].ci(row, arg_dict)
-
-    def _powered_effect_and_required_sample_size(self, df: DataFrame, mde_column: str) -> DataFrame:
-        if df[self._method_column].unique() != ZTEST and mde_column in df:
-            raise ValueError("Minimum detectable effects only supported for ZTest.")
-        elif df[self._method_column].unique() != ZTEST or (df[ADJUSTED_POWER].isna()).any():
-            df[POWERED_EFFECT] = None
-            df[REQUIRED_SAMPLE_SIZE] = None
-            return df
-        else:
-            arg_dict = {
-                NUMERATOR: self._numerator,
-                NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
-                DENOMINATOR: self._denominator,
             }
-            return confidence_computers[df[self._method_column].values[0]].powered_effect_and_required_sample_size(
-                df, arg_dict
+        )
+
+    def _add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict) -> DataFrame:
+        n_comparisons = df["n_comparisons"].values[0]
+        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+            if arg_dict[CORRECTION_METHOD] not in [
+                BONFERRONI,
+                BONFERRONI_ONLY_COUNT_TWOSIDED,
+                BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+                SPOT_1,
+            ]:
+                raise ValueError(
+                    f"{arg_dict[CORRECTION_METHOD]} not supported for sequential tests. Use one of"
+                    f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
+                    f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
+                )
+            adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict)
+            df = df.merge(adjusted_alpha, left_index=True, right_index=True)
+            df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ALPHA] / n_comparisons
+            df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+            df[P_VALUE] = None
+            df[ADJUSTED_P] = None
+        elif arg_dict[CORRECTION_METHOD] in [
+            HOLM,
+            HOMMEL,
+            SIMES_HOCHBERG,
+            SIDAK,
+            HOLM_SIDAK,
+            FDR_BH,
+            FDR_BY,
+            FDR_TSBH,
+            FDR_TSBKY,
+            SPOT_1_HOLM,
+            SPOT_1_HOMMEL,
+            SPOT_1_SIMES_HOCHBERG,
+            SPOT_1_SIDAK,
+            SPOT_1_HOLM_SIDAK,
+            SPOT_1_FDR_BH,
+            SPOT_1_FDR_BY,
+            SPOT_1_FDR_TSBH,
+            SPOT_1_FDR_TSBKY,
+        ]:
+            if arg_dict[CORRECTION_METHOD].startswith("spot-"):
+                correction_method = arg_dict[CORRECTION_METHOD][7:]
+            else:
+                correction_method = arg_dict[CORRECTION_METHOD]
+            df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+            df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
+            is_significant, adjusted_p, _, _ = multipletests(
+                pvals=df[P_VALUE], alpha=1 - arg_dict[INTERVAL_SIZE], method=correction_method
             )
+            df[ADJUSTED_P] = adjusted_p
+            df[IS_SIGNIFICANT] = is_significant
+        elif arg_dict[CORRECTION_METHOD] in [
+            BONFERRONI,
+            BONFERRONI_ONLY_COUNT_TWOSIDED,
+            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+            SPOT_1,
+        ]:
+            df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
+            df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE] = df[ADJUSTED_ALPHA]
+            df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
+            df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+        else:
+            raise ValueError("Can't figure out which correction method to use :(")
 
-    def _achieved_power(self, row: Series, mde: float, alpha: float, arg_dict: Dict) -> DataFrame:
-        return confidence_computers[row[self._method_column]].achieved_power(row, mde, alpha, arg_dict)
+        return df
 
-    def _compute_sequential_adjusted_alpha(self, df: DataFrame, final_expected_sample_size_column: str) -> Series:
-        if all(df[self._method_column] == "z-test"):
-            arg_dict = {
-                DENOMINATOR: self._denominator,
-                FINAL_EXPECTED_SAMPLE_SIZE: final_expected_sample_size_column,
-                ORDINAL_GROUP_COLUMN: self._ordinal_group_column,
-            }
-            start_time = time.time()
-            sequential_alphas = confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict)
-            print(
-                f"Finished computing sequential: {time.time() - start_time:.2f}s "
-                #   f"for {set([m for m,d in df.index])}"
+    def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
+        lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
+
+        if (
+            arg_dict[CORRECTION_METHOD]
+            in [
+                HOLM,
+                HOMMEL,
+                SIMES_HOCHBERG,
+                SPOT_1_HOLM,
+                SPOT_1_HOMMEL,
+                SPOT_1_SIMES_HOCHBERG,
+            ]
+            and all(df[PREFERENCE_TEST] != TWO_SIDED)
+        ):
+            if all(df[arg_dict[METHOD]] == "z-test"):
+                adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
+                    df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
+                )
+            else:
+                raise NotImplementedError(f"{arg_dict[CORRECTION_METHOD]} is only supported for ZTests")
+        elif arg_dict[CORRECTION_METHOD] in [
+            BONFERRONI,
+            BONFERRONI_ONLY_COUNT_TWOSIDED,
+            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+            SPOT_1,
+            SPOT_1_HOLM,
+            SPOT_1_HOMMEL,
+            SPOT_1_SIMES_HOCHBERG,
+            SPOT_1_SIDAK,
+            SPOT_1_HOLM_SIDAK,
+            SPOT_1_FDR_BH,
+            SPOT_1_FDR_BY,
+            SPOT_1_FDR_TSBH,
+            SPOT_1_FDR_TSBKY,
+        ]:
+            adjusted_lower, adjusted_upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(
+                df, ADJUSTED_ALPHA, arg_dict
             )
-            return sequential_alphas
         else:
-            raise NotImplementedError("Sequential testing is only supported for z-tests")
+            warn(f"Confidence intervals not supported for {arg_dict[CORRECTION_METHOD]}")
+            adjusted_lower = None
+            adjusted_upper = None
 
-    def _ci_for_multiple_comparison_methods(
-        self,
-        df: DataFrame,
-        correction_method: str,
-        alpha: float,
-        w: float = 1.0,
-    ) -> Tuple[Union[Series, float], Union[Series, float]]:
-        if all(df[self._method_column] == "z-test"):
-            return confidence_computers["z-test"].ci_for_multiple_comparison_methods(df, correction_method, alpha, w)
-        else:
-            raise NotImplementedError(f"{self._correction_method} is only supported for ZTests")
+        return (
+            df.assign(**{CI_LOWER: lower})
+            .assign(**{CI_UPPER: upper})
+            .assign(**{ADJUSTED_LOWER: adjusted_lower})
+            .assign(**{ADJUSTED_UPPER: adjusted_upper})
+        )
+
+    return (
+        df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
+        .assign(**{P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict)})
+        .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict)
+        .pipe(_add_ci, arg_dict=arg_dict)
+    )
+
+
+def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
+    if absolute:
+        return df.assign(absolute_difference=absolute)
+    else:
+        return (
+            df.assign(absolute_difference=absolute)
+            .assign(**{DIFFERENCE: df[DIFFERENCE] / df[POINT_ESTIMATE + SFX1]})
+            .assign(**{CI_LOWER: df[CI_LOWER] / df[POINT_ESTIMATE + SFX1]})
+            .assign(**{CI_UPPER: df[CI_UPPER] / df[POINT_ESTIMATE + SFX1]})
+            .assign(**{ADJUSTED_LOWER: df[ADJUSTED_LOWER] / df[POINT_ESTIMATE + SFX1]})
+            .assign(**{ADJUSTED_UPPER: df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
+            .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
+            .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
+        )
+
+
+def _p_value(df: DataFrame, arg_dict: Dict) -> float:
+    if df[arg_dict[METHOD]].values[0] == CHI2 and (df[NIM].notna()).any():
+        raise ValueError("Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead.")
+    return confidence_computers[df[arg_dict[METHOD]].values[0]].p_value(df, arg_dict)
+
+
+def _powered_effect_and_required_sample_size(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    if df[arg_dict[METHOD]].unique() != ZTEST and arg_dict[MDE] in df:
+        raise ValueError("Minimum detectable effects only supported for ZTest.")
+    elif df[arg_dict[METHOD]].unique() != ZTEST or (df[ADJUSTED_POWER].isna()).any():
+        df[POWERED_EFFECT] = None
+        df[REQUIRED_SAMPLE_SIZE] = None
+        return df
+    else:
+        return confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect_and_required_sample_size(
+            df, arg_dict
+        )
+
+
+def _compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict) -> Series:
+    if all(df[method_column] == "z-test"):
+        start_time = time.time()
+        sequential_alphas = confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict)
+        print(
+            f"Finished computing sequential: {time.time() - start_time:.2f}s "
+            #   f"for {set([m for m,d in df.index])}"
+        )
+        return sequential_alphas
+    else:
+        raise NotImplementedError("Sequential testing is only supported for z-tests")

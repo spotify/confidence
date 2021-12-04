@@ -10,7 +10,6 @@ from spotify_confidence.analysis.constants import (
     NUMERATOR_SUM_OF_SQUARES,
     DENOMINATOR,
     INTERVAL_SIZE,
-    ALPHA,
     POINT_ESTIMATE,
     CI_LOWER,
     CI_UPPER,
@@ -74,26 +73,25 @@ def _dof(row: Series, arg_dict: Dict[str, str]) -> float:
     return (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
 
 
-def p_value(row: Series, arg_dict: Dict[str, str]) -> float:
+def p_value(df: Series, arg_dict: Dict[str, str]) -> Series:
     _, p_value = _tstat_generic(
-        value1=row[POINT_ESTIMATE + SFX2],
-        value2=row[POINT_ESTIMATE + SFX1],
-        std_diff=row[STD_ERR],
-        dof=_dof(row, arg_dict),
-        alternative=row[PREFERENCE_TEST],
-        diff=row[NULL_HYPOTHESIS],
+        value1=df[POINT_ESTIMATE + SFX2],
+        value2=df[POINT_ESTIMATE + SFX1],
+        std_diff=df[STD_ERR],
+        dof=_dof(df, arg_dict),
+        alternative=df[PREFERENCE_TEST].values[0],
+        diff=df[NULL_HYPOTHESIS],
     )
     return p_value
 
 
-def ci(row: Series, arg_dict: Dict[str, str]) -> Tuple[float, float]:
-    alpha_column = arg_dict[ALPHA]
+def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
     return _tconfint_generic(
-        mean=row[DIFFERENCE],
-        std_mean=row[STD_ERR],
-        dof=_dof(row, arg_dict),
-        alpha=row[alpha_column],
-        alternative=row[PREFERENCE_TEST],
+        mean=df[DIFFERENCE],
+        std_mean=df[STD_ERR],
+        dof=_dof(df, arg_dict),
+        alpha=df[alpha_column],
+        alternative=df[PREFERENCE_TEST].values[0],
     )
 
 

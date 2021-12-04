@@ -83,4 +83,24 @@ class ConfidenceComputerABC(ABC):
         alpha: float,
         groupby: Union[str, Iterable],
     ) -> DataFrame:
+        """Calculated the achieved power of test of differences between
+        level 1 and level 2 given a targeted MDE.
+
+        Args:
+            level_1 (str, tuple of str): Name of first level.
+            level_2 (str, tuple of str): Name of second level.
+            mde (float): Absolute minimal detectable effect size.
+            alpha (float): Type I error rate, cutoff value for determining
+                statistical significance.
+            groupby (str): Name of column.
+                If specified, will return the difference for each level
+                of the grouped dimension.
+
+        Returns:
+            Pandas DataFrame with the following columns:
+            - level_1: Name of level 1.
+            - level_2: Name of level 2.
+            - power: 1 - B, where B is the likelihood of a Type II (false
+                negative) error.
+        """
         pass
