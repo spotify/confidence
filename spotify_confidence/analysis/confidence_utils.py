@@ -270,18 +270,6 @@ def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
         raise ValueError(f"non_inferiority_margins must be None, tuple, dict," f"or DataFrame, but is {type(nims)}.")
 
 
-def equals_none_or_nan(x, y):
-    return (
-        True
-        if x == y
-        or (x is None and y is None)
-        or (type(x) is float and type(y) is float and np.isnan(x) and np.isnan(y))
-        or (x is None and type(y) is float and np.isnan(y))
-        or (y is None and type(x) is float and np.isnan(x))
-        else False
-    )
-
-
 def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
     for column in columns:
         if column is None or column + SFX1 not in df.columns or column + SFX2 not in df.columns:
@@ -299,13 +287,6 @@ def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFr
 def drop_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
     columns_dict = {col + SFX1: col for col in columns}
     return df.rename(columns=columns_dict).drop(columns=[col + SFX2 for col in columns])
-
-
-def select_levels(
-    df: DataFrame, level_columns: Union[str, Iterable], level_1: Union[str, Tuple], level_2: Union[str, Tuple]
-) -> DataFrame:
-    gdf = df.groupby(level_columns)
-    return concat([gdf.get_group(level_1), gdf.get_group(level_2)])
 
 
 def level2str(level: Union[str, Tuple]) -> str:
