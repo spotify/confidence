@@ -25,6 +25,7 @@ ORDINAL_GROUP_COLUMN = "ordinal_group_column"
 MDE = "mde"
 METHOD = "method_column"
 CORRECTION_METHOD = "correction_method"
+ABSOLUTE = "absolute"
 
 POINT_ESTIMATE = "point_estimate"
 VARIANCE = "variance"

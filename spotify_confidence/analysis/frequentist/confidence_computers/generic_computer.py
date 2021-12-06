@@ -37,7 +37,6 @@ from spotify_confidence.analysis.confidence_utils import (
     get_all_group_columns,
     validate_data,
     remove_group_columns,
-    applyParallel,
     groupbyApplyParallel,
 )
 from spotify_confidence.analysis.constants import (
@@ -52,6 +51,7 @@ from spotify_confidence.analysis.constants import (
     MDE,
     METHOD,
     CORRECTION_METHOD,
+    ABSOLUTE,
     VARIANCE,
     CI_LOWER,
     CI_UPPER,
@@ -484,18 +484,13 @@ class GenericComputer(ConfidenceComputerABC):
             METHOD: self._method_column,
             CORRECTION_METHOD: self._correction_method,
             INTERVAL_SIZE: self._interval_size,
+            ABSOLUTE: absolute,
         }
-        comparison_df = (
-            comparison_df.assign(n_comparisons=n_comparisons)
-            .groupby(groups_except_ordinal + [self._method_column], as_index=False)
-            .apply(
-                lambda df: df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
-                .assign(**{STD_ERR: confidence_computers[df[arg_dict[METHOD]].values[0]].std_err(df, arg_dict)})
-                .pipe(_add_p_value_and_ci, arg_dict=arg_dict)
-                .pipe(_powered_effect_and_required_sample_size, arg_dict=arg_dict)
-                .pipe(_adjust_if_absolute, absolute=absolute)
-                .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
-            )
+        comparison_df = groupbyApplyParallel(
+            comparison_df.assign(n_comparisons=n_comparisons).groupby(
+                groups_except_ordinal + [self._method_column], as_index=False
+            ),
+            lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
         print(f"Time passed computing CIs: {time.time() - start_time}")
         print(f"Time passed computing CIs: {time.time() - start_time:.2f}")
@@ -602,6 +597,17 @@ class GenericComputer(ConfidenceComputerABC):
                 return max(1, number_comparions * max(1, self._number_success_metrics) * number_segments)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
+
+
+def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    return (
+        df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
+        .assign(**{STD_ERR: confidence_computers[df[arg_dict[METHOD]].values[0]].std_err(df, arg_dict)})
+        .pipe(_add_p_value_and_ci, arg_dict=arg_dict)
+        .pipe(_powered_effect_and_required_sample_size, arg_dict=arg_dict)
+        .pipe(_adjust_if_absolute, absolute=arg_dict[ABSOLUTE])
+        .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
+    )
 
 
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
