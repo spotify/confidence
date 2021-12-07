@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 from typing import Union, Iterable, List, Tuple, Dict
 from warnings import warn
 
@@ -211,7 +210,6 @@ class GenericComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
-            start_time = time.time()
             arg_dict = {
                 NUMERATOR: self._numerator,
                 NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
@@ -245,7 +243,6 @@ class GenericComputer(ConfidenceComputerABC):
                 )
                 .reset_index(drop=True)
             )
-            print(f"Time passed computing sufficient stats: {time.time() - start_time:.2f}")
         return self._sufficient
 
     def compute_difference(
@@ -443,7 +440,6 @@ class GenericComputer(ConfidenceComputerABC):
                     .drop(columns="dummy_join_column")
                 )
 
-        start_time = time.time()
         comparison_df = (
             df.pipe(add_nim_input_columns_from_tuple_or_dict, nims=nims, mde_column=mde_column)
             .pipe(add_nims_and_mdes, mde_column=mde_column)
@@ -465,7 +461,7 @@ class GenericComputer(ConfidenceComputerABC):
             .assign(**{POWER: self._power})
             .pipe(self._add_adjusted_power)
         )
-        print(f"Time passed applying nims and mdes, joining: {time.time() - start_time:.2f}")
+
         groups_except_ordinal = [
             column
             for column in df.index.names
@@ -475,7 +471,7 @@ class GenericComputer(ConfidenceComputerABC):
         n_comparisons = self._get_num_comparisons(
             comparison_df, self._correction_method, ["level_1", "level_2"] + groups_except_ordinal
         )
-        start_time = time.time()
+
         arg_dict = {
             NUMERATOR: self._numerator,
             NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
@@ -495,8 +491,6 @@ class GenericComputer(ConfidenceComputerABC):
             ),
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
-        print(f"Time passed computing CIs: {time.time() - start_time}")
-        print(f"Time passed computing CIs: {time.time() - start_time:.2f}")
         return comparison_df
 
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
@@ -852,12 +846,6 @@ def _powered_effect_and_required_sample_size(df: DataFrame, arg_dict: Dict) -> D
 
 def _compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict) -> Series:
     if all(df[method_column] == "z-test"):
-        start_time = time.time()
-        sequential_alphas = confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict)
-        print(
-            f"Finished computing sequential: {time.time() - start_time:.2f}s "
-            #   f"for {set([m for m,d in df.index])}"
-        )
-        return sequential_alphas
+        return confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict)
     else:
         raise NotImplementedError("Sequential testing is only supported for z-tests")
