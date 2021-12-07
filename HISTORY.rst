@@ -2,6 +2,11 @@
 History
 =======
 
+2.4.3 (2021-12-06)
+------------------
+
+* Improve performance by using more optimal pandas operations and by running computations in paralell over groupby dimensions.
+
 2.4.2 (2021-11-24)
 ------------------
 

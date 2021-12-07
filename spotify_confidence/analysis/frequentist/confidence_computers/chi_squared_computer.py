@@ -1,68 +1,88 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 from pandas import DataFrame, Series
 from statsmodels.stats.proportion import proportion_confint, proportions_chisquare, confint_proportions_2indep
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
-from spotify_confidence.analysis.constants import POINT_ESTIMATE, VARIANCE, CI_LOWER, CI_UPPER, SFX1, SFX2
+from spotify_confidence.analysis.constants import (
+    NUMERATOR,
+    DENOMINATOR,
+    INTERVAL_SIZE,
+    POINT_ESTIMATE,
+    VARIANCE,
+    CI_LOWER,
+    CI_UPPER,
+    SFX1,
+    SFX2,
+)
 
 
-class ChiSquaredComputer(object):
-    def __init__(self, numerator, numerator_sumsq, denominator, ordinal_group_column, interval_size):
-        self._numerator = numerator
-        self._numerator_sumsq = numerator_sumsq
-        self._denominator = denominator
-        self._ordinal_group_column = ordinal_group_column
-        self._interval_size = interval_size
+def point_estimate(df: DataFrame, arg_dict: Dict[str, str]) -> float:
+    numerator = arg_dict[NUMERATOR]
+    denominator = arg_dict[DENOMINATOR]
+    if (df[denominator] == 0).any():
+        raise ValueError("""Can't compute point estimate: denominator is 0""")
+    return df[numerator] / df[denominator]
 
-    def _point_estimate(self, row: Series) -> float:
-        if row[self._denominator] == 0:
-            raise ValueError("""Can't compute point estimate: denominator is 0""")
-        return row[self._numerator] / row[self._denominator]
 
-    def _variance(self, row: Series) -> float:
-        variance = row[POINT_ESTIMATE] * (1 - row[POINT_ESTIMATE])
-        if variance < 0:
-            raise ValueError("Computed variance is negative. " "Please check your inputs.")
-        return variance
+def variance(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+    variance = df[POINT_ESTIMATE] * (1 - df[POINT_ESTIMATE])
+    if (variance < 0).any():
+        raise ValueError(f"Computed variance is negative: {variance}. " "Please check your inputs.")
+    return variance
 
-    def _std_err(self, row: Series) -> float:
-        return np.sqrt(
-            row[VARIANCE + SFX1] / row[self._denominator + SFX1] + row[VARIANCE + SFX2] / row[self._denominator + SFX2]
-        )
 
-    def _add_point_estimate_ci(self, row: DataFrame) -> Series:
-        row[CI_LOWER], row[CI_UPPER] = proportion_confint(
-            count=row[self._numerator],
-            nobs=row[self._denominator],
-            alpha=1 - self._interval_size,
-        )
-        return row
+def std_err(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+    denominator = arg_dict[DENOMINATOR]
+    return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
-    def _p_value(self, row: Series) -> float:
+
+def add_point_estimate_ci(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+    numerator = arg_dict[NUMERATOR]
+    denominator = arg_dict[DENOMINATOR]
+    interval_size = arg_dict[INTERVAL_SIZE]
+    df[CI_LOWER], df[CI_UPPER] = proportion_confint(
+        count=df[numerator],
+        nobs=df[denominator],
+        alpha=1 - interval_size,
+    )
+    return df
+
+
+def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+    n1, n2 = arg_dict[NUMERATOR] + SFX1, arg_dict[NUMERATOR] + SFX2
+    d1, d2 = arg_dict[DENOMINATOR] + SFX1, arg_dict[DENOMINATOR] + SFX2
+
+    def p_value_row(row):
         _, p_value, _ = proportions_chisquare(
-            count=[row[self._numerator + SFX1], row[self._numerator + SFX2]],
-            nobs=[row[self._denominator + SFX1], row[self._denominator + SFX2]],
+            count=[row[n1], row[n2]],
+            nobs=[row[d1], row[d2]],
         )
         return p_value
 
-    def _ci(self, row: Series, alpha_column: str) -> Tuple[float, float]:
-        return confint_proportions_2indep(
-            count1=row[self._numerator + SFX2],
-            nobs1=row[self._denominator + SFX2],
-            count2=row[self._numerator + SFX1],
-            nobs2=row[self._denominator + SFX1],
-            alpha=row[alpha_column],
-            compare="diff",
-            method="wald",
-        )
+    return df.apply(p_value_row, axis=1)
 
-    def _achieved_power(self, df: DataFrame, mde: float, alpha: float) -> DataFrame:
-        s1, s2 = df[self._numerator + SFX1], df[self._numerator + SFX2]
-        n1, n2 = df[self._denominator + SFX1], df[self._denominator + SFX2]
 
-        pooled_prop = (s1 + s2) / (n1 + n2)
-        var_pooled = pooled_prop * (1 - pooled_prop)
+def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
+    n1, n2 = arg_dict[NUMERATOR] + SFX1, arg_dict[NUMERATOR] + SFX2
+    d1, d2 = arg_dict[DENOMINATOR] + SFX1, arg_dict[DENOMINATOR] + SFX2
+    return confint_proportions_2indep(
+        count1=df[n2],
+        nobs1=df[d2],
+        count2=df[n1],
+        nobs2=df[d1],
+        alpha=df[alpha_column],
+        compare="diff",
+        method="wald",
+    )
 
-        return power_calculation(mde, var_pooled, alpha, n1, n2)
+
+def achieved_power(df: DataFrame, mde: float, alpha: float, arg_dict: Dict[str, str]) -> DataFrame:
+    n1, n2 = arg_dict[NUMERATOR] + SFX1, arg_dict[NUMERATOR] + SFX2
+    d1, d2 = arg_dict[DENOMINATOR] + SFX1, arg_dict[DENOMINATOR] + SFX2
+
+    pooled_prop = (df[n1] + df[n2]) / (df[d1] + df[d2])
+    var_pooled = pooled_prop * (1 - pooled_prop)
+
+    return power_calculation(mde, var_pooled, alpha, df[d1], df[d2])

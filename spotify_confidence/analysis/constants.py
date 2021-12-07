@@ -14,6 +14,19 @@
 
 from typing import Tuple, Dict, Union
 
+NUMERATOR = "numerator"
+NUMERATOR_SUM_OF_SQUARES = "numerator_sum_of_squares"
+DENOMINATOR = "denominator"
+BOOTSTRAPS = "bootstraps"
+INTERVAL_SIZE = "interval_size"
+ALPHA = "alpha"
+FINAL_EXPECTED_SAMPLE_SIZE = "final_expected_sample_size"
+ORDINAL_GROUP_COLUMN = "ordinal_group_column"
+MDE = "mde"
+METHOD = "method_column"
+CORRECTION_METHOD = "correction_method"
+ABSOLUTE = "absolute"
+
 POINT_ESTIMATE = "point_estimate"
 VARIANCE = "variance"
 CI_LOWER, CI_UPPER = "ci_lower", "ci_upper"
