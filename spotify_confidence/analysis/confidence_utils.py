@@ -27,7 +27,7 @@ from spotify_confidence.analysis.constants import (
 
 
 def groupbyApplyParallel(dfGrouped, func_to_apply):
-    with ThreadPoolExecutor(max_workers=16, thread_name_prefix="groupbyApplyParallel") as p:
+    with ThreadPoolExecutor(max_workers=32, thread_name_prefix="groupbyApplyParallel") as p:
         ret_list = p.map(
             func_to_apply,
             [group for name, group in dfGrouped],
@@ -35,7 +35,7 @@ def groupbyApplyParallel(dfGrouped, func_to_apply):
     return concat(ret_list)
 
 
-def applyParallel(df, func_to_apply, splits=16):
+def applyParallel(df, func_to_apply, splits=32):
     with ThreadPoolExecutor(max_workers=splits, thread_name_prefix="applyParallel") as p:
         ret_list = p.map(
             func_to_apply,
