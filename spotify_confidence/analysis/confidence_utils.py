@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import OrderedDict
+from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Union, Iterable, Tuple, List
 
 import numpy as np
@@ -20,31 +21,13 @@ from pandas import DataFrame, concat, Series
 from scipy.stats import norm
 
 from spotify_confidence.analysis.constants import (
-    INCREASE_PREFFERED,
-    DECREASE_PREFFERED,
-    TWO_SIDED,
-    NIM_TYPE,
-    NIM_INPUT_COLUMN_NAME,
-    PREFERRED_DIRECTION_INPUT_NAME,
-    NIM,
-    NULL_HYPOTHESIS,
-    PREFERENCE,
-    ALTERNATIVE_HYPOTHESIS,
     SFX1,
     SFX2,
-    POINT_ESTIMATE,
 )
-
-from concurrent.futures.thread import ThreadPoolExecutor
-
-# from concurrent.futures import ProcessPoolExecutor
-# from multiprocessing import Pool, cpu_count
 
 
 def groupbyApplyParallel(dfGrouped, func_to_apply):
     with ThreadPoolExecutor(max_workers=16, thread_name_prefix="groupbyApplyParallel") as p:
-        # with ProcessPoolExecutor(max_workers=16) as p:
-        # with Pool(processes=16) as p:
         ret_list = p.map(
             func_to_apply,
             [group for name, group in dfGrouped],
@@ -54,8 +37,6 @@ def groupbyApplyParallel(dfGrouped, func_to_apply):
 
 def applyParallel(df, func_to_apply, splits=16):
     with ThreadPoolExecutor(max_workers=splits, thread_name_prefix="applyParallel") as p:
-        # with ProcessPoolExecutor(max_workers=16) as p:
-        # with Pool(processes=16) as p:
         ret_list = p.map(
             func_to_apply,
             np.array_split(df, min(splits, len(df))),
@@ -129,145 +110,6 @@ def validate_levels(df: DataFrame, level_columns: Union[str, Iterable], levels: 
                     level, level_columns, list(df.groupby(level_columns).groups.keys())
                 )
             )
-
-
-def add_mde_columns(df: DataFrame, mde_column: str) -> DataFrame:
-    def _mde_2_signed_mde(mde: Tuple[float, str]) -> Tuple[float, float, str]:
-        mde_value = None if (type(mde[0]) is float and np.isnan(mde[0])) else mde[0]
-        if mde[1] is None or (type(mde[1]) is float and np.isnan(mde[1])):
-            return (mde[0], mde_value, TWO_SIDED)
-        elif mde[1].lower() == INCREASE_PREFFERED:
-            return (mde[0], mde_value, "larger")
-        elif mde[1].lower() == DECREASE_PREFFERED:
-            return (mde[0], None if mde_value is None else -mde_value, "smaller")
-
-    if mde_column is not None:
-        return (
-            df.assign(
-                tmp_alt_hyp_dir=df.apply(
-                    lambda row: _mde_2_signed_mde(
-                        (
-                            row[mde_column],
-                            (row[PREFERRED_DIRECTION_INPUT_NAME] if PREFERRED_DIRECTION_INPUT_NAME in row else np.nan),
-                        )
-                    ),
-                    axis=1,
-                )
-            )
-            .assign(
-                **{
-                    ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
-                        lambda row: row[ALTERNATIVE_HYPOTHESIS]
-                        if ALTERNATIVE_HYPOTHESIS in row and (row[mde_column] is None or np.isnan(row[mde_column]))
-                        else None
-                        if row["tmp_alt_hyp_dir"][1] is None
-                        else row[POINT_ESTIMATE] * row["tmp_alt_hyp_dir"][1],
-                        axis=1,
-                    )
-                }
-            )
-            .assign(
-                **{
-                    PREFERENCE: lambda df: df.apply(
-                        lambda row: row[PREFERENCE]
-                        if PREFERENCE in row and (row[mde_column] is None or np.isnan(row[mde_column]))
-                        else row["tmp_alt_hyp_dir"][2],
-                        axis=1,
-                    )
-                }
-            )
-            .assign(
-                **{
-                    NULL_HYPOTHESIS: df.apply(
-                        lambda row: row[NULL_HYPOTHESIS]
-                        if NULL_HYPOTHESIS in row and (row[mde_column] is None or np.isnan(row[mde_column]))
-                        else 0,
-                        axis=1,
-                    )
-                }
-            )
-            .drop(columns=[mde_column, "tmp_alt_hyp_dir"])
-        )
-    else:
-        return df
-
-
-def add_nim_columns(df: DataFrame, nims: NIM_TYPE) -> DataFrame:
-    def _nim_2_signed_nim(nim: Tuple[float, str]) -> Tuple[float, float, str]:
-        nim_value = 0 if nim[0] is None or (type(nim[0]) is float and np.isnan(nim[0])) else nim[0]
-        if nim[1] is None or (type(nim[1]) is float and np.isnan(nim[1])):
-            return (nim[0], nim_value, TWO_SIDED)
-        elif nim[1].lower() == INCREASE_PREFFERED:
-            return (nim[0], -nim_value, "larger")
-        elif nim[1].lower() == DECREASE_PREFFERED:
-            return (nim[0], nim_value, "smaller")
-        else:
-            raise ValueError(f"{nim[1].lower()} not in " f"{[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
-
-    if nims is None:
-        return (
-            df.assign(**{NIM: None})
-            .assign(**{NULL_HYPOTHESIS: 0 if NULL_HYPOTHESIS not in df else df[NULL_HYPOTHESIS]})
-            .assign(**{PREFERENCE: TWO_SIDED if PREFERENCE not in df else df[PREFERENCE]})
-            .assign(
-                **{ALTERNATIVE_HYPOTHESIS: None if ALTERNATIVE_HYPOTHESIS not in df else df[ALTERNATIVE_HYPOTHESIS]}
-            )
-        )
-    elif type(nims) is tuple:
-        return (
-            df.assign(**{NIM: _nim_2_signed_nim((nims[0], nims[1]))[0]})
-            .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * _nim_2_signed_nim((nims[0], nims[1]))[1]})
-            .assign(**{PREFERENCE: _nim_2_signed_nim((nims[0], nims[1]))[2]})
-            .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
-        )
-    elif type(nims) is dict:
-        sgnd_nims = {group: _nim_2_signed_nim(nim) for group, nim in nims.items()}
-        nim_df = DataFrame(
-            index=df.index, columns=[NIM, NULL_HYPOTHESIS, PREFERENCE], data=list(df.index.to_series().map(sgnd_nims))
-        )
-        return (
-            df.assign(**{NIM: nim_df[NIM]})
-            .assign(**{NULL_HYPOTHESIS: df[POINT_ESTIMATE] * nim_df[NULL_HYPOTHESIS]})
-            .assign(**{PREFERENCE: nim_df[PREFERENCE]})
-            .assign(**{ALTERNATIVE_HYPOTHESIS: 0})
-        )
-    elif type(nims) is bool:
-        return (
-            df.assign(**{NIM: lambda df: df[NIM_INPUT_COLUMN_NAME]})
-            .assign(
-                **{
-                    NULL_HYPOTHESIS: lambda df: df.apply(
-                        lambda row: row[NULL_HYPOTHESIS]
-                        if NULL_HYPOTHESIS in row and (row[NIM] is None or np.isnan(row[NIM]))
-                        else row[POINT_ESTIMATE]
-                        * _nim_2_signed_nim((row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[1],
-                        axis=1,
-                    )
-                }
-            )
-            .assign(
-                **{
-                    PREFERENCE: lambda df: df.apply(
-                        lambda row: row[PREFERENCE]
-                        if PREFERENCE in row and (row[NIM] is None or np.isnan(row[NIM]))
-                        else _nim_2_signed_nim((row[NIM], row[PREFERRED_DIRECTION_INPUT_NAME]))[2],
-                        axis=1,
-                    )
-                }
-            )
-            .assign(
-                **{
-                    ALTERNATIVE_HYPOTHESIS: lambda df: df.apply(
-                        lambda row: row[ALTERNATIVE_HYPOTHESIS]
-                        if ALTERNATIVE_HYPOTHESIS in row and (row[NIM] is None or np.isnan(row[NIM]))
-                        else 0,
-                        axis=1,
-                    )
-                }
-            )
-        )
-    else:
-        raise ValueError(f"non_inferiority_margins must be None, tuple, dict," f"or DataFrame, but is {type(nims)}.")
 
 
 def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
