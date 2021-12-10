@@ -17,6 +17,7 @@ from warnings import warn
 
 from pandas import DataFrame, Series
 from statsmodels.stats.multitest import multipletests
+from scipy import stats as st
 from numpy import isnan
 
 import spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer as bootstrap_computer
@@ -69,6 +70,7 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_UPPER,
     IS_SIGNIFICANT,
     REQUIRED_SAMPLE_SIZE,
+    REQUIRED_SAMPLE_SIZE_METRIC,
     NULL_HYPOTHESIS,
     ALTERNATIVE_HYPOTHESIS,
     NIM,
@@ -469,7 +471,10 @@ class GenericComputer(ConfidenceComputerABC):
             and (column != self._ordinal_group_column or final_expected_sample_size_column is None)
         ]
         n_comparisons = self._get_num_comparisons(
-            comparison_df, self._correction_method, ["level_1", "level_2"] + groups_except_ordinal
+            comparison_df,
+            self._correction_method,
+            number_comparisons=comparison_df.groupby(["level_1", "level_2"]).ngroups,
+            groupby=groups_except_ordinal,
         )
 
         arg_dict = {
@@ -541,11 +546,20 @@ class GenericComputer(ConfidenceComputerABC):
             )
         )[["level_1", "level_2", "achieved_power"]]
 
-    def _get_num_comparisons(self, df: DataFrame, correction_method: str, groupby: Iterable) -> int:
+    def _get_num_comparisons(
+        self, df: DataFrame, correction_method: str, number_comparisons: int, groupby: Iterable
+    ) -> int:
         if correction_method == BONFERRONI:
-            return max(1, df.groupby(groupby).ngroups)
+            return max(1, number_comparisons * df.assign(_dummy_=1).groupby(groupby + ["_dummy_"]).ngroups)
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
-            return max(df.query(f'{PREFERENCE_TEST} == "{TWO_SIDED}"').groupby(groupby).ngroups, 1)
+            return max(
+                number_comparisons
+                * df.query(f'{PREFERENCE_TEST} == "{TWO_SIDED}"')
+                .assign(_dummy_=1)
+                .groupby(groupby + ["_dummy_"])
+                .ngroups,
+                1,
+            )
         elif correction_method in [
             HOLM,
             HOMMEL,
@@ -572,26 +586,26 @@ class GenericComputer(ConfidenceComputerABC):
             SPOT_1_FDR_TSBKY,
         ]:
             if self._metric_column is None or self._treatment_column is None:
-                return max(1, df[df[NIM].isnull()].groupby(groupby).ngroups)
+                return max(
+                    1,
+                    number_comparisons * df[df[NIM].isnull()].assign(_dummy_=1).groupby(groupby + ["_dummy_"]).ngroups,
+                )
             else:
                 if self._single_metric:
                     if df[df[NIM].isnull()].shape[0] > 0:
-                        self._number_success_metrics = 1
+                        number_success_metrics = 1
                     else:
-                        self._number_success_metrics = 0
+                        number_success_metrics = 0
                 else:
-                    self._number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
 
-                number_comparions = len(
-                    (df[self._treatment_column + SFX1] + df[self._treatment_column + SFX2]).unique()
-                )
                 number_segments = (
                     1
                     if len(self._segments) == 0 or not all(item in df.index.names for item in self._segments)
                     else df.groupby(self._segments).ngroups
                 )
 
-                return max(1, number_comparions * max(1, self._number_success_metrics) * number_segments)
+                return max(1, number_comparisons * max(1, number_success_metrics) * number_segments)
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
 
@@ -664,7 +678,7 @@ def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
         df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
         .assign(**{STD_ERR: confidence_computers[df[arg_dict[METHOD]].values[0]].std_err(df, arg_dict)})
         .pipe(_add_p_value_and_ci, arg_dict=arg_dict)
-        .pipe(_powered_effect_and_required_sample_size, arg_dict=arg_dict)
+        .pipe(_powered_effect_and_required_sample_size_from_difference_df, arg_dict=arg_dict)
         .pipe(_adjust_if_absolute, absolute=arg_dict[ABSOLUTE])
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
     )
@@ -831,7 +845,7 @@ def _p_value(df: DataFrame, arg_dict: Dict) -> float:
     return confidence_computers[df[arg_dict[METHOD]].values[0]].p_value(df, arg_dict)
 
 
-def _powered_effect_and_required_sample_size(df: DataFrame, arg_dict: Dict) -> DataFrame:
+def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
     if df[arg_dict[METHOD]].unique() != ZTEST and arg_dict[MDE] in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
     elif df[arg_dict[METHOD]].unique() != ZTEST or (df[ADJUSTED_POWER].isna()).any():
@@ -839,9 +853,61 @@ def _powered_effect_and_required_sample_size(df: DataFrame, arg_dict: Dict) -> D
         df[REQUIRED_SAMPLE_SIZE] = None
         return df
     else:
-        return confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect_and_required_sample_size(
-            df, arg_dict
+        n1, n2 = df[arg_dict[DENOMINATOR] + SFX1], df[arg_dict[DENOMINATOR] + SFX2]
+        kappa = n1 / n2
+        binary = (df[arg_dict[NUMERATOR_SUM_OF_SQUARES] + SFX1] == df[arg_dict[NUMERATOR] + SFX1]).all()
+        current_number_of_units = n1 + n2
+        proportion_of_total = (n1 + n2) / df[f"current_total_{arg_dict[DENOMINATOR]}"]
+
+        z_alpha = st.norm.ppf(
+            1
+            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
         )
+        z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
+
+        nim = df[NIM].values[0]
+        if isinstance(nim, float):
+            non_inferiority = not isnan(nim)
+        elif nim is None:
+            non_inferiority = nim is not None
+
+        df[POWERED_EFFECT] = confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect(
+            df=df.assign(kappa=kappa).assign(current_number_of_units=current_number_of_units),
+            z_alpha=z_alpha,
+            z_power=z_power,
+            binary=binary,
+            non_inferiority=non_inferiority,
+        )
+
+        if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
+            df[REQUIRED_SAMPLE_SIZE] = confidence_computers[df[arg_dict[METHOD]].values[0]].required_sample_size(
+                proportion_of_total=1,
+                z_alpha=z_alpha,
+                z_power=z_power,
+                binary=binary,
+                non_inferiority=non_inferiority,
+                hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
+                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_var=df[VARIANCE + SFX1],
+                kappa=kappa,
+            )
+            df[REQUIRED_SAMPLE_SIZE_METRIC] = confidence_computers[
+                df[arg_dict[METHOD]].values[0]
+            ].required_sample_size(
+                proportion_of_total=proportion_of_total,
+                z_alpha=z_alpha,
+                z_power=z_power,
+                binary=binary,
+                non_inferiority=non_inferiority,
+                hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
+                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_var=df[VARIANCE + SFX1],
+                kappa=kappa,
+            )
+        else:
+            df[REQUIRED_SAMPLE_SIZE] = None
+
+        return df
 
 
 def _compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict) -> Series:
