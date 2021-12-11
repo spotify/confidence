@@ -107,8 +107,8 @@ from spotify_confidence.analysis.constants import (
     ZTEST,
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
-    NIM_INPUT_COLUMN_NAME,
-    PREFERRED_DIRECTION_INPUT_NAME,
+    NIM_COLUMN_DEFAULT,
+    PREFERRED_DIRECTION_COLUMN_DEFAULT,
     INCREASE_PREFFERED,
     DECREASE_PREFFERED,
 )
@@ -137,9 +137,13 @@ class GenericComputer(ConfidenceComputerABC):
         metric_column: Union[str, None],
         treatment_column: Union[str, None],
         power: float,
+        avg_column,
+        var_column,
     ):
 
         self._df = data_frame
+        self._avg_column = avg_column
+        self._var_column = var_column
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         if self._numerator is not None and (self._numerator_sumsq is None or self._numerator_sumsq == self._numerator):
@@ -188,8 +192,11 @@ class GenericComputer(ConfidenceComputerABC):
             or TTEST in self._df[self._method_column]
             or ZTEST in self._df[self._method_column]
         ):
-            columns_that_must_exist += [self._numerator, self._denominator]
-            columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
+            if not self._avg_column or not self._var_column:
+                columns_that_must_exist += [self._numerator, self._denominator]
+                columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
+            else:
+                columns_that_must_exist += [self._avg_column, self._var_column]
         if BOOTSTRAP in self._df[self._method_column]:
             columns_that_must_exist += [self._bootstrap_samples_column]
 
@@ -225,16 +232,16 @@ class GenericComputer(ConfidenceComputerABC):
                 .apply(
                     lambda df: df.assign(
                         **{
-                            POINT_ESTIMATE: lambda df: confidence_computers[
-                                df[self._method_column].values[0]
-                            ].point_estimate(df, arg_dict)
+                            POINT_ESTIMATE: lambda df: df[self._avg_column]
+                            if self._avg_column is not None
+                            else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
                         }
                     )
                     .assign(
                         **{
-                            VARIANCE: lambda df: confidence_computers[df[self._method_column].values[0]].variance(
-                                df, arg_dict
-                            )
+                            VARIANCE: lambda df: df[self._var_column]
+                            if self._var_column is not None
+                            else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
                         }
                     )
                     .pipe(
@@ -444,7 +451,12 @@ class GenericComputer(ConfidenceComputerABC):
 
         comparison_df = (
             df.pipe(add_nim_input_columns_from_tuple_or_dict, nims=nims, mde_column=mde_column)
-            .pipe(add_nims_and_mdes, mde_column=mde_column)
+            .pipe(
+                add_nims_and_mdes,
+                mde_column=mde_column,
+                nim_column=NIM_COLUMN_DEFAULT,
+                preferred_direction_column=PREFERRED_DIRECTION_COLUMN_DEFAULT,
+            )
             .pipe(join)
             .query(
                 f"level_1 in {[l1 for l1, l2 in groups_to_compare]} and "
@@ -497,6 +509,36 @@ class GenericComputer(ConfidenceComputerABC):
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
         return comparison_df
+
+    def compute_sample_size(
+        self, treatment_weights: Iterable,  mde_column: str, nim_column: str, preferred_direction_column: str, final_expected_sample_size_column: str
+    ) -> DataFrame:
+        sample_size_df = (
+            self._sufficient_statistics.pipe(
+                add_nims_and_mdes,
+                mde_column=mde_column,
+                nim_colum=nim_column,
+                preferred_direction_columns=preferred_direction_column,
+            )
+            .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
+            .assign(**{POWER: self._power})
+            .pipe(self._add_adjusted_power)
+        )
+
+        groups_except_ordinal = [
+            column
+            for column in sample_size_df.index.names
+            if column is not None
+            and (column != self._ordinal_group_column or final_expected_sample_size_column is None)
+        ]
+        n_comparisons = self._get_num_comparisons(
+            sample_size_df,
+            self._correction_method,
+            number_comparisons=len(treatment_weights),
+            groupby=groups_except_ordinal,
+        )
+
+        return sample_size_df
 
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
         if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
@@ -612,29 +654,29 @@ class GenericComputer(ConfidenceComputerABC):
 
 def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str) -> DataFrame:
     if type(nims) is tuple:
-        return df.assign(**{NIM_INPUT_COLUMN_NAME: nims[0]}).assign(**{PREFERRED_DIRECTION_INPUT_NAME: nims[1]})
+        return df.assign(**{NIM_COLUMN_DEFAULT: nims[0]}).assign(**{PREFERRED_DIRECTION_COLUMN_DEFAULT: nims[1]})
     elif type(nims) is dict:
         nim_values = {key: value[0] for key, value in nims.items()}
         nim_preferences = {key: value[1] for key, value in nims.items()}
-        return df.assign(**{NIM_INPUT_COLUMN_NAME: lambda df: df.index.to_series().map(nim_values)}).assign(
-            **{PREFERRED_DIRECTION_INPUT_NAME: lambda df: df.index.to_series().map(nim_preferences)}
+        return df.assign(**{NIM_COLUMN_DEFAULT: lambda df: df.index.to_series().map(nim_values)}).assign(
+            **{PREFERRED_DIRECTION_COLUMN_DEFAULT: lambda df: df.index.to_series().map(nim_preferences)}
         )
     elif nims is None:
-        return df.assign(**{NIM_INPUT_COLUMN_NAME: None}).assign(
+        return df.assign(**{NIM_COLUMN_DEFAULT: None}).assign(
             **{
-                PREFERRED_DIRECTION_INPUT_NAME: None
-                if PREFERRED_DIRECTION_INPUT_NAME not in df or mde_column is None
-                else df[PREFERRED_DIRECTION_INPUT_NAME]
+                PREFERRED_DIRECTION_COLUMN_DEFAULT: None
+                if PREFERRED_DIRECTION_COLUMN_DEFAULT not in df or mde_column is None
+                else df[PREFERRED_DIRECTION_COLUMN_DEFAULT]
             }
         )
     else:
         return df
 
 
-def add_nims_and_mdes(df: DataFrame, mde_column: str) -> DataFrame:
+def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
-        nim = grp[NIM_INPUT_COLUMN_NAME].astype(float)
-        input_preference = grp[PREFERRED_DIRECTION_INPUT_NAME].values[0]
+        nim = grp[nim_column].astype(float)
+        input_preference = grp[preferred_direction_column].values[0]
         mde = None if mde_column is None else grp[mde_column]
 
         nim_is_na = nim.isna().all()
@@ -663,9 +705,7 @@ def add_nims_and_mdes(df: DataFrame, mde_column: str) -> DataFrame:
 
     index_names = [name for name in df.index.names if name is not None]
     return (
-        df.groupby(
-            [NIM_INPUT_COLUMN_NAME, PREFERRED_DIRECTION_INPUT_NAME] + listify(mde_column), dropna=False, as_index=False
-        )
+        df.groupby([nim_column, preferred_direction_column] + listify(mde_column), dropna=False, as_index=False)
         .apply(_set_nims_and_mdes)
         .pipe(lambda df: df.reset_index(index_names))
         .reset_index(drop=True)

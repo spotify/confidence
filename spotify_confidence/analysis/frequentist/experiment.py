@@ -86,6 +86,8 @@ class Experiment(ConfidenceABC):
                 metric_column=metric_column,
                 treatment_column=treatment_column,
                 power=power,
+                avg_column=None,
+                var_column=None,
             )
 
         self._confidence_grapher = (
