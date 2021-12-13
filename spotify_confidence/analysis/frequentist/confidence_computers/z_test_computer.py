@@ -20,6 +20,7 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_LOWER,
     ADJUSTED_UPPER,
     VARIANCE,
+    NUMBER_OF_COMPARISONS,
     TWO_SIDED,
     SFX2,
     SFX1,
@@ -37,12 +38,6 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_SIMES_HOCHBERG,
     NIM,
     ADJUSTED_ALPHA,
-    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
-    ADJUSTED_POWER,
-    ALTERNATIVE_HYPOTHESIS,
-    POWERED_EFFECT,
-    REQUIRED_SAMPLE_SIZE,
-    REQUIRED_SAMPLE_SIZE_METRIC,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -123,12 +118,13 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
     denominator = arg_dict[DENOMINATOR]
     final_expected_sample_size_column = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
     ordinal_group_column = arg_dict[ORDINAL_GROUP_COLUMN]
+    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
 
     def adjusted_alphas_for_group(grp: DataFrame) -> Series:
         return (
             sequential_bounds(
                 t=grp["sample_size_proportions"].values,
-                alpha=grp[ALPHA].values[0] / grp["n_comparisons"].values[0],
+                alpha=grp[ALPHA].values[0] / n_comparisons,
                 sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1,
             )
             .df.set_index(grp.index)
@@ -161,12 +157,12 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
     )
 
     return Series(
-        data=df.groupby(df.index.names)[[ALPHA, PREFERENCE_TEST, "n_comparisons"]]
+        data=df.groupby(df.index.names)[[ALPHA, PREFERENCE_TEST]]
         .first()
         .merge(sample_size_proportions, left_index=True, right_index=True)
         .assign(_sequential_dummy_index_=1)
         .groupby(groups_except_ordinal + ["_sequential_dummy_index_"])[
-            ["sample_size_proportions", PREFERENCE_TEST, ALPHA, "n_comparisons"]
+            ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
         ]
         .apply(adjusted_alphas_for_group)[ADJUSTED_ALPHA],
         name=ADJUSTED_ALPHA,

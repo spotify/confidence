@@ -1,5 +1,7 @@
-from typing import Union, Iterable, Tuple, Dict, List
+from typing import Union, Iterable
+
 from pandas import DataFrame
+
 from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..confidence_utils import (
@@ -8,7 +10,7 @@ from ..confidence_utils import (
     get_all_categorical_group_columns,
     get_all_group_columns,
 )
-from ..constants import BONFERRONI, NIM_TYPE, METHODS
+from ..constants import BONFERRONI, METHODS
 
 
 class SampleSizeCalculator:
@@ -17,6 +19,7 @@ class SampleSizeCalculator:
         data_frame: DataFrame,
         avg_column: str,
         var_column: str,
+        is_binary_column: str,
         categorical_group_columns: Union[str, Iterable],
         ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
@@ -31,6 +34,7 @@ class SampleSizeCalculator:
         self._df = data_frame
         self._avg_column = avg_column
         self._var_column = var_column
+        self._is_binary_column = is_binary_column
         self._categorical_group_columns = get_all_categorical_group_columns(
             categorical_group_columns, metric_column, treatment_column
         )
@@ -60,6 +64,9 @@ class SampleSizeCalculator:
                 metric_column=metric_column,
                 treatment_column=treatment_column,
                 power=power,
+                avg_column=self._avg_column,
+                var_column=self._var_column,
+                is_binary_column=self._is_binary_column,
             )
 
     def sample_size(
@@ -71,5 +78,5 @@ class SampleSizeCalculator:
         final_expected_sample_size_column: str,
     ) -> DataFrame:
         return self._confidence_computer.compute_sample_size(
-            treatment_weights, mde_column, nim_column, preferred_direction_column, final_expected_sample_size_column
+            treatment_weights, mde_column, nim_column, preferred_direction_column
         )
