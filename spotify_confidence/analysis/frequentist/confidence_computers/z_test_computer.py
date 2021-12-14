@@ -235,6 +235,16 @@ def ci_for_multiple_comparison_methods(
     return ci_df[ADJUSTED_LOWER], ci_df[ADJUSTED_UPPER]
 
 
+def ci_width(
+    z_alpha, binary, non_inferiority, hypothetical_effect, control_avg, control_var, control_count, treatment_count
+) -> Union[Series, float]:
+    treatment_var = _get_hypothetical_treatment_var(
+        binary, non_inferiority, control_avg, control_var, hypothetical_effect
+    )
+    _, std_err = st._unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
+    return 2 * z_alpha * std_err
+
+
 def powered_effect(
     df: DataFrame,
     z_alpha: float,

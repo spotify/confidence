@@ -15,6 +15,7 @@
 from typing import Union, Iterable, List, Tuple, Dict
 from warnings import warn
 
+import numpy as np
 from pandas import DataFrame, Series
 from statsmodels.stats.multitest import multipletests
 from scipy import stats as st
@@ -74,6 +75,7 @@ from spotify_confidence.analysis.constants import (
     IS_SIGNIFICANT,
     REQUIRED_SAMPLE_SIZE,
     REQUIRED_SAMPLE_SIZE_METRIC,
+    CI_WIDTH,
     NULL_HYPOTHESIS,
     ALTERNATIVE_HYPOTHESIS,
     NIM,
@@ -250,7 +252,9 @@ class GenericComputer(ConfidenceComputerABC):
                         }
                     )
                     .pipe(
-                        lambda df: confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
+                        lambda df: df
+                        if self._avg_column is not None
+                        else confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
                             df, arg_dict
                         )
                     )
@@ -520,13 +524,17 @@ class GenericComputer(ConfidenceComputerABC):
         mde_column: str,
         nim_column: str,
         preferred_direction_column: str,
+        final_expected_sample_size_column: str,
     ) -> DataFrame:
         sample_size_df = (
             self._sufficient_statistics.pipe(
+                lambda df: df if self._all_group_columns == [] else df.set_index(self._all_group_columns)
+            )
+            .pipe(
                 add_nims_and_mdes,
                 mde_column=mde_column,
-                nim_colum=nim_column,
-                preferred_direction_columns=preferred_direction_column,
+                nim_column=nim_column,
+                preferred_direction_column=preferred_direction_column,
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -537,7 +545,7 @@ class GenericComputer(ConfidenceComputerABC):
         n_comparisons = self._get_num_comparisons(
             sample_size_df,
             self._correction_method,
-            number_of_level_comparisons=len(treatment_weights),
+            number_of_level_comparisons=len(treatment_weights) - 1,
             groupby=group_columns,
         )
 
@@ -546,19 +554,25 @@ class GenericComputer(ConfidenceComputerABC):
             METHOD: self._method_column,
             NUMBER_OF_COMPARISONS: n_comparisons,
             TREATMENT_WEIGHTS: treatment_weights,
+            INTERVAL_SIZE: self._interval_size,
+            CORRECTION_METHOD: self._correction_method,
+            IS_BINARY: self._is_binary,
+            FINAL_EXPECTED_SAMPLE_SIZE: final_expected_sample_size_column,
         }
         sample_size_df = groupbyApplyParallel(
             sample_size_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
-                group_columns + [self._method_column], as_index=False
+                group_columns + [self._method_column],
+                as_index=False,
+                sort=False,
             ),
-            lambda df: _sample_size_from_summary_df(df, arg_dict=arg_dict),
+            lambda df: _compute_sample_sizes_and_ci_widths(df, arg_dict=arg_dict),
         )
 
         return sample_size_df
 
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
         if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
-            if self._metric_column is None or self._treatment_column is None:
+            if self._metric_column is None:
                 return df.assign(**{ADJUSTED_POWER: None})
             else:
                 number_total_metrics = 1 if self._single_metric else df.groupby(self._metric_column).ngroups
@@ -571,10 +585,10 @@ class GenericComputer(ConfidenceComputerABC):
                     number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
 
                 number_guardrail_metrics = number_total_metrics - number_success_metrics
-            power_correction = (
-                number_guardrail_metrics if number_success_metrics == 0 else number_guardrail_metrics + 1
-            )
-            return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
+                power_correction = (
+                    number_guardrail_metrics if number_success_metrics == 0 else number_guardrail_metrics + 1
+                )
+                return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
         else:
             return df.assign(**{ADJUSTED_POWER: df[POWER]})
 
@@ -973,6 +987,10 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
         return df
 
 
+def _compute_sample_sizes_and_ci_widths(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    return df.pipe(_sample_size_from_summary_df, arg_dict=arg_dict).pipe(_ci_width, arg_dict=arg_dict)
+
+
 def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
     if df[arg_dict[METHOD]].values[0] != ZTEST and arg_dict[MDE] in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
@@ -981,24 +999,23 @@ def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
     else:
         all_weights = arg_dict[TREATMENT_WEIGHTS]
         control_weight, treatment_weights = all_weights[0], all_weights[1:]
+
+        binary = df[arg_dict[IS_BINARY]].values[0]
+        z_alpha = st.norm.ppf(
+            1
+            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
+        )
+        z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
+        nim = df[NIM].values[0]
+        if isinstance(nim, float):
+            non_inferiority = not isnan(nim)
+        elif nim is None:
+            non_inferiority = nim is not None
+
         max_sample_size = 0
         for treatment_weight in treatment_weights:
             kappa = control_weight / treatment_weight
-            binary = df[arg_dict[IS_BINARY]].values[0]
             proportion_of_total = (control_weight + treatment_weight) / sum(all_weights)
-
-            z_alpha = st.norm.ppf(
-                1
-                - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0]
-                / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
-            )
-            z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
-
-            nim = df[NIM].values[0]
-            if isinstance(nim, float):
-                non_inferiority = not isnan(nim)
-            elif nim is None:
-                non_inferiority = nim is not None
 
             if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
                 this_sample_size = confidence_computers[df[arg_dict[METHOD]].values[0]].required_sample_size(
@@ -1008,12 +1025,63 @@ def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
                     binary=binary,
                     non_inferiority=non_inferiority,
                     hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                    control_avg=df[POINT_ESTIMATE + SFX1],
-                    control_var=df[VARIANCE + SFX1],
+                    control_avg=df[POINT_ESTIMATE],
+                    control_var=df[VARIANCE],
                     kappa=kappa,
                 )
-                max_sample_size = max(this_sample_size, max_sample_size)
+                max_sample_size = max(this_sample_size.max(), max_sample_size)
 
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None if max_sample_size == 0 else max_sample_size
+
+    return df
+
+
+def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    expected_sample_size = (
+        None if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is None else df[arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]].values[0]
+    )
+    if expected_sample_size is None or (type(expected_sample_size) is float and np.isnan(expected_sample_size)):
+        return df.assign(**{CI_WIDTH: None})
+
+    all_weights = arg_dict[TREATMENT_WEIGHTS]
+    control_weight, treatment_weights = all_weights[0], all_weights[1:]
+    sum_of_weights = sum(all_weights)
+
+    control_count = int((control_weight / sum_of_weights) * expected_sample_size)
+    if control_count == 0:
+        return float("inf")
+
+    else:
+        binary = df[arg_dict[IS_BINARY]].values[0]
+        z_alpha = st.norm.ppf(
+            1
+            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
+        )
+        nim = df[NIM].values[0]
+        if isinstance(nim, float):
+            non_inferiority = not isnan(nim)
+        elif nim is None:
+            non_inferiority = nim is not None
+        max_ci_width = 0
+        for treatment_weight in treatment_weights:
+            treatment_count = int((treatment_weight / sum_of_weights) * expected_sample_size)
+            if treatment_count == 0:
+                return float("inf")
+            else:
+                comparison_ci_width = confidence_computers[df[arg_dict[METHOD]].values[0]].ci_width(
+                    z_alpha=z_alpha,
+                    binary=binary,
+                    non_inferiority=non_inferiority,
+                    hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
+                    control_avg=df[POINT_ESTIMATE],
+                    control_var=df[VARIANCE],
+                    control_count=control_count,
+                    treatment_count=treatment_count,
+                )
+
+            if comparison_ci_width > max_ci_width:
+                max_ci_width = comparison_ci_width
+
+        df[CI_WIDTH] = None if max_ci_width == 0 else max_ci_width
 
     return df

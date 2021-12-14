@@ -10,7 +10,7 @@ from ..confidence_utils import (
     get_all_categorical_group_columns,
     get_all_group_columns,
 )
-from ..constants import BONFERRONI, METHODS
+from ..constants import BONFERRONI, METHODS, ZTEST, METHOD_COLUMN_NAME
 
 
 class SampleSizeCalculator:
@@ -20,17 +20,15 @@ class SampleSizeCalculator:
         avg_column: str,
         var_column: str,
         is_binary_column: str,
-        categorical_group_columns: Union[str, Iterable],
+        categorical_group_columns: Union[None, str, Iterable] = None,
         ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
         correction_method: str = BONFERRONI,
         confidence_computer: ConfidenceComputerABC = None,
-        method_column: str = None,
         metric_column=None,
         treatment_column=None,
         power: float = 0.8,
     ):
-        validate_categorical_columns(categorical_group_columns)
         self._df = data_frame
         self._avg_column = avg_column
         self._var_column = var_column
@@ -42,16 +40,12 @@ class SampleSizeCalculator:
         self._metric_column = metric_column
         self._treatment_column = treatment_column
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
-        if method_column is None:
-            raise ValueError("method column cannot be None")
-        if not all(self._df[method_column].map(lambda m: m in METHODS)):
-            raise ValueError(f"Values of method column must be in {METHODS}")
 
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
             self._confidence_computer = GenericComputer(
-                data_frame=data_frame,
+                data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: ZTEST}),
                 numerator_column=None,
                 numerator_sum_squares_column=None,
                 denominator_column=None,
@@ -59,7 +53,7 @@ class SampleSizeCalculator:
                 ordinal_group_column=ordinal_group_column,
                 interval_size=interval_size,
                 correction_method=correction_method.lower(),
-                method_column=method_column,
+                method_column=METHOD_COLUMN_NAME,
                 bootstrap_samples_column=None,
                 metric_column=metric_column,
                 treatment_column=treatment_column,
@@ -75,8 +69,8 @@ class SampleSizeCalculator:
         mde_column: str,
         nim_column: str,
         preferred_direction_column: str,
-        final_expected_sample_size_column: str,
+        final_expected_sample_size_column: str = None,
     ) -> DataFrame:
         return self._confidence_computer.compute_sample_size(
-            treatment_weights, mde_column, nim_column, preferred_direction_column
+            treatment_weights, mde_column, nim_column, preferred_direction_column, final_expected_sample_size_column
         )
