@@ -241,7 +241,7 @@ def ci_width(
     treatment_var = _get_hypothetical_treatment_var(
         binary, non_inferiority, control_avg, control_var, hypothetical_effect
     )
-    _, std_err = st._unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
+    _, std_err = st.stats._unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
     return 2 * z_alpha * std_err
 
 

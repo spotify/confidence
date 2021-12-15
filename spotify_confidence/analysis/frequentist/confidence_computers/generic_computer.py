@@ -188,9 +188,6 @@ class GenericComputer(ConfidenceComputerABC):
         self._single_metric = False
         if self._metric_column is not None and data_frame.groupby(self._metric_column).ngroups == 1:
             self._single_metric = True
-            self._categorical_group_columns = remove_group_columns(
-                self._categorical_group_columns, self._metric_column
-            )
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
@@ -578,7 +575,13 @@ class GenericComputer(ConfidenceComputerABC):
     ) -> Tuple[Iterable, int]:
         sample_size_df = sample_size_df.assign(
             **{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)}
-        ).assign(**{OPTIMAL_WEIGHTS: lambda df: df.apply(lambda row: _optimal_weights(row[OPTIMAL_KAPPA], number_of_groups), axis=1)})
+        ).assign(
+            **{
+                OPTIMAL_WEIGHTS: lambda df: df.apply(
+                    lambda row: _optimal_weights(row[OPTIMAL_KAPPA], number_of_groups), axis=1
+                )
+            }
+        )
 
         group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._method_column]
         arg_dict = {
@@ -1089,8 +1092,7 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
                     treatment_count=treatment_count,
                 )
 
-            if comparison_ci_width > max_ci_width:
-                max_ci_width = comparison_ci_width
+            max_ci_width = max(comparison_ci_width.max(), max_ci_width)
 
         df[CI_WIDTH] = None if max_ci_width == 0 else max_ci_width
 
@@ -1123,13 +1125,17 @@ def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
     return [control_weight] + [treatment_weight for _ in range(number_of_groups - 1)]
 
 
-def _find_optimal_group_weights_across_rows(df: DataFrame, group_count: int, group_columns: Iterable, arg_dict: Dict) -> (List[float], int):
+def _find_optimal_group_weights_across_rows(
+    df: DataFrame, group_count: int, group_columns: Iterable, arg_dict: Dict
+) -> (List[float], int):
     min_kappa = min(df[OPTIMAL_KAPPA])
     max_kappa = max(df[OPTIMAL_KAPPA])
 
     if min_kappa == max_kappa:
         optimal_weights = df[OPTIMAL_WEIGHTS][0]
-        optimal_sample_size = _calculate_optimal_sample_size_given_weights(df, optimal_weights, group_columns, arg_dict)
+        optimal_sample_size = _calculate_optimal_sample_size_given_weights(
+            df, optimal_weights, group_columns, arg_dict
+        )
         return optimal_weights, optimal_sample_size
 
     in_between_kappas = np.linspace(min_kappa, max_kappa, 100)
@@ -1145,7 +1151,9 @@ def _find_optimal_group_weights_across_rows(df: DataFrame, group_count: int, gro
     return optimal_weights, min_optimal_sample_size
 
 
-def _calculate_optimal_sample_size_given_weights(df: DataFrame, optimal_weights: List[float], group_columns: Iterable, arg_dict: Dict) -> int:
+def _calculate_optimal_sample_size_given_weights(
+    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, arg_dict: Dict
+) -> int:
     arg_dict[TREATMENT_WEIGHTS] = optimal_weights
     sample_size_df = groupbyApplyParallel(
         df.groupby(group_columns, as_index=False, sort=False),

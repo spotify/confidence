@@ -5,12 +5,11 @@ from pandas import DataFrame
 from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..confidence_utils import (
-    validate_categorical_columns,
     listify,
     get_all_categorical_group_columns,
     get_all_group_columns,
 )
-from ..constants import BONFERRONI, METHODS, ZTEST, METHOD_COLUMN_NAME
+from ..constants import BONFERRONI, ZTEST, METHOD_COLUMN_NAME
 
 
 class SampleSizeCalculator:
