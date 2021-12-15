@@ -50,6 +50,8 @@ ADJUSTED_POWER = "adjusted_power"
 IS_SIGNIFICANT = "is_significant"
 REQUIRED_SAMPLE_SIZE = "required_sample_size"
 REQUIRED_SAMPLE_SIZE_METRIC = "required_sample_size_for_metric"
+OPTIMAL_KAPPA = "optimal_kappa"
+OPTIMAL_WEIGHTS = "optimal_weigghts"
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"

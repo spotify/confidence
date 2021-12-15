@@ -1,4 +1,4 @@
-from typing import Union, Iterable
+from typing import Union, Iterable, Tuple
 
 from pandas import DataFrame
 
@@ -74,3 +74,8 @@ class SampleSizeCalculator:
         return self._confidence_computer.compute_sample_size(
             treatment_weights, mde_column, nim_column, preferred_direction_column, final_expected_sample_size_column
         )
+
+    def optimal_weights_and_sample_size(
+        self, sample_size_df: DataFrame, number_of_groups: int
+    ) -> Tuple[Iterable, int]:
+        return self._confidence_computer.compute_optimal_weights_and_sample_size(sample_size_df, number_of_groups)

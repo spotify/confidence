@@ -43,8 +43,9 @@ class TestSampleSizeCalculator(object):
             power=0.8,
             correction_method=SPOT_1,
         )
+        treatment_weights = [5000, 2000, 3000]
         ss = ssc.sample_size(
-            treatment_weights=[5000, 2000, 3000],
+            treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
@@ -54,7 +55,7 @@ class TestSampleSizeCalculator(object):
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC][0] / 1042868 < 1.001
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC][1] / 95459 < 1.001
         assert ss[CI_WIDTH].isna().all()
-        # assert len(optimal_weights_per_group) == len(treatment_weights)
-        # assert 0.999 < result.optimal_sample_size / 894863 < 1.001
 
-        # assert np.isclose(ss[POWERED_EFFECT][0], 0.3972, atol=0.001)
+        optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert len(optimal_weights) == len(treatment_weights)
+        assert 0.999 < optimal_sample_size / 894863 < 1.001

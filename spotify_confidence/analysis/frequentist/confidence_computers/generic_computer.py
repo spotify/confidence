@@ -38,6 +38,7 @@ from spotify_confidence.analysis.confidence_utils import (
     validate_data,
     remove_group_columns,
     groupbyApplyParallel,
+    is_non_inferiority,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -75,6 +76,8 @@ from spotify_confidence.analysis.constants import (
     IS_SIGNIFICANT,
     REQUIRED_SAMPLE_SIZE,
     REQUIRED_SAMPLE_SIZE_METRIC,
+    OPTIMAL_KAPPA,
+    OPTIMAL_WEIGHTS,
     CI_WIDTH,
     NULL_HYPOTHESIS,
     ALTERNATIVE_HYPOTHESIS,
@@ -570,6 +573,20 @@ class GenericComputer(ConfidenceComputerABC):
 
         return sample_size_df
 
+    def compute_optimal_weights_and_sample_size(
+        self, sample_size_df: DataFrame, number_of_groups: int
+    ) -> Tuple[Iterable, int]:
+        sample_size_df = sample_size_df.assign(
+            **{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)}
+        ).assign(**{OPTIMAL_WEIGHTS: lambda df: df.apply(lambda row: _optimal_weights(row[OPTIMAL_KAPPA], number_of_groups), axis=1)})
+
+        group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._method_column]
+        arg_dict = {
+            METHOD: self._method_column,
+            IS_BINARY: self._is_binary,
+        }
+        return _find_optimal_group_weights_across_rows(sample_size_df, number_of_groups, group_columns, arg_dict)
+
     def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
         if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
             if self._metric_column is None:
@@ -992,7 +1009,7 @@ def _compute_sample_sizes_and_ci_widths(df: DataFrame, arg_dict: Dict) -> DataFr
 
 
 def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] != ZTEST and arg_dict[MDE] in df:
+    if df[arg_dict[METHOD]].values[0] != ZTEST in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
     elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
@@ -1006,11 +1023,7 @@ def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
             - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
         )
         z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
-        nim = df[NIM].values[0]
-        if isinstance(nim, float):
-            non_inferiority = not isnan(nim)
-        elif nim is None:
-            non_inferiority = nim is not None
+        non_inferiority = is_non_inferiority(df[NIM].values[0])
 
         max_sample_size = 0
         for treatment_weight in treatment_weights:
@@ -1057,11 +1070,8 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
             1
             - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
         )
-        nim = df[NIM].values[0]
-        if isinstance(nim, float):
-            non_inferiority = not isnan(nim)
-        elif nim is None:
-            non_inferiority = nim is not None
+
+        non_inferiority = is_non_inferiority(df[NIM].values[0])
         max_ci_width = 0
         for treatment_weight in treatment_weights:
             treatment_count = int((treatment_weight / sum_of_weights) * expected_sample_size)
@@ -1085,3 +1095,65 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
         df[CI_WIDTH] = None if max_ci_width == 0 else max_ci_width
 
     return df
+
+
+def _optimal_kappa(row: Series, is_binary_column) -> float:
+    def _binary_variance(p: float) -> float:
+        return p * (1 - p)
+
+    if row[is_binary_column]:
+        if is_non_inferiority(row[NIM]):
+            return 1.0
+        else:
+            if row[POINT_ESTIMATE] == 0.0:
+                # variance will be 0 as well in this case. This if-branch is important to avoid divide by zero problems
+                return 1.0
+            else:
+                hypothetical_effect = row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS]
+                return np.sqrt(
+                    _binary_variance(row[POINT_ESTIMATE]) / _binary_variance(row[POINT_ESTIMATE] + hypothetical_effect)
+                )
+    else:
+        return 1.0
+
+
+def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
+    treatment_weight = 1 / (kappa + number_of_groups - 1)
+    control_weight = kappa * treatment_weight
+    return [control_weight] + [treatment_weight for _ in range(number_of_groups - 1)]
+
+
+def _find_optimal_group_weights_across_rows(df: DataFrame, group_count: int, group_columns: Iterable, arg_dict: Dict) -> (List[float], int):
+    min_kappa = min(df[OPTIMAL_KAPPA])
+    max_kappa = max(df[OPTIMAL_KAPPA])
+
+    if min_kappa == max_kappa:
+        optimal_weights = df[OPTIMAL_WEIGHTS][0]
+        optimal_sample_size = _calculate_optimal_sample_size_given_weights(df, optimal_weights, group_columns, arg_dict)
+        return optimal_weights, optimal_sample_size
+
+    in_between_kappas = np.linspace(min_kappa, max_kappa, 100)
+    min_optimal_sample_size = float("inf")
+    optimal_weights = []
+    for kappa in in_between_kappas:
+        weights = _optimal_weights(kappa, group_count)
+        optimal_sample_size = _calculate_optimal_sample_size_given_weights(df, weights, group_columns, arg_dict)
+        if optimal_sample_size is not None and optimal_sample_size < min_optimal_sample_size:
+            min_optimal_sample_size = optimal_sample_size
+            optimal_weights = weights
+    min_optimal_sample_size = np.nan if min_optimal_sample_size == 0 else min_optimal_sample_size
+    return optimal_weights, min_optimal_sample_size
+
+
+def _calculate_optimal_sample_size_given_weights(df: DataFrame, optimal_weights: List[float], group_columns: Iterable, arg_dict: Dict) -> int:
+    arg_dict[TREATMENT_WEIGHTS] = optimal_weights
+    sample_size_df = groupbyApplyParallel(
+        df.groupby(group_columns, as_index=False, sort=False),
+        lambda df: _sample_size_from_summary_df(df, arg_dict=arg_dict),
+    )
+
+    if sample_size_df[REQUIRED_SAMPLE_SIZE_METRIC].isna().all():
+        return None
+    optimal_sample_size = sample_size_df[REQUIRED_SAMPLE_SIZE_METRIC].max()
+
+    return np.ceil(optimal_sample_size) if np.isfinite(optimal_sample_size) else optimal_sample_size
