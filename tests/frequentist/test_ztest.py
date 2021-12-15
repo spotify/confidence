@@ -68,14 +68,18 @@ class TestPoweredEffectContinuousSingleMetric(object):
 
     def test_powered_effect1(self):
         powered_effect = self.test.difference(
-            level_1="control", level_2="test", minimum_detectable_effects_column="minimum_detectable_effect"
+            level_1=("control", "metricA"),
+            level_2=("test", "metricA"),
+            minimum_detectable_effects_column="minimum_detectable_effect",
         )
         assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.3972, atol=0.001)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 30792, atol=100)
 
     def test_powered_effect2(self):
         powered_effect = self.test.difference(
-            level_1="control", level_2="test2", minimum_detectable_effects_column="minimum_detectable_effect"
+            level_1=("control", "metricA"),
+            level_2=("test2", "metricA"),
+            minimum_detectable_effects_column="minimum_detectable_effect",
         )
         assert np.isclose(powered_effect[POWERED_EFFECT][0], 0.4208, atol=0.001)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][0], 5760, atol=100)

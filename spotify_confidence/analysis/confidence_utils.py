@@ -173,6 +173,13 @@ def _validate_column(df: DataFrame, col: str):
         raise ValueError(f"""Column {col} is not in dataframe""")
 
 
+def is_non_inferiority(nim) -> bool:
+    if isinstance(nim, float):
+        return not np.isnan(nim)
+    elif nim is None:
+        return nim is not None
+
+
 def _get_finite_bounds(numbers: Series) -> Tuple[float, float]:
     finite_numbers = numbers[numbers.abs() != float("inf")]
     return finite_numbers.min(), finite_numbers.max()
