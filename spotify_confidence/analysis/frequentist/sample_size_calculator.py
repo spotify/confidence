@@ -7,7 +7,6 @@ from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerAB
 from ..confidence_utils import (
     listify,
     get_all_categorical_group_columns,
-    get_all_group_columns,
 )
 from ..constants import BONFERRONI, ZTEST, METHOD_COLUMN_NAME
 
@@ -20,26 +19,12 @@ class SampleSizeCalculator:
         var_column: str,
         is_binary_column: str,
         categorical_group_columns: Union[None, str, Iterable] = None,
-        ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
         correction_method: str = BONFERRONI,
         confidence_computer: ConfidenceComputerABC = None,
         metric_column=None,
-        treatment_column=None,
         power: float = 0.8,
     ):
-        self._df = data_frame
-        self._avg_column = avg_column
-        self._var_column = var_column
-        self._is_binary_column = is_binary_column
-        self._categorical_group_columns = get_all_categorical_group_columns(
-            categorical_group_columns, metric_column, treatment_column
-        )
-        self._ordinal_group_column = ordinal_group_column
-        self._metric_column = metric_column
-        self._treatment_column = treatment_column
-        self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
-
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
@@ -49,17 +34,17 @@ class SampleSizeCalculator:
                 numerator_sum_squares_column=None,
                 denominator_column=None,
                 categorical_group_columns=listify(categorical_group_columns),
-                ordinal_group_column=ordinal_group_column,
+                ordinal_group_column=None,
                 interval_size=interval_size,
                 correction_method=correction_method.lower(),
                 method_column=METHOD_COLUMN_NAME,
                 bootstrap_samples_column=None,
                 metric_column=metric_column,
-                treatment_column=treatment_column,
+                treatment_column=None,
                 power=power,
-                avg_column=self._avg_column,
-                var_column=self._var_column,
-                is_binary_column=self._is_binary_column,
+                avg_column=avg_column,
+                var_column=var_column,
+                is_binary_column=is_binary_column,
             )
 
     def sample_size(
