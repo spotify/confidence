@@ -251,13 +251,15 @@ def powered_effect(
     z_power: float,
     binary: bool,
     non_inferiority: bool,
+    avg_column: float,
+    var_column: float,
 ) -> Series:
 
     if binary and not non_inferiority:
         effect = df.apply(
             lambda row: _search_MDE_binary_local_search(
-                control_avg=row[POINT_ESTIMATE + SFX1],
-                control_var=row[VARIANCE + SFX1],
+                control_avg=row[avg_column],
+                control_var=row[var_column],
                 non_inferiority=False,
                 kappa=row["kappa"],
                 proportion_of_total=1.0,
@@ -271,11 +273,11 @@ def powered_effect(
         treatment_var = _get_hypothetical_treatment_var(
             binary_metric=binary,
             non_inferiority=df[NIM] is not None,
-            control_avg=df[POINT_ESTIMATE + SFX1],
-            control_var=df[VARIANCE + SFX1],
+            control_avg=df[avg_column],
+            control_var=df[var_column],
             hypothetical_effect=0,
         )
-        n2_partial = np.power((z_alpha + z_power), 2) * (df[VARIANCE + SFX1] / df["kappa"] + treatment_var)
+        n2_partial = np.power((z_alpha + z_power), 2) * (df[var_column] / df["kappa"] + treatment_var)
         effect = np.sqrt((1 / (df["current_number_of_units"])) * (n2_partial + df["kappa"] * n2_partial))
 
     return effect

@@ -62,3 +62,15 @@ class SampleSizeCalculator:
         self, sample_size_df: DataFrame, number_of_groups: int
     ) -> Tuple[Iterable, int]:
         return self._confidence_computer.compute_optimal_weights_and_sample_size(sample_size_df, number_of_groups)
+
+    def powered_effect(
+        self,
+        treatment_weights: Iterable,
+        mde_column: str,
+        nim_column: str,
+        preferred_direction_column: str,
+        sample_size: int,
+    ) -> DataFrame:
+        return self._confidence_computer.compute_powered_effect(
+            treatment_weights, mde_column, nim_column, preferred_direction_column, sample_size
+        )

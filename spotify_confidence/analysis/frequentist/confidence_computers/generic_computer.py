@@ -528,6 +528,45 @@ class GenericComputer(ConfidenceComputerABC):
         preferred_direction_column: str,
         final_expected_sample_size_column: str,
     ) -> DataFrame:
+        arg_dict, group_columns, sample_size_df = self._initialise_sample_size_and_power_computation(
+            final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
+        )
+        sample_size_df = groupbyApplyParallel(
+            sample_size_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
+                group_columns + [self._method_column],
+                as_index=False,
+                sort=False,
+            ),
+            lambda df: _compute_sample_sizes_and_ci_widths(df, arg_dict=arg_dict),
+        )
+
+        return sample_size_df.reset_index()
+
+    def compute_powered_effect(
+        self,
+        treatment_weights: Iterable,
+        mde_column: str,
+        nim_column: str,
+        preferred_direction_column: str,
+        sample_size: float,
+    ) -> DataFrame:
+        arg_dict, group_columns, powered_effect_df = self._initialise_sample_size_and_power_computation(
+            sample_size, mde_column, nim_column, preferred_direction_column, treatment_weights
+        )
+        powered_effect_df = groupbyApplyParallel(
+            powered_effect_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
+                group_columns + [self._method_column],
+                as_index=False,
+                sort=False,
+            ),
+            lambda df: _compute_powered_effects(df, arg_dict=arg_dict),
+        )
+
+        return powered_effect_df.reset_index()
+
+    def _initialise_sample_size_and_power_computation(
+        self, final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
+    ):
         sample_size_df = (
             self._sufficient_statistics.pipe(
                 lambda df: df if self._all_group_columns == [] else df.set_index(self._all_group_columns)
@@ -542,7 +581,6 @@ class GenericComputer(ConfidenceComputerABC):
             .assign(**{POWER: self._power})
             .pipe(self._add_adjusted_power)
         )
-
         group_columns = [column for column in sample_size_df.index.names if column is not None]
         n_comparisons = self._get_num_comparisons(
             sample_size_df,
@@ -550,7 +588,6 @@ class GenericComputer(ConfidenceComputerABC):
             number_of_level_comparisons=len(treatment_weights) - 1,
             groupby=group_columns,
         )
-
         arg_dict = {
             MDE: mde_column,
             METHOD: self._method_column,
@@ -561,16 +598,7 @@ class GenericComputer(ConfidenceComputerABC):
             IS_BINARY: self._is_binary,
             FINAL_EXPECTED_SAMPLE_SIZE: final_expected_sample_size_column,
         }
-        sample_size_df = groupbyApplyParallel(
-            sample_size_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
-                group_columns + [self._method_column],
-                as_index=False,
-                sort=False,
-            ),
-            lambda df: _compute_sample_sizes_and_ci_widths(df, arg_dict=arg_dict),
-        )
-
-        return sample_size_df.reset_index()
+        return arg_dict, group_columns, sample_size_df
 
     def compute_optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
@@ -984,6 +1012,8 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
+            avg_column=POINT_ESTIMATE + SFX1,
+            var_column=VARIANCE + SFX1,
         )
 
         if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
@@ -1024,7 +1054,7 @@ def _compute_sample_sizes_and_ci_widths(df: DataFrame, arg_dict: Dict) -> DataFr
 
 def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
     if df[arg_dict[METHOD]].values[0] != ZTEST in df:
-        raise ValueError("Minimum detectable effects only supported for ZTest.")
+        raise ValueError("Sample size calculation only supported for ZTest.")
     elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
     else:
@@ -1059,6 +1089,52 @@ def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
                 max_sample_size = max(this_sample_size.max(), max_sample_size)
 
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None if max_sample_size == 0 else max_sample_size
+
+    return df
+
+
+def _compute_powered_effects(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    return df.pipe(_powered_effect_from_summary_df, arg_dict=arg_dict)
+
+
+def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    if df[arg_dict[METHOD]].values[0] != ZTEST in df:
+        raise ValueError("Powered effect calculation only supported for ZTest.")
+    elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
+        df[REQUIRED_SAMPLE_SIZE_METRIC] = None
+    else:
+        all_weights = arg_dict[TREATMENT_WEIGHTS]
+        control_weight, treatment_weights = all_weights[0], all_weights[1:]
+
+        current_number_of_units = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
+
+        binary = df[arg_dict[IS_BINARY]].values[0]
+        z_alpha = st.norm.ppf(
+            1
+            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
+        )
+        z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
+        non_inferiority = is_non_inferiority(df[NIM].values[0])
+
+        max_powered_effect = 0
+        for treatment_weight in treatment_weights:
+            kappa = control_weight / treatment_weight
+
+            this_powered_effect = df[POWERED_EFFECT] = confidence_computers[
+                df[arg_dict[METHOD]].values[0]
+            ].powered_effect(
+                df=df.assign(kappa=kappa).assign(current_number_of_units=current_number_of_units),
+                z_alpha=z_alpha,
+                z_power=z_power,
+                binary=binary,
+                non_inferiority=non_inferiority,
+                avg_column=POINT_ESTIMATE,
+                var_column=VARIANCE,
+            )
+
+            max_powered_effect = max(this_powered_effect.max(), max_powered_effect)
+
+        df[POWERED_EFFECT] = None if max_powered_effect == 0 else max_powered_effect
 
     return df
 
