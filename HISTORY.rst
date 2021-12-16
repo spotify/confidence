@@ -2,7 +2,7 @@
 History
 =======
 
-2.5.0 (2021-12-15)
+2.5.0 (2021-12-16)
 ------------------
 
 * Added SampleSizeCalculator class to allow for more complex sample size calculations involving several metrics and dimensions
