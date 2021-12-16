@@ -1065,7 +1065,7 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
     expected_sample_size = (
         None if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is None else df[arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]].values[0]
     )
-    if expected_sample_size is None or (type(expected_sample_size) is float and np.isnan(expected_sample_size)):
+    if expected_sample_size is None or np.isnan(expected_sample_size):
         return df.assign(**{CI_WIDTH: None})
 
     all_weights = arg_dict[TREATMENT_WEIGHTS]
