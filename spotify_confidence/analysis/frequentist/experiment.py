@@ -86,7 +86,7 @@ class Experiment(ConfidenceABC):
                 metric_column=metric_column,
                 treatment_column=treatment_column,
                 power=power,
-                avg_column=None,
+                point_estimate_column=None,
                 var_column=None,
                 is_binary_column=None,
             )

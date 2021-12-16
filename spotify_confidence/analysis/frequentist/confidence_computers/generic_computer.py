@@ -145,13 +145,13 @@ class GenericComputer(ConfidenceComputerABC):
         metric_column: Union[str, None],
         treatment_column: Union[str, None],
         power: float,
-        avg_column: str,
+        point_estimate_column: str,
         var_column: str,
         is_binary_column: str,
     ):
 
         self._df = data_frame
-        self._avg_column = avg_column
+        self._point_estimate_column = point_estimate_column
         self._var_column = var_column
         self._is_binary = is_binary_column
         self._numerator = numerator_column
@@ -199,11 +199,11 @@ class GenericComputer(ConfidenceComputerABC):
             or TTEST in self._df[self._method_column]
             or ZTEST in self._df[self._method_column]
         ):
-            if not self._avg_column or not self._var_column:
+            if not self._point_estimate_column or not self._var_column:
                 columns_that_must_exist += [self._numerator, self._denominator]
                 columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
             else:
-                columns_that_must_exist += [self._avg_column, self._var_column]
+                columns_that_must_exist += [self._point_estimate_column, self._var_column]
         if BOOTSTRAP in self._df[self._method_column]:
             columns_that_must_exist += [self._bootstrap_samples_column]
 
@@ -239,8 +239,8 @@ class GenericComputer(ConfidenceComputerABC):
                 .apply(
                     lambda df: df.assign(
                         **{
-                            POINT_ESTIMATE: lambda df: df[self._avg_column]
-                            if self._avg_column is not None
+                            POINT_ESTIMATE: lambda df: df[self._point_estimate_column]
+                            if self._point_estimate_column is not None
                             else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
                         }
                     )
@@ -253,7 +253,7 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .pipe(
                         lambda df: df
-                        if self._avg_column is not None
+                        if self._point_estimate_column is not None
                         else confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
                             df, arg_dict
                         )

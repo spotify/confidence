@@ -21,7 +21,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -57,7 +57,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -93,7 +93,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -129,7 +129,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -164,7 +164,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -198,7 +198,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -233,7 +233,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -271,7 +271,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             categorical_group_columns="country",
@@ -306,7 +306,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -340,7 +340,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",
@@ -371,7 +371,7 @@ class TestSampleSizeCalculator(object):
 
         ssc = SampleSizeCalculator(
             data_frame=df,
-            avg_column="avg",
+            point_estimate_column="avg",
             var_column="var",
             metric_column="metric_name",
             is_binary_column="binary",

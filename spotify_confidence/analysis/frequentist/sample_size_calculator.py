@@ -14,7 +14,7 @@ class SampleSizeCalculator:
     def __init__(
         self,
         data_frame: DataFrame,
-        avg_column: str,
+        point_estimate_column: str,
         var_column: str,
         is_binary_column: str,
         categorical_group_columns: Union[None, str, Iterable] = None,
@@ -41,7 +41,7 @@ class SampleSizeCalculator:
                 metric_column=metric_column,
                 treatment_column=None,
                 power=power,
-                avg_column=avg_column,
+                point_estimate_column=point_estimate_column,
                 var_column=var_column,
                 is_binary_column=is_binary_column,
             )
