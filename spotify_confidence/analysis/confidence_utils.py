@@ -153,7 +153,7 @@ def validate_data(df: DataFrame, columns_that_must_exist, group_columns: Iterabl
         _validate_column(df, col)
 
     # Ensure there's at most 1 observation per grouping.
-    max_one_row_per_grouping = all(df.groupby(group_columns).size() <= 1)
+    max_one_row_per_grouping = all(df.groupby(group_columns, sort=False).size() <= 1)
     if not max_one_row_per_grouping:
         raise ValueError("""Each grouping should have at most 1 observation.""")
 

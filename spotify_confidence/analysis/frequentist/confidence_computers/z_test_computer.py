@@ -144,7 +144,7 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
     max_sample_size_by_group = (
         (
             df[["current_total_" + denominator, final_expected_sample_size_column]]
-            .groupby(groups_except_ordinal)
+            .groupby(groups_except_ordinal, sort=False)
             .max()
             .max(axis=1)
         )
@@ -152,16 +152,16 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
         else (df[["current_total_" + denominator, final_expected_sample_size_column]].max().max())
     )
     sample_size_proportions = Series(
-        data=df.groupby(df.index.names)["current_total_" + denominator].first() / max_sample_size_by_group,
+        data=df.groupby(df.index.names, sort=False)["current_total_" + denominator].first() / max_sample_size_by_group,
         name="sample_size_proportions",
     )
 
     return Series(
-        data=df.groupby(df.index.names)[[ALPHA, PREFERENCE_TEST]]
+        data=df.groupby(df.index.names, sort=False)[[ALPHA, PREFERENCE_TEST]]
         .first()
         .merge(sample_size_proportions, left_index=True, right_index=True)
         .assign(_sequential_dummy_index_=1)
-        .groupby(groups_except_ordinal + ["_sequential_dummy_index_"])[
+        .groupby(groups_except_ordinal + ["_sequential_dummy_index_"], sort=False)[
             ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
         ]
         .apply(adjusted_alphas_for_group)[ADJUSTED_ALPHA],

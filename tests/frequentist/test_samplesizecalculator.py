@@ -38,8 +38,8 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] / 1042868 < 1.001
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 95459 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 1042868 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 95459 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -74,8 +74,8 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] / 1170185 < 1.001
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 95459 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 1170185 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 95459 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -110,8 +110,8 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] / 730009 < 1.001
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 58621 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 730009 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 58621 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -146,8 +146,8 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] / 718056 < 1.001
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 65337 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 718056 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 65337 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -181,7 +181,7 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] / 553620 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 553620 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -215,7 +215,7 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 58622 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 58622 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -250,8 +250,8 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] / 680575 < 1.001
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 52741 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 680575 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 52741 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
@@ -289,10 +289,10 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc[("denmark", "share_bananas_1d"), REQUIRED_SAMPLE_SIZE_METRIC] / 595876 < 1.001
-        assert 0.999 < ss.loc[("sweden", "share_bananas_1d"), REQUIRED_SAMPLE_SIZE_METRIC] / 2103232 < 1.001
-        assert 0.999 < ss.loc[("denmark", "bananas_per_user_7d"), REQUIRED_SAMPLE_SIZE_METRIC] / 143396 < 1.001
-        assert 0.999 < ss.loc[("sweden", "bananas_per_user_7d"), REQUIRED_SAMPLE_SIZE_METRIC] / 685656 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 595876 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 2103232 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[2] / 143396 < 1.001
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[3] / 685656 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
     def test_sample_size_calculation_ciwidth_nimless_with_expected_sample_size(self):
@@ -324,11 +324,11 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert ss.loc["share_bananas_1d", REQUIRED_SAMPLE_SIZE_METRIC] == np.float("inf")
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 75345 < 1.001
+        assert ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] == np.float("inf")
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 75345 < 1.001
 
-        np.testing.assert_almost_equal(ss.loc["share_bananas_1d", CI_WIDTH], 0.0047527)
-        np.testing.assert_almost_equal(ss.loc["bananas_per_user_7d", CI_WIDTH], 0.0151362)
+        np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.0047527)
+        np.testing.assert_almost_equal(ss[CI_WIDTH].values[1], 0.0151362)
 
     def test_sample_size_calculation_ciwidth_matches_real_width_returned_by_onesided_test(self):
         df = pd.DataFrame(
@@ -358,8 +358,8 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 25334 < 1.001
-        np.testing.assert_almost_equal(ss.loc["bananas_per_user_7d", CI_WIDTH], 0.0096023)
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 25334 < 1.001
+        np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.0096023)
 
     def test_sample_size_calculation_ciwidth_matches_real_width_returned_by_twosided_test_with_direction(self):
         df = pd.DataFrame(
@@ -389,5 +389,5 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert 0.999 < ss.loc["bananas_per_user_7d", REQUIRED_SAMPLE_SIZE_METRIC] / 32162 < 1.001
-        np.testing.assert_almost_equal(ss.loc["bananas_per_user_7d", CI_WIDTH], 0.01144189)
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 32162 < 1.001
+        np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.01144189)

@@ -186,7 +186,7 @@ class GenericComputer(ConfidenceComputerABC):
         self._method_column = method_column
 
         self._single_metric = False
-        if self._metric_column is not None and data_frame.groupby(self._metric_column).ngroups == 1:
+        if self._metric_column is not None and data_frame.groupby(self._metric_column, sort=False).ngroups == 1:
             self._single_metric = True
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
@@ -235,7 +235,7 @@ class GenericComputer(ConfidenceComputerABC):
             }
             groupby = [col for col in [self._method_column, self._metric_column] if col is not None]
             self._sufficient = (
-                self._df.groupby(groupby)
+                self._df.groupby(groupby, sort=False)
                 .apply(
                     lambda df: df.assign(
                         **{
@@ -309,7 +309,9 @@ class GenericComputer(ConfidenceComputerABC):
     ) -> DataFrame:
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         other_levels = [
-            other for other in self._sufficient_statistics.groupby(level_columns).groups.keys() if other != level
+            other
+            for other in self._sufficient_statistics.groupby(level_columns, sort=False).groups.keys()
+            if other != level
         ]
         levels = [(level, other) for other in other_levels]
         difference_df = self._compute_differences(
@@ -407,7 +409,7 @@ class GenericComputer(ConfidenceComputerABC):
                 )
             else:
                 return df.merge(
-                    df.groupby(groupby)[self._denominator]
+                    df.groupby(groupby, sort=False)[self._denominator]
                     .sum()
                     .reset_index()
                     .rename(columns={self._denominator: f"current_total_{self._denominator}"})
@@ -494,7 +496,7 @@ class GenericComputer(ConfidenceComputerABC):
         n_comparisons = self._get_num_comparisons(
             comparison_df,
             self._correction_method,
-            number_of_level_comparisons=comparison_df.groupby(["level_1", "level_2"]).ngroups,
+            number_of_level_comparisons=comparison_df.groupby(["level_1", "level_2"], sort=False).ngroups,
             groupby=groups_except_ordinal,
         )
 
@@ -513,7 +515,7 @@ class GenericComputer(ConfidenceComputerABC):
             NUMBER_OF_COMPARISONS: n_comparisons,
         }
         comparison_df = groupbyApplyParallel(
-            comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False),
+            comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
         return comparison_df
@@ -568,7 +570,7 @@ class GenericComputer(ConfidenceComputerABC):
             lambda df: _compute_sample_sizes_and_ci_widths(df, arg_dict=arg_dict),
         )
 
-        return sample_size_df
+        return sample_size_df.reset_index()
 
     def compute_optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
@@ -595,14 +597,16 @@ class GenericComputer(ConfidenceComputerABC):
             if self._metric_column is None:
                 return df.assign(**{ADJUSTED_POWER: None})
             else:
-                number_total_metrics = 1 if self._single_metric else df.groupby(self._metric_column).ngroups
+                number_total_metrics = (
+                    1 if self._single_metric else df.groupby(self._metric_column, sort=False).ngroups
+                )
                 if self._single_metric:
                     if df[df[NIM].isnull()].shape[0] > 0:
                         number_success_metrics = 1
                     else:
                         number_success_metrics = 0
                 else:
-                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column, sort=False).ngroups
 
                 number_guardrail_metrics = number_total_metrics - number_success_metrics
                 power_correction = (
@@ -642,13 +646,16 @@ class GenericComputer(ConfidenceComputerABC):
         self, df: DataFrame, correction_method: str, number_of_level_comparisons: int, groupby: Iterable
     ) -> int:
         if correction_method == BONFERRONI:
-            return max(1, number_of_level_comparisons * df.assign(_dummy_=1).groupby(groupby + ["_dummy_"]).ngroups)
+            return max(
+                1,
+                number_of_level_comparisons * df.assign(_dummy_=1).groupby(groupby + ["_dummy_"], sort=False).ngroups,
+            )
         elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
             return max(
                 number_of_level_comparisons
                 * df.query(f'{PREFERENCE_TEST} == "{TWO_SIDED}"')
                 .assign(_dummy_=1)
-                .groupby(groupby + ["_dummy_"])
+                .groupby(groupby + ["_dummy_"], sort=False)
                 .ngroups,
                 1,
             )
@@ -681,7 +688,7 @@ class GenericComputer(ConfidenceComputerABC):
                 return max(
                     1,
                     number_of_level_comparisons
-                    * df[df[NIM].isnull()].assign(_dummy_=1).groupby(groupby + ["_dummy_"]).ngroups,
+                    * df[df[NIM].isnull()].assign(_dummy_=1).groupby(groupby + ["_dummy_"], sort=False).ngroups,
                 )
             else:
                 if self._single_metric:
@@ -690,12 +697,12 @@ class GenericComputer(ConfidenceComputerABC):
                     else:
                         number_success_metrics = 0
                 else:
-                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column).ngroups
+                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column, sort=False).ngroups
 
                 number_segments = (
                     1
                     if len(self._segments) == 0 or not all(item in df.index.names for item in self._segments)
-                    else df.groupby(self._segments).ngroups
+                    else df.groupby(self._segments, sort=False).ngroups
                 )
 
                 return max(1, number_of_level_comparisons * max(1, number_success_metrics) * number_segments)
@@ -756,7 +763,9 @@ def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred
 
     index_names = [name for name in df.index.names if name is not None]
     return (
-        df.groupby([nim_column, preferred_direction_column] + listify(mde_column), dropna=False, as_index=False)
+        df.groupby(
+            [nim_column, preferred_direction_column] + listify(mde_column), dropna=False, as_index=False, sort=False
+        )
         .apply(_set_nims_and_mdes)
         .pipe(lambda df: df.reset_index(index_names))
         .reset_index(drop=True)

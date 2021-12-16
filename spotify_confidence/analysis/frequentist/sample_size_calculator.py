@@ -6,7 +6,6 @@ from spotify_confidence.analysis.frequentist.confidence_computers.generic_comput
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..confidence_utils import (
     listify,
-    get_all_categorical_group_columns,
 )
 from ..constants import BONFERRONI, ZTEST, METHOD_COLUMN_NAME
 
