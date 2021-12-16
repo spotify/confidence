@@ -150,7 +150,7 @@ class GenericComputer(ConfidenceComputerABC):
         is_binary_column: str,
     ):
 
-        self._df = data_frame
+        self._df = data_frame.reset_index(drop=True)
         self._point_estimate_column = point_estimate_column
         self._var_column = var_column
         self._is_binary = is_binary_column
@@ -575,14 +575,16 @@ class GenericComputer(ConfidenceComputerABC):
     def compute_optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
     ) -> Tuple[Iterable, int]:
-        sample_size_df = sample_size_df.assign(
-            **{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)}
-        ).assign(
-            **{
-                OPTIMAL_WEIGHTS: lambda df: df.apply(
-                    lambda row: _optimal_weights(row[OPTIMAL_KAPPA], number_of_groups), axis=1
-                )
-            }
+        sample_size_df = (
+            sample_size_df.reset_index(drop=True)
+            .assign(**{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)})
+            .assign(
+                **{
+                    OPTIMAL_WEIGHTS: lambda df: df.apply(
+                        lambda row: _optimal_weights(row[OPTIMAL_KAPPA], number_of_groups), axis=1
+                    )
+                }
+            )
         )
 
         group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._method_column]
