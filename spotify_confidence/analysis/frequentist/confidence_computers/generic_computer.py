@@ -991,7 +991,6 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
         n1, n2 = df[arg_dict[DENOMINATOR] + SFX1], df[arg_dict[DENOMINATOR] + SFX2]
         kappa = n1 / n2
         binary = (df[arg_dict[NUMERATOR_SUM_OF_SQUARES] + SFX1] == df[arg_dict[NUMERATOR] + SFX1]).all()
-        current_number_of_units = n1 + n2
         proportion_of_total = (n1 + n2) / df[f"current_total_{arg_dict[DENOMINATOR]}"]
 
         z_alpha = st.norm.ppf(
@@ -1007,7 +1006,9 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             non_inferiority = nim is not None
 
         df[POWERED_EFFECT] = confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect(
-            df=df.assign(kappa=kappa).assign(current_number_of_units=current_number_of_units),
+            df=df.assign(kappa=kappa)
+            .assign(current_number_of_units=df[f"current_total_{arg_dict[DENOMINATOR]}"])
+            .assign(proportion_of_total=proportion_of_total),
             z_alpha=z_alpha,
             z_power=z_power,
             binary=binary,
@@ -1119,11 +1120,14 @@ def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
         max_powered_effect = 0
         for treatment_weight in treatment_weights:
             kappa = control_weight / treatment_weight
+            proportion_of_total = (control_weight + treatment_weight) / sum(all_weights)
 
             this_powered_effect = df[POWERED_EFFECT] = confidence_computers[
                 df[arg_dict[METHOD]].values[0]
             ].powered_effect(
-                df=df.assign(kappa=kappa).assign(current_number_of_units=current_number_of_units),
+                df=df.assign(kappa=kappa)
+                .assign(current_number_of_units=current_number_of_units)
+                .assign(proportion_of_total=proportion_of_total),
                 z_alpha=z_alpha,
                 z_power=z_power,
                 binary=binary,

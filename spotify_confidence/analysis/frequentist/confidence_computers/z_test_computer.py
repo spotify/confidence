@@ -262,7 +262,7 @@ def powered_effect(
                 control_var=row[var_column],
                 non_inferiority=False,
                 kappa=row["kappa"],
-                proportion_of_total=1.0,
+                proportion_of_total=row["proportion_of_total"],
                 current_number_of_units=row["current_number_of_units"],
                 z_alpha=z_alpha,
                 z_power=z_power,
@@ -278,7 +278,9 @@ def powered_effect(
             hypothetical_effect=0,
         )
         n2_partial = np.power((z_alpha + z_power), 2) * (df[var_column] / df["kappa"] + treatment_var)
-        effect = np.sqrt((1 / (df["current_number_of_units"])) * (n2_partial + df["kappa"] * n2_partial))
+        effect = np.sqrt(
+            (1 / (df["current_number_of_units"] * df["proportion_of_total"])) * (n2_partial + df["kappa"] * n2_partial)
+        )
 
     return effect
 
