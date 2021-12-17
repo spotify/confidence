@@ -521,6 +521,6 @@ class TestSampleSizeCalculator(object):
             sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
 
-        relative_powered_effect = powered_effect_df[POWERED_EFFECT]/powered_effect_df["avg"]
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
 
         assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
