@@ -18,7 +18,7 @@ from pandas import DataFrame
 
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
-from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
+from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME, ZTEST
 from spotify_confidence.analysis.frequentist.experiment import Experiment
 
 
@@ -40,7 +40,7 @@ class ZTest(Experiment):
         power: float = 0.8,
     ):
         super(ZTest, self).__init__(
-            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test"}),
+            data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: ZTEST}),
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,
             denominator_column=denominator_column,

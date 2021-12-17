@@ -51,13 +51,13 @@ def sample_ratio_test(
     elif not (np.array(list(expected_proportions.values())) > 0).all():
         raise ValueError("proportions must all be positive")
 
-    all_groups = list(df.groupby(all_group_columns).groups.keys())
+    all_groups = list(df.groupby(all_group_columns, sort=False).groups.keys())
     if set(all_groups) != set(expected_proportions.keys()):
         raise ValueError(f"`expected_proportion` keys must match groupings in the " f"order {all_group_columns}")
 
     n_tot = df[denominator].sum()
 
-    grouped_data = df.groupby(all_group_columns)
+    grouped_data = df.groupby(all_group_columns, sort=False)
     sr_df = grouped_data.sum()
     sr_df["observed_proportion"] = np.zeros(len(sr_df))
     sr_df["expected_proportion"] = np.zeros(len(sr_df))
