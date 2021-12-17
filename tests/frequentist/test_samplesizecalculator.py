@@ -5,6 +5,7 @@ from spotify_confidence.analysis.constants import (
     SPOT_1,
     REQUIRED_SAMPLE_SIZE_METRIC,
     CI_WIDTH,
+    POWERED_EFFECT,
 )
 from spotify_confidence.analysis.frequentist.sample_size_calculator import SampleSizeCalculator
 
@@ -46,13 +47,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 894863 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_2(self):
         df = pd.DataFrame(
@@ -90,13 +95,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 1004113 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_3(self):
         df = pd.DataFrame(
@@ -134,13 +143,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 596991 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_4(self):
         df = pd.DataFrame(
@@ -178,13 +191,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 586168 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["nim"].values[0], rtol=1e-3)
 
     def test_sample_size_5(self):
         df = pd.DataFrame(
@@ -220,13 +237,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 451934 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["nim"].values[0], rtol=1e-3)
 
     def test_sample_size_6(self):
         df = pd.DataFrame(
@@ -262,13 +283,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 47854 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_7(self):
         df = pd.DataFrame(
@@ -306,13 +331,17 @@ class TestSampleSizeCalculator(object):
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 556565 < 1.001
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_8(self):
         df = pd.DataFrame(
@@ -351,13 +380,17 @@ class TestSampleSizeCalculator(object):
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[3] / 685656 < 1.001
         assert ss[CI_WIDTH].isna().all()
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_calculation_ciwidth_nimless_with_expected_sample_size(self):
         df = pd.DataFrame(
@@ -394,13 +427,17 @@ class TestSampleSizeCalculator(object):
         np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.0047527)
         np.testing.assert_almost_equal(ss[CI_WIDTH].values[1], 0.0151362)
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isnan(relative_powered_effect.values[0])
 
     def test_sample_size_calculation_ciwidth_matches_real_width_returned_by_onesided_test(self):
         df = pd.DataFrame(
@@ -433,13 +470,17 @@ class TestSampleSizeCalculator(object):
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 25334 < 1.001
         np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.0096023)
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
 
     def test_sample_size_calculation_ciwidth_matches_real_width_returned_by_twosided_test_with_direction(self):
         df = pd.DataFrame(
@@ -472,10 +513,14 @@ class TestSampleSizeCalculator(object):
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 32162 < 1.001
         np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.01144189)
 
-        ssc.powered_effect(
+        powered_effect_df = ssc.powered_effect(
             treatment_weights=treatment_weights,
             mde_column="mde",
             nim_column="nim",
             preferred_direction_column="preference",
-            sample_size=1e6,
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
         )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT]/powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
