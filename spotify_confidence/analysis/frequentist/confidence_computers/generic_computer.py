@@ -16,10 +16,10 @@ from typing import Union, Iterable, List, Tuple, Dict
 from warnings import warn
 
 import numpy as np
-from pandas import DataFrame, Series, concat
-from statsmodels.stats.multitest import multipletests
-from scipy import stats as st
 from numpy import isnan
+from pandas import DataFrame, Series
+from scipy import stats as st
+from statsmodels.stats.multitest import multipletests
 
 import spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer as bootstrap_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer as chi_squared_computer
@@ -40,6 +40,7 @@ from spotify_confidence.analysis.confidence_utils import (
     remove_group_columns,
     groupbyApplyParallel,
     is_non_inferiority,
+    reset_named_indices,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -58,6 +59,9 @@ from spotify_confidence.analysis.constants import (
     NUMBER_OF_COMPARISONS,
     TREATMENT_WEIGHTS,
     IS_BINARY,
+    FEATURE,
+    FEATURE_SUMSQ,
+    FEATURE_CROSS,
     CI_LOWER,
     CI_UPPER,
     DIFFERENCE,
@@ -199,7 +203,6 @@ class GenericComputer(ConfidenceComputerABC):
             self._single_metric = True
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
-        self._regression_group_columns = get_all_group_columns(self._metric_column, self._ordinal_group_column)
         self._bootstrap_samples_column = bootstrap_samples_column
 
         columns_that_must_exist = []
@@ -237,14 +240,15 @@ class GenericComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
-            if self._regression_group_columns is not None and len(self._regression_group_columns) > 0:
-                self._df = self._df.groupby(self._regression_group_columns).apply(self._estimate_slope)
             arg_dict = {
                 NUMERATOR: self._numerator,
                 NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
                 DENOMINATOR: self._denominator,
                 BOOTSTRAPS: self._bootstrap_samples_column,
                 INTERVAL_SIZE: self._interval_size,
+                FEATURE: self._feature,
+                FEATURE_SUMSQ: self._feature_ssq,
+                FEATURE_CROSS: self._feature_cross,
             }
             groupby = [col for col in [self._method_column, self._metric_column] if col is not None]
             self._sufficient = (
@@ -272,16 +276,9 @@ class GenericComputer(ConfidenceComputerABC):
                         )
                     )
                 )
-                .reset_index(drop=True)
+                .pipe(reset_named_indices)
             )
         return self._sufficient
-
-    def _estimate_slope(self, df: DataFrame) -> Series:
-        if all(df[self._method_column] == ZTESTLINREG):
-            if self._metric_column is not None:
-                # TODO: Should be .groupby(_metric_column)!!!
-                return self._confidence_computers[ZTESTLINREG]._estimate_slope(df)
-        return df
 
     def compute_difference(
         self,

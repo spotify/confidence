@@ -180,6 +180,14 @@ def is_non_inferiority(nim) -> bool:
         return nim is not None
 
 
+def reset_named_indices(df):
+    named_indices = [name for name in df.index.names if name is not None]
+    if len(named_indices) > 0:
+        return df.reset_index(named_indices, drop=True).sort_index()
+    else:
+        return df
+
+
 def _get_finite_bounds(numbers: Series) -> Tuple[float, float]:
     finite_numbers = numbers[numbers.abs() != float("inf")]
     return finite_numbers.min(), finite_numbers.max()

@@ -62,14 +62,14 @@ class TestUnivariateSingleMetric(object):
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0], rtol=0.0001)
 
-        diff = self.test.difference(level_1="0", level_2="1", verbose=True)
+        diff = self.test.difference(level_1="0", level_2="1", verbose=True, groupby="metric_name")
         assert np.allclose(b1[1], diff["difference"])
 
         v0 = np.var(y_adj[self.d == 0])
         v1 = np.var(y_adj[self.d == 1])
         n0 = y_adj[self.d == 0].size
         n1 = y_adj[self.d == 1].size
-        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1))
+        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
 
 
 class TestUnivariateMultiMetric(object):
@@ -79,8 +79,8 @@ class TestUnivariateMultiMetric(object):
         d = np.random.randint(2, size=n)
         x = np.random.standard_normal(size=n)
         y = 0.5 * d + 0.5 * x + np.random.standard_normal(size=n)
-        m = np.random.randint(2, size=n)
-        data = pd.DataFrame({"variation_name": list(map(str, d)), "metric_name": list(map(str, m)), "y": y, "x": x})
+        m = np.repeat(["metricA", "metricB"], int(n / 2))
+        data = pd.DataFrame({"variation_name": list(map(str, d)), "metric_name": m, "y": y, "x": x})
         data = (
             data.assign(xy=y * x)
             .assign(x2=x ** 2)
@@ -123,43 +123,43 @@ class TestUnivariateMultiMetric(object):
             return np.matmul(np.linalg.inv(np.matmul(np.transpose(X), X)), np.matmul(np.transpose(X), y))
 
         summary_df = self.test.summary(verbose=True)
-        N0 = self.m[self.m == 0].size
+        N0 = self.m[self.m == "metricA"].size
         N1 = self.n - N0
         X = np.ones((N0, 2))
-        X[:, 1] = self.x[self.m == 0]
-        b0 = linreg(X, self.y[self.m == 0])
-        y_adj = self.y[self.m == 0] - np.matmul(X, b0)
-        X[:, 1] = self.d[self.m == 0]
+        X[:, 1] = self.x[self.m == "metricA"]
+        b0 = linreg(X, self.y[self.m == "metricA"])
+        y_adj = self.y[self.m == "metricA"] - np.matmul(X, b0)
+        X[:, 1] = self.d[self.m == "metricA"]
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0], rtol=0.0001)
 
-        diff = self.test.difference(level_1=("0", "0"), level_2=("1", "0"), verbose=True)
+        diff = self.test.difference(level_1=("0", "metricA"), level_2=("1", "metricA"), verbose=True)
         assert np.allclose(b1[1], diff["difference"])
 
-        idx = self.d[self.m == 0]
+        idx = self.d[self.m == "metricA"]
         v0 = np.var(y_adj[idx == 0])
         v1 = np.var(y_adj[idx == 1])
         n0 = y_adj[idx == 0].size
         n1 = y_adj[idx == 1].size
-        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1))
+        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
 
         X = np.ones((N1, 2))
-        X[:, 1] = self.x[self.m == 1]
-        b0 = linreg(X, self.y[self.m == 1])
-        y_adj = self.y[self.m == 1] - np.matmul(X, b0)
-        X[:, 1] = self.d[self.m == 1]
+        X[:, 1] = self.x[self.m == "metricB"]
+        b0 = linreg(X, self.y[self.m == "metricB"])
+        y_adj = self.y[self.m == "metricB"] - np.matmul(X, b0)
+        X[:, 1] = self.d[self.m == "metricB"]
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][1], rtol=0.0001)
 
-        diff = self.test.difference(level_1=("0", "1"), level_2=("1", "1"), verbose=True)
+        diff = self.test.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True)
         assert np.allclose(b1[1], diff["difference"])
 
-        idx = self.d[self.m == 1]
+        idx = self.d[self.m == "metricB"]
         v0 = np.var(y_adj[idx == 0])
         v1 = np.var(y_adj[idx == 1])
         n0 = y_adj[idx == 0].size
         n1 = y_adj[idx == 1].size
-        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1))
+        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
 
 
 class TestUnivariateNoFeatures(object):
@@ -213,7 +213,6 @@ class TestUnivariateNoFeatures(object):
         pd.testing.assert_frame_equal(summary_ztest, summary_ztestlinreg)
 
 
-
 class TestMultivariateSingleMetric(object):
     def setup(self):
         np.random.seed(123)
@@ -223,21 +222,11 @@ class TestMultivariateSingleMetric(object):
         x1 = np.random.standard_normal(size=n)
         x2 = np.random.standard_normal(size=n)
         y = 0.5 * d + 0.5 * x1 + 0.5 * x2 + np.random.standard_normal(size=n)
-        df = pd.DataFrame(
-            {'variation_name': list(map(str, d)),
-             'y': y,
-             'x1': x1,
-             'x2': x2})
+        df = pd.DataFrame({"variation_name": list(map(str, d)), "y": y, "x1": x1, "x2": x2})
 
-        data = df \
-            .assign(y2=y ** 2) \
-            .groupby(['variation_name']) \
-            .agg({
-            'y': ['sum', 'count'],
-            'y2': 'sum'}) \
-            .reset_index()
+        data = df.assign(y2=y ** 2).groupby(["variation_name"]).agg({"y": ["sum", "count"], "y2": "sum"}).reset_index()
 
-        data.columns = data.columns.map('_'.join).str.strip('_')
+        data.columns = data.columns.map("_".join).str.strip("_")
 
         def _to_XX(data, features):
             X = data[features].to_numpy()
@@ -255,19 +244,25 @@ class TestMultivariateSingleMetric(object):
             Xs = np.sum(X, axis=0)
             return Xs
 
-        XX = df.groupby(['variation_name']) \
-            .apply(lambda x: pd.Series({'out': _to_XX(x, features=['x1', 'x2'])})) \
-            .to_records()['out']
-        Xy = df.groupby(['variation_name']) \
-            .apply(lambda x: pd.Series({'out': _to_Xy(x, features=['x1', 'x2'], metric='y')})) \
-            .to_records()['out']
-        Xs = df.groupby(['variation_name']) \
-            .apply(lambda x: pd.Series({'out': _to_Xs(x, features=['x1', 'x2'])})) \
-            .to_records()['out']
+        XX = (
+            df.groupby(["variation_name"])
+            .apply(lambda x: pd.Series({"out": _to_XX(x, features=["x1", "x2"])}))
+            .to_records()["out"]
+        )
+        Xy = (
+            df.groupby(["variation_name"])
+            .apply(lambda x: pd.Series({"out": _to_Xy(x, features=["x1", "x2"], metric="y")}))
+            .to_records()["out"]
+        )
+        Xs = (
+            df.groupby(["variation_name"])
+            .apply(lambda x: pd.Series({"out": _to_Xs(x, features=["x1", "x2"])}))
+            .to_records()["out"]
+        )
 
-        data['XX'] = XX
-        data['Xy'] = Xy
-        data['Xs'] = Xs
+        data["XX"] = XX
+        data["Xy"] = Xy
+        data["Xs"] = Xs
         data = data.assign(**{"metric_name": "metricA"})
         self.n = n
         self.x1 = x1
@@ -308,16 +303,16 @@ class TestMultivariateSingleMetric(object):
         X = np.ones((self.n, 2))
         X[:, 1] = self.d
         b1 = linreg(X, y_adj)
-        assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0], rtol=0.0001)
+        assert np.allclose(b0[1:], summary_df[REGRESSION_PARAM][0].reshape(1, 2), rtol=0.0001)
 
-        diff = self.test.difference(level_1="0", level_2="1", verbose=True)
+        diff = self.test.difference(level_1="0", level_2="1", groupby="metric_name", verbose=True)
         assert np.allclose(b1[1], diff["difference"])
 
         v0 = np.var(y_adj[self.d == 0])
         v1 = np.var(y_adj[self.d == 1])
         n0 = y_adj[self.d == 0].size
         n1 = y_adj[self.d == 1].size
-        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1))
+        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
 
 
 class TestMultivariateMultipleMetrics(object):
@@ -329,23 +324,19 @@ class TestMultivariateMultipleMetrics(object):
         x1 = np.random.standard_normal(size=n)
         x2 = np.random.standard_normal(size=n)
         y = 0.5 * d + 0.5 * x1 + 0.5 * x2 + np.random.standard_normal(size=n)
-        metric_name = np.random.choice(['metricA', 'metricB'], n)
+        metric_name = np.random.choice(["metricA", "metricB"], n)
         df = pd.DataFrame(
-            {'variation_name': list(map(str, d)),
-             'y': y,
-             'x1': x1,
-             'x2': x2,
-             'metric_name': metric_name})
+            {"variation_name": list(map(str, d)), "y": y, "x1": x1, "x2": x2, "metric_name": metric_name}
+        )
 
-        data = df \
-            .assign(y2=y ** 2) \
-            .groupby(['variation_name', 'metric_name']) \
-            .agg({
-            'y': ['sum', 'count'],
-            'y2': 'sum'}) \
+        data = (
+            df.assign(y2=y ** 2)
+            .groupby(["variation_name", "metric_name"])
+            .agg({"y": ["sum", "count"], "y2": "sum"})
             .reset_index()
+        )
 
-        data.columns = data.columns.map('_'.join).str.strip('_')
+        data.columns = data.columns.map("_".join).str.strip("_")
 
         def _to_XX(data, features):
             X = data[features].to_numpy()
@@ -363,19 +354,25 @@ class TestMultivariateMultipleMetrics(object):
             Xs = np.sum(X, axis=0)
             return Xs
 
-        XX = df.groupby(['variation_name', 'metric_name']) \
-            .apply(lambda x: pd.Series({'out': _to_XX(x, features=['x1', 'x2'])})) \
-            .to_records()['out']
-        Xy = df.groupby(['variation_name', 'metric_name']) \
-            .apply(lambda x: pd.Series({'out': _to_Xy(x, features=['x1', 'x2'], metric='y')})) \
-            .to_records()['out']
-        Xs = df.groupby(['variation_name', 'metric_name']) \
-            .apply(lambda x: pd.Series({'out': _to_Xs(x, features=['x1', 'x2'])})) \
-            .to_records()['out']
+        XX = (
+            df.groupby(["variation_name", "metric_name"])
+            .apply(lambda x: pd.Series({"out": _to_XX(x, features=["x1", "x2"])}))
+            .to_records()["out"]
+        )
+        Xy = (
+            df.groupby(["variation_name", "metric_name"])
+            .apply(lambda x: pd.Series({"out": _to_Xy(x, features=["x1", "x2"], metric="y")}))
+            .to_records()["out"]
+        )
+        Xs = (
+            df.groupby(["variation_name", "metric_name"])
+            .apply(lambda x: pd.Series({"out": _to_Xs(x, features=["x1", "x2"])}))
+            .to_records()["out"]
+        )
 
-        data['XX'] = XX
-        data['Xy'] = Xy
-        data['Xs'] = Xs
+        data["XX"] = XX
+        data["Xy"] = Xy
+        data["Xs"] = Xs
 
         self.n = n
         self.x1 = x1
@@ -409,15 +406,15 @@ class TestMultivariateMultipleMetrics(object):
             return np.matmul(np.linalg.inv(np.matmul(np.transpose(X), X)), np.matmul(np.transpose(X), y))
 
         summary_df = self.test.summary(verbose=True)
-        N0 = self.m[self.m == 'metricA'].size
-        N1 = self.n - N0
+        N0 = self.m[self.m == "metricA"].size
+        # N1 = self.n - N0
         X = np.ones((N0, 3))
-        X[:, 1] = self.x1[self.m == 'metricA']
-        X[:, 2] = self.x2[self.m == 'metricA']
-        b0 = linreg(X, self.y[self.m == 'metricA'])
-        y_adj = self.y[self.m == 'metricA'] - np.matmul(X, b0)
+        X[:, 1] = self.x1[self.m == "metricA"]
+        X[:, 2] = self.x2[self.m == "metricA"]
+        b0 = linreg(X, self.y[self.m == "metricA"])
+        y_adj = self.y[self.m == "metricA"] - np.matmul(X, b0)
         X = np.ones((N0, 2))
-        X[:, 1] = self.d[self.m == 'metricA']
+        X[:, 1] = self.d[self.m == "metricA"]
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][0][0], rtol=0.0001)
         assert np.allclose(b0[2], summary_df[REGRESSION_PARAM][0][1], rtol=0.0001)
@@ -426,21 +423,22 @@ class TestMultivariateMultipleMetrics(object):
         assert np.allclose(b1[1], diff["difference"])
 
         summary_df = self.test.summary(verbose=True)
-        N0 = self.m[self.m == 'metricB'].size
-        N1 = self.n - N0
+        N0 = self.m[self.m == "metricB"].size
+        # N1 = self.n - N0
         X = np.ones((N0, 3))
-        X[:, 1] = self.x1[self.m == 'metricB']
-        X[:, 2] = self.x2[self.m == 'metricB']
-        b0 = linreg(X, self.y[self.m == 'metricB'])
-        y_adj = self.y[self.m == 'metricB'] - np.matmul(X, b0)
+        X[:, 1] = self.x1[self.m == "metricB"]
+        X[:, 2] = self.x2[self.m == "metricB"]
+        b0 = linreg(X, self.y[self.m == "metricB"])
+        y_adj = self.y[self.m == "metricB"] - np.matmul(X, b0)
         X = np.ones((N0, 2))
-        X[:, 1] = self.d[self.m == 'metricB']
+        X[:, 1] = self.d[self.m == "metricB"]
         b1 = linreg(X, y_adj)
         assert np.allclose(b0[1], summary_df[REGRESSION_PARAM][1][0], rtol=0.0001)
         assert np.allclose(b0[2], summary_df[REGRESSION_PARAM][1][1], rtol=0.0001)
 
         diff = self.test.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True)
         assert np.allclose(b1[1], diff["difference"])
+
 
 # TODO: Test for sequential data (w/ ordinal column)
 # TODO: Test for segmentation

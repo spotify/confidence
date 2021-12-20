@@ -1,106 +1,112 @@
 from functools import reduce
+from typing import Dict
 
 import numpy as np
 from pandas import DataFrame, Series
 
 from spotify_confidence.analysis.confidence_utils import unlist, dfmatmul
-from spotify_confidence.analysis.constants import REGRESSION_PARAM, POINT_ESTIMATE, VARIANCE
-from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import ZTestComputer
+from spotify_confidence.analysis.constants import (
+    REGRESSION_PARAM,
+    FEATURE,
+    FEATURE_SUMSQ,
+    FEATURE_CROSS,
+    NUMERATOR,
+    DENOMINATOR,
+)
+from spotify_confidence.analysis.frequentist.confidence_computers import z_test_computer
 
 
-class ZTestLinregComputer(ZTestComputer):
-    def __init__(
-        self,
-        numerator,
-        numerator_sumsq,
-        denominator,
-        ordinal_group_column,
-        interval_size,
-        feature_column,
-        feature_sum_squares_column,
-        feature_cross_sum_column,
-        method_column,
-    ):
-        self._numerator = numerator
-        self._numerator_sumsq = numerator_sumsq
-        self._denominator = denominator
-        self._ordinal_group_column = ordinal_group_column
-        self._interval_size = interval_size
-        self._feature = feature_column
-        self._feature_ssq = feature_sum_squares_column
-        self._feature_cross = feature_cross_sum_column
-        self._method_column = method_column
-
-    def _estimate_slope(self, df) -> DataFrame:
-        def col_sum(x):
-            out = reduce(lambda x, y: x + y, x)
-            return out
-
-        def dimension(x):
-            return x.shape[0] if isinstance(x, np.ndarray) and x.size > 1 else 1
-
-        k = df[self._feature_ssq].apply(dimension).iloc[0]
-
-        XX0 = np.zeros((k + 1, k + 1))
-        XX0[1 : (k + 1), 1 : (k + 1)] = col_sum(df[self._feature_ssq])
-        XX0[0, 0] = col_sum(df[self._denominator])
-        XX0[0, 1 : (k + 1)] = col_sum(df[self._feature])
-        XX0[1 : (k + 1), 0] = col_sum(df[self._feature])
-
-        Xy0 = np.zeros((k + 1, 1))
-        Xy0[
-            0,
-        ] = col_sum(df[self._numerator])
-        Xy0[1 : (k + 1),] = np.atleast_2d(
-            col_sum(df[self._feature_cross])
-        ).reshape(-1, 1)
-
-        b = np.matmul(np.linalg.inv(XX0), Xy0)
-        out = b[1 : (k + 1)]
-        if out.size == 1:
-            out = out.item()
-
-        outseries = Series(index=df.index, dtype=df[self._feature].dtype)
-        df[REGRESSION_PARAM] = outseries.apply(lambda x: out)
+def estimate_slope(df, arg_dict: Dict) -> DataFrame:
+    if arg_dict[FEATURE] not in df:
         return df
 
-    def _point_estimate(self, row: Series) -> float:
+    def col_sum(x):
+        return reduce(lambda x, y: x + y, x)
 
-        if row[self._denominator] == 0:
-            raise ValueError(
-                """Can't compute point estimate:
-                                denominator is 0"""
-            )
-        out1 = row[self._numerator] / row[self._denominator]
-        if REGRESSION_PARAM in row.index.values:
-            out2 = dfmatmul(row[REGRESSION_PARAM], row[self._feature], outer=False)
-            out3 = out2 / row[self._denominator]
-        else:
-            out3 = 0
-        return out1 - out3
+    def dimension(x):
+        return x.shape[0] if isinstance(x, np.ndarray) and x.size > 1 else 1
 
-    def _variance(self, row: DataFrame) -> Series:
+    k = df[arg_dict[FEATURE_SUMSQ]].apply(dimension).iloc[0]
 
-        y = row[self._numerator]
-        yy = row[self._numerator_sumsq]
-        n = row[self._denominator]
-        variance1 = yy / n - (y / n) ** 2
+    XX0 = np.zeros((k + 1, k + 1))
+    XX0[1 : (k + 1), 1 : (k + 1)] = col_sum(df[arg_dict[FEATURE_SUMSQ]])
+    XX0[0, 0] = col_sum(df[arg_dict[DENOMINATOR]])
+    XX0[0, 1 : (k + 1)] = col_sum(df[arg_dict[FEATURE]])
+    XX0[1 : (k + 1), 0] = col_sum(df[arg_dict[FEATURE]])
 
-        if (
-            (self._feature in row.index.values)
-            and (self._feature_ssq in row.index.values)
-            and (self._feature_cross in row.index.values)
-        ):
-            XX = unlist(row[self._feature_ssq])
-            X = unlist(row[self._feature])
-            Xy = unlist(row[self._feature_cross])
+    Xy0 = np.zeros((k + 1, 1))
+    Xy0[
+        0,
+    ] = col_sum(df[arg_dict[NUMERATOR]])
+    Xy0[1 : (k + 1),] = np.atleast_2d(
+        col_sum(df[arg_dict[FEATURE_CROSS]])
+    ).reshape(-1, 1)
+
+    b = np.matmul(np.linalg.inv(XX0), Xy0)
+    out = b[1 : (k + 1)]
+    if out.size == 1:
+        out = out.item()
+
+    outseries = Series(index=df.index, dtype=df[arg_dict[FEATURE]].dtype)
+    df[REGRESSION_PARAM] = outseries.apply(lambda x: out)
+    return df
+
+
+def point_estimate(df: Series, arg_dict) -> float:
+    df = estimate_slope(df, arg_dict)
+    point_estimate = df[arg_dict[NUMERATOR]] / df[arg_dict[DENOMINATOR]]
+
+    if REGRESSION_PARAM in df:
+
+        def lin_reg_point_estimate_delta(row: Series, arg_dict: Dict) -> Series:
+            return dfmatmul(row[REGRESSION_PARAM], row[arg_dict[FEATURE]], outer=False)
+
+        return (
+            point_estimate
+            - df.apply(lin_reg_point_estimate_delta, arg_dict=arg_dict, axis=1) / df[arg_dict[DENOMINATOR]]
+        )
+
+    return point_estimate
+
+
+def variance(df: DataFrame, arg_dict) -> Series:
+    variance1 = z_test_computer.variance(df, arg_dict)
+
+    if arg_dict[FEATURE] in df:
+
+        def lin_reg_variance_delta(row, arg_dict):
+            y = row[arg_dict[NUMERATOR]]
+            n = row[arg_dict[DENOMINATOR]]
+
+            XX = unlist(row[arg_dict[FEATURE_SUMSQ]])
+            X = unlist(row[arg_dict[FEATURE]])
+            Xy = unlist(row[arg_dict[FEATURE_CROSS]])
 
             sample_var = XX / n - dfmatmul(X / n, X / n)
             sample_cov = Xy / n - dfmatmul(X / n, y / n)
             b = np.atleast_2d(row[REGRESSION_PARAM])
             variance2 = np.matmul(np.transpose(b), np.matmul(sample_var, b)).item()
             variance3 = -2 * np.matmul(np.transpose(b), sample_cov).item()
-            return variance1 + variance2 + variance3
-        else:
 
-            return variance1
+            return variance2 + variance3
+
+        return variance1 + df.apply(lin_reg_variance_delta, arg_dict=arg_dict, axis=1)
+    else:
+
+        return variance1
+
+
+def add_point_estimate_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    return z_test_computer.add_point_estimate_ci(df, arg_dict)
+
+
+def std_err(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    return z_test_computer.std_err(df, arg_dict)
+
+
+def p_value(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    return z_test_computer.p_value(df, arg_dict)
+
+
+def ci(df: DataFrame, alpha_column: str, arg_dict: Dict) -> DataFrame:
+    return z_test_computer.ci(df, alpha_column, arg_dict)

@@ -44,6 +44,9 @@ class SampleSizeCalculator:
                 point_estimate_column=point_estimate_column,
                 var_column=var_column,
                 is_binary_column=is_binary_column,
+                feature_column=None,
+                feature_sum_squares_column=None,
+                feature_cross_sum_column=None,
             )
 
     def sample_size(
