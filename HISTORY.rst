@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.0 (2021-12-21)
+------------------
+
+* Added support for variance reduction using linear regression
+
 2.5.0 (2021-12-16)
 ------------------
 
