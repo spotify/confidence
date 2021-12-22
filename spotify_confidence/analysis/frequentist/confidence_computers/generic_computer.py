@@ -16,15 +16,16 @@ from typing import Union, Iterable, List, Tuple, Dict
 from warnings import warn
 
 import numpy as np
-from pandas import DataFrame, Series
-from statsmodels.stats.multitest import multipletests
-from scipy import stats as st
 from numpy import isnan
+from pandas import DataFrame, Series
+from scipy import stats as st
+from statsmodels.stats.multitest import multipletests
 
 import spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer as bootstrap_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer as chi_squared_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer as t_test_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer as z_test_computers
+import spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer as z_test_linreg_computer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.confidence_utils import (
     get_remaning_groups,
@@ -39,6 +40,7 @@ from spotify_confidence.analysis.confidence_utils import (
     remove_group_columns,
     groupbyApplyParallel,
     is_non_inferiority,
+    reset_named_indices,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -57,6 +59,9 @@ from spotify_confidence.analysis.constants import (
     NUMBER_OF_COMPARISONS,
     TREATMENT_WEIGHTS,
     IS_BINARY,
+    FEATURE,
+    FEATURE_SUMSQ,
+    FEATURE_CROSS,
     CI_LOWER,
     CI_UPPER,
     DIFFERENCE,
@@ -119,6 +124,7 @@ from spotify_confidence.analysis.constants import (
     PREFERRED_DIRECTION_COLUMN_DEFAULT,
     INCREASE_PREFFERED,
     DECREASE_PREFFERED,
+    ZTESTLINREG,
 )
 
 confidence_computers = {
@@ -126,6 +132,7 @@ confidence_computers = {
     TTEST: t_test_computer,
     ZTEST: z_test_computers,
     BOOTSTRAP: bootstrap_computer,
+    ZTESTLINREG: z_test_linreg_computer,
 }
 
 
@@ -133,21 +140,24 @@ class GenericComputer(ConfidenceComputerABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
-        numerator_sum_squares_column: str,
-        denominator_column: str,
+        numerator_column: Union[str, None],
+        numerator_sum_squares_column: Union[str, None],
+        denominator_column: Union[str, None],
         categorical_group_columns: Union[str, Iterable],
-        ordinal_group_column: str,
+        ordinal_group_column: Union[str, None],
         interval_size: float,
         correction_method: str,
         method_column: str,
-        bootstrap_samples_column: str,
+        bootstrap_samples_column: Union[str, None],
         metric_column: Union[str, None],
         treatment_column: Union[str, None],
         power: float,
         point_estimate_column: str,
         var_column: str,
         is_binary_column: str,
+        feature_column: Union[str, None],
+        feature_sum_squares_column: Union[str, None],
+        feature_cross_sum_column: Union[str, None],
     ):
 
         self._df = data_frame.reset_index(drop=True)
@@ -179,6 +189,9 @@ class GenericComputer(ConfidenceComputerABC):
         self._interval_size = interval_size
         self._power = power
         self._treatment_column = treatment_column
+        self._feature = feature_column
+        self._feature_ssq = feature_sum_squares_column
+        self._feature_cross = feature_cross_sum_column
 
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
@@ -190,7 +203,6 @@ class GenericComputer(ConfidenceComputerABC):
             self._single_metric = True
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
-
         self._bootstrap_samples_column = bootstrap_samples_column
 
         columns_that_must_exist = []
@@ -206,6 +218,8 @@ class GenericComputer(ConfidenceComputerABC):
                 columns_that_must_exist += [self._point_estimate_column, self._var_column]
         if BOOTSTRAP in self._df[self._method_column]:
             columns_that_must_exist += [self._bootstrap_samples_column]
+        if ZTESTLINREG in self._df[self._method_column]:
+            columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
@@ -232,6 +246,9 @@ class GenericComputer(ConfidenceComputerABC):
                 DENOMINATOR: self._denominator,
                 BOOTSTRAPS: self._bootstrap_samples_column,
                 INTERVAL_SIZE: self._interval_size,
+                FEATURE: self._feature,
+                FEATURE_SUMSQ: self._feature_ssq,
+                FEATURE_CROSS: self._feature_cross,
             }
             groupby = [col for col in [self._method_column, self._metric_column] if col is not None]
             self._sufficient = (
@@ -259,7 +276,7 @@ class GenericComputer(ConfidenceComputerABC):
                         )
                     )
                 )
-                .reset_index(drop=True)
+                .pipe(reset_named_indices)
             )
         return self._sufficient
 

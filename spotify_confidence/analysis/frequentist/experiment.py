@@ -50,6 +50,9 @@ class Experiment(ConfidenceABC):
         metric_column=None,
         treatment_column=None,
         power: float = 0.8,
+        feature_column: str = None,
+        feature_sum_squares_column: str = None,
+        feature_cross_sum_column: str = None,
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -89,6 +92,9 @@ class Experiment(ConfidenceABC):
                 point_estimate_column=None,
                 var_column=None,
                 is_binary_column=None,
+                feature_column=feature_column,
+                feature_sum_squares_column=feature_sum_squares_column,
+                feature_cross_sum_column=feature_cross_sum_column,
             )
 
         self._confidence_grapher = (

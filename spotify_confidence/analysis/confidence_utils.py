@@ -180,6 +180,14 @@ def is_non_inferiority(nim) -> bool:
         return nim is not None
 
 
+def reset_named_indices(df):
+    named_indices = [name for name in df.index.names if name is not None]
+    if len(named_indices) > 0:
+        return df.reset_index(named_indices, drop=True).sort_index()
+    else:
+        return df
+
+
 def _get_finite_bounds(numbers: Series) -> Tuple[float, float]:
     finite_numbers = numbers[numbers.abs() != float("inf")]
     return finite_numbers.min(), finite_numbers.max()
@@ -213,3 +221,30 @@ def power_calculation(mde: float, baseline_var: float, alpha: float, n1: int, n2
     z_stat = a * b
 
     return norm.cdf(z_stat - z_alpha) + norm.cdf(-z_stat - z_alpha)
+
+
+def unlist(x):
+    x0 = x[0] if isinstance(x, list) else x
+    x1 = np.atleast_2d(x0)
+    if x1.shape[0] < x1.shape[1]:
+        x1 = x1.transpose()
+    return x1
+
+
+def dfmatmul(x, y, outer=True):
+
+    x = np.atleast_2d(x)
+    y = np.atleast_2d(y)
+    if x.shape[0] < x.shape[1]:
+        x = x.transpose()
+    if y.shape[0] < y.shape[1]:
+        y = y.transpose()
+
+    if outer:
+        out = np.matmul(x, np.transpose(y))
+    else:
+        out = np.matmul(np.transpose(x), y)
+
+    if out.size == 1:
+        out = out.item()
+    return out
