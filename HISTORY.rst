@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.1 (2022-01-21)
+------------------
+
+* Fixed bug that led to crash when a segment had zero observations
+
 2.6.0 (2021-12-21)
 ------------------
 

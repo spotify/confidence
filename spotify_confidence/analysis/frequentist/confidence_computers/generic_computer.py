@@ -1173,7 +1173,7 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
 
     control_count = int((control_weight / sum_of_weights) * expected_sample_size)
     if control_count == 0:
-        return float("inf")
+        return df.assign(**{CI_WIDTH: float("inf")})
 
     else:
         binary = df[arg_dict[IS_BINARY]].values[0]
@@ -1187,7 +1187,7 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
         for treatment_weight in treatment_weights:
             treatment_count = int((treatment_weight / sum_of_weights) * expected_sample_size)
             if treatment_count == 0:
-                return float("inf")
+                return df.assign(**{CI_WIDTH: float("inf")})
             else:
                 comparison_ci_width = confidence_computers[df[arg_dict[METHOD]].values[0]].ci_width(
                     z_alpha=z_alpha,
