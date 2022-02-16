@@ -452,6 +452,7 @@ class GenericComputer(ConfidenceComputerABC):
             .pipe(lambda df: df.reset_index([name for name in df.index.names if name is not None]))
             .reset_index(drop=True)
             .sort_values(by=groupby + ["level_1", "level_2"])
+            .reset_index(drop=True)
         )
 
     def _create_comparison_df(
@@ -487,8 +488,9 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .pipe(join)
             .query(
-                f"level_1 in {[l1 for l1, l2 in groups_to_compare]} and "
-                + f"level_2 in {[l2 for l1, l2 in groups_to_compare]}"
+                "("
+                + " or ".join([f"(level_1=='{l1}' and level_2=='{l2}')" for l1, l2 in groups_to_compare])
+                + ")"
                 + "and level_1 != level_2"
             )
             .pipe(
