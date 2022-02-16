@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.2 (2022-02-16)
+------------------
+
+* Fixed bug that led to incorrect title of difference plots
+
 2.6.1 (2022-01-21)
 ------------------
 
