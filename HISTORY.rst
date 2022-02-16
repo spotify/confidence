@@ -6,6 +6,7 @@ History
 ------------------
 
 * Fixed bug that led to incorrect title of difference plots
+* Fixed bug that led to too many comparisons for certain combinations of `levels` passed to the differences method
 
 2.6.1 (2022-01-21)
 ------------------
