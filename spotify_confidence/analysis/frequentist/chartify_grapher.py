@@ -126,7 +126,9 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         if "level_1" in groupby and "level_2" in groupby:
             title = "Change from level_1 to level_2"
         else:
-            title = "Change from {} to {}".format(difference_df["level_1"].any(), difference_df["level_2"].any())
+            title = "Change from {} to {}".format(
+                difference_df["level_1"].values[0], difference_df["level_2"].values[0]
+            )
 
         y_axis_label = self._get_difference_plot_label(absolute)
         ch = self._ordinal_plot(
@@ -158,7 +160,9 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         if "level_1" in groupby and "level_2" in groupby:
             title = "Change from level_1 to level_2"
         else:
-            title = "Change from {} to {}".format(difference_df["level_1"].any(), difference_df["level_2"].any())
+            title = "Change from {} to {}".format(
+                difference_df["level_1"].values[0], difference_df["level_2"].values[0]
+            )
         x_label = "" if groupby is None else "{}".format(groupby)
 
         chart_grid = self._categorical_difference_chart(
@@ -458,7 +462,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
     def _get_multiple_difference_title(self, difference_df, level_as_reference):
         reference_level = "level_1" if level_as_reference else "level_2"
-        title = "Comparison to {}".format(difference_df[reference_level].any())
+        title = "Comparison to {}".format(difference_df[reference_level].values[0])
         return title
 
     def _add_level_column(self, groupby, level_as_reference):
