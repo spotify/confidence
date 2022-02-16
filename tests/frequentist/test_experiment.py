@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 import spotify_confidence
+from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST
 
 
 class TestBootstrap(object):
@@ -105,3 +106,43 @@ class TestBootstrap(object):
     def test_multiple_difference_plot(self):
         chartgrid = self.test.multiple_difference_plot(level="control", level_as_reference=True)
         assert len(chartgrid.charts) == 1
+
+    def test_differences_one_level_on_both_sides(self):
+        df = pd.DataFrame(
+            {
+                "group_name": {0: "LT", 1: "HB", 2: "RNDM", 3: "ST"},
+                "num_user": {0: 5832071, 1: 5830464, 2: 5775235, 3: 5829780},
+                "sum": {
+                    0: 3650267885.292686,
+                    1: 3640976251.2644653,
+                    2: 3543904424.4249864,
+                    3: 3640408188.9692664,
+                },
+                "sum_squares": {
+                    0: 11464986242442.066,
+                    1: 11395508685623.664,
+                    2: 10953117763878.217,
+                    3: 11400833683366.701,
+                },
+            }
+        )
+
+        test = spotify_confidence.Experiment(
+            data_frame=df.assign(**{METHOD_COLUMN_NAME: ZTEST}),
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_squares",
+            denominator_column="num_user",
+            categorical_group_columns="group_name",
+            method_column=METHOD_COLUMN_NAME,
+        )
+
+        diff = test.differences(
+            levels=[
+                ("RNDM", "HB"),
+                ("ST", "HB"),
+                ("LT", "HB"),
+                ("ST", "LT"),
+            ]
+        )
+
+        assert len(diff) == 4
