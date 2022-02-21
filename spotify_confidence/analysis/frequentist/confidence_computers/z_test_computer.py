@@ -38,7 +38,7 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_SIMES_HOCHBERG,
     NIM,
     ADJUSTED_ALPHA, NUMBER_OF_COMPARISONS_VALIDATION, ADJUSTED_ALPHA_TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT,
-    INCREASE_PREFFERED, DECREASE_PREFFERED,
+    INCREASE_PREFFERED, DECREASE_PREFFERED, PREFERENCE_DICT
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -97,15 +97,14 @@ def p_value(df: DataFrame, arg_dict: Dict[str, str], tanking: bool) -> Series:
             alternative=df[PREFERENCE_TEST].values[0],
             diff=df[NULL_HYPOTHESIS],
         )
-    elif pref_dir in [INCREASE_PREFFERED, DECREASE_PREFFERED]:
-        _, p_value_inv = _zstat_generic(
+    elif df[PREFERRED_DIRECTION_COLUMN_DEFAULT].values[0] in [INCREASE_PREFFERED, DECREASE_PREFFERED]:
+        _, p_value = _zstat_generic(
             value1=df[POINT_ESTIMATE + SFX2],
             value2=df[POINT_ESTIMATE + SFX1],
             std_diff=df[STD_ERR],
-            alternative=df[PREFERRED_DIRECTION_COLUMN_DEFAULT].values[0],
+            alternative="larger" if df[PREFERRED_DIRECTION_COLUMN_DEFAULT].values[0] == DECREASE_PREFFERED else "smaller",
             diff=df[NULL_HYPOTHESIS],
         )
-        p_value = 1 - p_value_inv
     else:
         p_value = float('nan')
     return p_value
