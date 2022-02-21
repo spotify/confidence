@@ -27,7 +27,7 @@ from ..confidence_utils import (
     get_all_categorical_group_columns,
     get_all_group_columns,
 )
-from ..constants import BONFERRONI, NIM_TYPE, METHODS
+from ..constants import BONFERRONI, NIM_TYPE, METHODS, SPOT_1
 from ..frequentist.sample_ratio_test import sample_ratio_test
 from ...chartgrid import ChartGrid
 
@@ -53,6 +53,7 @@ class Experiment(ConfidenceABC):
         feature_column: str = None,
         feature_sum_squares_column: str = None,
         feature_cross_sum_column: str = None,
+        tanking: bool = False
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -71,6 +72,10 @@ class Experiment(ConfidenceABC):
             raise ValueError("method column cannot be None")
         if not all(self._df[method_column].map(lambda m: m in METHODS)):
             raise ValueError(f"Values of method column must be in {METHODS}")
+
+        self._tanking = tanking
+        if tanking and not correction_method == SPOT_1:
+            raise ValueError(f"tanking tests can only be used with the {SPOT_1} correction method")
 
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer

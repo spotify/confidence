@@ -38,6 +38,7 @@ class ZTest(Experiment):
         metric_column: Union[str, None] = None,
         treatment_column: Union[str, None] = None,
         power: float = 0.8,
+        tanking: bool = False
     ):
         super(ZTest, self).__init__(
             data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: ZTEST}),
@@ -54,4 +55,5 @@ class ZTest(Experiment):
             metric_column=metric_column,
             treatment_column=treatment_column,
             power=power,
+            tanking=tanking
         )
