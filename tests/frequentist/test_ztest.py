@@ -19,7 +19,7 @@ from spotify_confidence.analysis.constants import (
     SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
     POWERED_EFFECT,
-    REQUIRED_SAMPLE_SIZE,
+    REQUIRED_SAMPLE_SIZE, IS_FAILING,
 )
 
 
@@ -3951,6 +3951,8 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             .assign(final_expected_sample_size=5000)
             .assign(method="z-test")
         )
+        self.data["decision_type"] = "validation_metric"
+        self.data.loc[self.data["metric"] == "bananas_per_user_7d", "decision_type"] = "guardrail_metric"
 
         self.test = spotify_confidence.Experiment(
             self.data,
@@ -3964,16 +3966,43 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             method_column="method",
             metric_column="metric",
             treatment_column=GROUP,
-            tanking=True
+            validations=True,
         )
 
-    def test_tanking(self):
+        self.test2 = spotify_confidence.Experiment(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, "country", "platform", "metric"],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column=GROUP,
+            validations=True,
+            decision_column="decision_type",
+        )
+
+    def test_validation_one_guardrail_one_success_metric(self):
         difference_df = self.test.multiple_difference(
             level="1",
             groupby=[DATE, "country", "platform", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_expected_sample_size",
             non_inferiority_margins=True,
-            verbose=True
+            verbose=True,
         )
-        assert 'is_tanking' in difference_df.columns
+        assert IS_FAILING in difference_df.columns
+
+    def test_validation_one_guardrail_one_validation_metric(self):
+        difference_df = self.test.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert IS_FAILING in difference_df.columns

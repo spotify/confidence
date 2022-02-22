@@ -37,8 +37,7 @@ class ZTest(Experiment):
         confidence_grapher: ConfidenceGrapherABC = None,
         metric_column: Union[str, None] = None,
         treatment_column: Union[str, None] = None,
-        power: float = 0.8,
-        tanking: bool = False
+        power: float = 0.8
     ):
         super(ZTest, self).__init__(
             data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: ZTEST}),
@@ -54,6 +53,5 @@ class ZTest(Experiment):
             method_column=METHOD_COLUMN_NAME,
             metric_column=metric_column,
             treatment_column=treatment_column,
-            power=power,
-            tanking=tanking
+            power=power
         )
