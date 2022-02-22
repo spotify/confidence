@@ -174,3 +174,16 @@ VALIDATION="validation"
 SUCCESS="success"
 GUARDRAIL="guardrail"
 VALIDATIONS_ENABLED="validations_enabled"
+
+SEQUENTIAL_TEST = "sequential_test"
+METRIC_CLASS = "metric_class"
+SAMPLE_RATIO_MISMATCH = "sample ratio mismatch"
+PRE_EXPOSURE_ACTIVITY = "pre-exposure activity"
+TANKING = "tanking"
+DECISION_DICT = {
+    SAMPLE_RATIO_MISMATCH: VALIDATION,
+    PRE_EXPOSURE_ACTIVITY: VALIDATION,
+    TANKING: VALIDATION,
+    SUCCESS: SUCCESS,
+    GUARDRAIL: GUARDRAIL
+}

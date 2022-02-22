@@ -55,6 +55,7 @@ class Experiment(ConfidenceABC):
         feature_cross_sum_column: str = None,
         validations: bool = False,
         decision_column: str = None,
+        sequential_test: bool = None
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -77,7 +78,9 @@ class Experiment(ConfidenceABC):
         self._validations_enabled = validations
         if validations and not correction_method == SPOT_1:
             raise ValueError(f"Validation tests can only be used with the {SPOT_1} correction method")
+        self._validations_enabled = validations
         self._decision_column = decision_column
+        self._sequential_test = sequential_test
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
@@ -102,7 +105,8 @@ class Experiment(ConfidenceABC):
                 feature_sum_squares_column=feature_sum_squares_column,
                 feature_cross_sum_column=feature_cross_sum_column,
                 validations=validations,
-                decision_column=decision_column
+                decision_column=decision_column,
+                sequential_test=sequential_test
             )
 
         self._confidence_grapher = (

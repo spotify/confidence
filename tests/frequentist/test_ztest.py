@@ -3985,6 +3985,23 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             decision_column="decision_type",
         )
 
+        self.test3 = spotify_confidence.Experiment(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, "country", "platform", "metric"],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column=GROUP,
+            validations=True,
+            decision_column="decision_type",
+            sequential_test=False
+        )
+
     def test_validation_one_guardrail_one_success_metric(self):
         difference_df = self.test.multiple_difference(
             level="1",
@@ -3997,7 +4014,18 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
         assert IS_FAILING in difference_df.columns
 
     def test_validation_one_guardrail_one_validation_metric(self):
-        difference_df = self.test.multiple_difference(
+        difference_df = self.test2.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert IS_FAILING in difference_df.columns
+
+    def test_validation_one_guardrail_one_success_metric_no_sequential(self):
+        difference_df = self.test3.multiple_difference(
             level="1",
             groupby=[DATE, "country", "platform", "metric"],
             level_as_reference=True,

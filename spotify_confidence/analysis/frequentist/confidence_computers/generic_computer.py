@@ -134,7 +134,7 @@ from spotify_confidence.analysis.constants import (
     CI_UPPER_VALIDATION,
     ADJUSTED_LOWER_VALIDATION,
     ADJUSTED_UPPER_VALIDATION, VALIDATION, VALIDATIONS_ENABLED,
-    SUCCESS, GUARDRAIL
+    SUCCESS, GUARDRAIL, METRIC_CLASS, DECISION_DICT, SEQUENTIAL_TEST
 )
 
 confidence_computers = {
@@ -169,7 +169,8 @@ class GenericComputer(ConfidenceComputerABC):
         feature_sum_squares_column: Union[str, None],
         feature_cross_sum_column: Union[str, None],
         validations: Union[bool, None],
-        decision_column: Union[str, None]
+        decision_column: Union[str, None],
+        sequential_test: Union[bool, None]
     ):
 
         self._df = data_frame.reset_index(drop=True)
@@ -218,6 +219,7 @@ class GenericComputer(ConfidenceComputerABC):
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
         self._bootstrap_samples_column = bootstrap_samples_column
+        self._sequential_test = sequential_test
 
         columns_that_must_exist = []
         if (
@@ -234,6 +236,8 @@ class GenericComputer(ConfidenceComputerABC):
             columns_that_must_exist += [self._bootstrap_samples_column]
         if ZTESTLINREG in self._df[self._method_column]:
             columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
+        if self._sequential_test:
+            columns_that_must_exist += self._ordinal_group_column
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
@@ -564,7 +568,8 @@ class GenericComputer(ConfidenceComputerABC):
             ABSOLUTE: absolute,
             NUMBER_OF_COMPARISONS: n_comparisons,
             NUMBER_OF_COMPARISONS_VALIDATION: n_comparisons_validation,
-            VALIDATIONS_ENABLED: self._validations_enabled
+            VALIDATIONS_ENABLED: self._validations_enabled,
+            SEQUENTIAL_TEST: self._sequential_test
         }
         comparison_df = groupbyApplyParallel(
             comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
@@ -729,7 +734,7 @@ class GenericComputer(ConfidenceComputerABC):
         self, df: DataFrame, correction_method: str, number_of_level_comparisons: int, groupby: Iterable, validations: bool
     ) -> int:
         if self._validations_enabled and self._decision_column is not None and not validations:
-            df = df.query(f"{self._decision_column} != {VALIDATION}")
+            df = df.loc[df[self._decision_column].map(DECISION_DICT) != VALIDATION]
         if correction_method == BONFERRONI:
             return max(
                 1,
@@ -792,7 +797,7 @@ class GenericComputer(ConfidenceComputerABC):
 
                     return max(1, number_of_level_comparisons * max(1, number_success_metrics) * number_segments)
                 else:
-                    MULTIPLICITY_ADJUST = [SUCCESS, GUARDRAIL, VALIDATION] if validations else [SUCCESS]
+                    MULTIPLICITY_ADJUST = DECISION_DICT.keys() if validations else [SUCCESS]
                     number_of_metrics = (
                         df.query(f"{self._decision_column} == {MULTIPLICITY_ADJUST}")
                           .groupby(self._metric_column, sort=False)
@@ -876,12 +881,10 @@ def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
         .pipe(_adjust_if_absolute, absolute=arg_dict[ABSOLUTE])
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
     )
-
-
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
     def _add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
         n_comparisons = arg_dict[NUMBER_OF_COMPARISONS_VALIDATION if validation else NUMBER_OF_COMPARISONS]
-        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None and (arg_dict[SEQUENTIAL_TEST] != False or validation):
             if arg_dict[CORRECTION_METHOD] not in [
                 BONFERRONI,
                 BONFERRONI_ONLY_COUNT_TWOSIDED,
@@ -1024,8 +1027,9 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
 
 
 def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    #TODO: Need to set ALPHA_VALIDATION
     alpha_0 = 1 - arg_dict[INTERVAL_SIZE]
-    return df.assign(
+    df = df.assign(
         **{
             ALPHA: df.apply(
                 lambda row: 2 * alpha_0
@@ -1034,7 +1038,13 @@ def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
                 axis=1,
             )
         }
-    ).assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
+    )
+    if arg_dict[SEQUENTIAL_TEST] == False and arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+
+        df.iloc[(
+                df.index.get_level_values(arg_dict[ORDINAL_GROUP_COLUMN]) <
+                df.reset_index()[arg_dict[ORDINAL_GROUP_COLUMN]].max()), df.columns.get_loc(ALPHA)] = float('nan')
+    return df.assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
 
 
 def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
