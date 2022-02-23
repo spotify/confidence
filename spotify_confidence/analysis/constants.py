@@ -60,6 +60,8 @@ IS_FAILING = "is_failing_validation"
 P_VALUE_VALIDATION = "p-value_validation"
 ADJUSTED_P_VALIDATION = "adjusted p-value validation"
 ADJUSTED_ALPHA_VALIDATION = "adjusted_alpha_validation"
+VALIDATION_INTERVAL_SIZE = "validation_interval_size"
+ALPHA_VALIDATION = "alpha_validation"
 CI_LOWER_VALIDATION, CI_UPPER_VALIDATION = "ci_lower_validation", "ci_upper_validation"
 ADJUSTED_LOWER_VALIDATION, ADJUSTED_UPPER_VALIDATION = "adjusted ci_lower_validation", "adjusted ci_upper_validation"
 

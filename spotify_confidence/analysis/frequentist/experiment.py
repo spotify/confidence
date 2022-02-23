@@ -55,7 +55,8 @@ class Experiment(ConfidenceABC):
         feature_cross_sum_column: str = None,
         validations: bool = False,
         decision_column: str = None,
-        sequential_test: bool = None
+        sequential_test: bool = None,
+        validation_interval_size: float = 0.99
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -106,7 +107,8 @@ class Experiment(ConfidenceABC):
                 feature_cross_sum_column=feature_cross_sum_column,
                 validations=validations,
                 decision_column=decision_column,
-                sequential_test=sequential_test
+                sequential_test=sequential_test,
+                validation_interval_size=validation_interval_size
             )
 
         self._confidence_grapher = (

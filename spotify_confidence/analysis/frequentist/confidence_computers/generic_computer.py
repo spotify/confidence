@@ -134,7 +134,7 @@ from spotify_confidence.analysis.constants import (
     CI_UPPER_VALIDATION,
     ADJUSTED_LOWER_VALIDATION,
     ADJUSTED_UPPER_VALIDATION, VALIDATION, VALIDATIONS_ENABLED,
-    SUCCESS, GUARDRAIL, METRIC_CLASS, DECISION_DICT, SEQUENTIAL_TEST
+    SUCCESS, GUARDRAIL, METRIC_CLASS, DECISION_DICT, SEQUENTIAL_TEST, VALIDATION_INTERVAL_SIZE, ALPHA_VALIDATION
 )
 
 confidence_computers = {
@@ -170,7 +170,8 @@ class GenericComputer(ConfidenceComputerABC):
         feature_cross_sum_column: Union[str, None],
         validations: Union[bool, None],
         decision_column: Union[str, None],
-        sequential_test: Union[bool, None]
+        sequential_test: Union[bool, None],
+        validation_interval_size: float
     ):
 
         self._df = data_frame.reset_index(drop=True)
@@ -207,6 +208,7 @@ class GenericComputer(ConfidenceComputerABC):
         self._feature_cross = feature_cross_sum_column
         self._decision_column = decision_column
         self._validations_enabled = validations
+        self._validation_interval_size = validation_interval_size
 
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
@@ -569,7 +571,8 @@ class GenericComputer(ConfidenceComputerABC):
             NUMBER_OF_COMPARISONS: n_comparisons,
             NUMBER_OF_COMPARISONS_VALIDATION: n_comparisons_validation,
             VALIDATIONS_ENABLED: self._validations_enabled,
-            SEQUENTIAL_TEST: self._sequential_test
+            SEQUENTIAL_TEST: self._sequential_test,
+            VALIDATION_INTERVAL_SIZE: self._validation_interval_size
         }
         comparison_df = groupbyApplyParallel(
             comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
@@ -884,7 +887,7 @@ def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
     def _add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
         n_comparisons = arg_dict[NUMBER_OF_COMPARISONS_VALIDATION if validation else NUMBER_OF_COMPARISONS]
-        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None and (arg_dict[SEQUENTIAL_TEST] != False or validation):
+        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None and (arg_dict[SEQUENTIAL_TEST] is not False or validation):
             if arg_dict[CORRECTION_METHOD] not in [
                 BONFERRONI,
                 BONFERRONI_ONLY_COUNT_TWOSIDED,
@@ -899,8 +902,9 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             if arg_dict[VALIDATIONS_ENABLED]:
                 adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict, validation)
                 df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-                df[IS_FAILING if validation else IS_SIGNIFICANT] = (
-                    df[P_VALUE_VALIDATION if validation else P_VALUE] < df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
+                inequal_fun = lambda x, y : (x < y) if (not x.isnull().all()) or (not y.isnull().all()) else bool('nan')
+                df[IS_FAILING if validation else IS_SIGNIFICANT] =  inequal_fun(
+                    df[P_VALUE_VALIDATION if validation else P_VALUE], df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
                 )
             elif validation and not arg_dict[VALIDATIONS_ENABLED]:
                 df[IS_FAILING if validation else IS_SIGNIFICANT] = bool('nan')
@@ -942,11 +946,13 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
             SPOT_1,
         ]:
-            df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA] = (df[ALPHA] / n_comparisons) \
-                if not validation or arg_dict[VALIDATIONS_ENABLED] else float('nan')
-            df[ADJUSTED_P_VALIDATION if validation else ADJUSTED_P] = df[P_VALUE_VALIDATION if validation else P_VALUE].map(
-                lambda p: min(p * n_comparisons, 1)
-            ) if not validation or arg_dict[VALIDATIONS_ENABLED] else float('nan')
+            df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA] = (
+                    df[ALPHA_VALIDATION if validation else ALPHA] / n_comparisons
+            ) if not validation or arg_dict[VALIDATIONS_ENABLED] else None
+            df[ADJUSTED_P_VALIDATION if validation else ADJUSTED_P] = (
+                df[P_VALUE_VALIDATION if validation else P_VALUE].map(lambda p: min(p * n_comparisons, 1))
+            ) if not validation or arg_dict[VALIDATIONS_ENABLED] else None
+            ## TODO: Need to check what happens here
             df[IS_FAILING if validation else IS_SIGNIFICANT] = (
                 df[P_VALUE_VALIDATION if validation else P_VALUE] < df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
             ) if not validation or arg_dict[VALIDATIONS_ENABLED] else bool('nan')
@@ -962,7 +968,12 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             raise NotImplementedError("Sequential testing is only supported for z-tests")
 
     def _add_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
-        lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
+        lower, upper = (confidence_computers[df[arg_dict[METHOD]].values[0]]
+                        .ci(df, ALPHA_VALIDATION if validation else ALPHA, arg_dict))
+
+        if (df[PREFERENCE] == TWO_SIDED).all() and validation:
+            lower[:] = None
+            upper[:] = None
 
         if (
             arg_dict[CORRECTION_METHOD]
@@ -1021,13 +1032,21 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
                 else P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict, validation=validation)
             }
         )
+        .pipe(_remove_alpha_p_value_if_fixed_horizon, arg_dict=arg_dict)
         .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict, validation=validation)
         .pipe(_add_ci, arg_dict=arg_dict, validation=validation)
     )
 
+def _remove_alpha_p_value_if_fixed_horizon(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    if arg_dict[SEQUENTIAL_TEST] == False and arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+        df.iloc[(
+                df.index.get_level_values(arg_dict[ORDINAL_GROUP_COLUMN]) <
+                df.reset_index()[arg_dict[ORDINAL_GROUP_COLUMN]].max()),
+                [df.columns.get_loc(col) for col in [ALPHA, P_VALUE]]] = None
+
+    return df
 
 def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    #TODO: Need to set ALPHA_VALIDATION
     alpha_0 = 1 - arg_dict[INTERVAL_SIZE]
     df = df.assign(
         **{
@@ -1039,11 +1058,24 @@ def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
             )
         }
     )
-    if arg_dict[SEQUENTIAL_TEST] == False and arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
 
+    if arg_dict[VALIDATIONS_ENABLED]:
+        alphav_0 = 1 - arg_dict[VALIDATION_INTERVAL_SIZE]
+        df = df.assign(
+            **{
+                ALPHA_VALIDATION: df.apply(
+                    lambda row: 2 * alphav_0
+                    if arg_dict[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
+                    else alphav_0,
+                    axis=1,
+                )
+            }
+        )
+
+    if arg_dict[SEQUENTIAL_TEST] == False and arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
         df.iloc[(
                 df.index.get_level_values(arg_dict[ORDINAL_GROUP_COLUMN]) <
-                df.reset_index()[arg_dict[ORDINAL_GROUP_COLUMN]].max()), df.columns.get_loc(ALPHA)] = float('nan')
+                df.reset_index()[arg_dict[ORDINAL_GROUP_COLUMN]].max()), df.columns.get_loc(ALPHA)] = None
     return df.assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
 
 
