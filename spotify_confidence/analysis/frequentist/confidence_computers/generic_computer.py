@@ -128,7 +128,7 @@ from spotify_confidence.analysis.constants import (
     NUMBER_OF_COMPARISONS_VALIDATION,
     ADJUSTED_ALPHA_VALIDATION,
     P_VALUE_VALIDATION,
-    IS_FAILING,
+    IS_SIGNIFICANT_VALIDATION,
     ADJUSTED_P_VALIDATION,
     CI_LOWER_VALIDATION,
     CI_UPPER_VALIDATION,
@@ -923,12 +923,12 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
                 adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict, validation)
                 df = df.merge(adjusted_alpha, left_index=True, right_index=True)
                 inequal_fun = lambda x, y: (x < y) if (not x.isnull().all()) or (not y.isnull().all()) else None
-                df[IS_FAILING if validation else IS_SIGNIFICANT] = inequal_fun(
+                df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = inequal_fun(
                     df[P_VALUE_VALIDATION if validation else P_VALUE],
                     df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA],
                 )
             elif validation and not arg_dict[VALIDATIONS_ENABLED]:
-                df[IS_FAILING if validation else IS_SIGNIFICANT] = None
+                df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = None
             df[P_VALUE_VALIDATION if validation else P_VALUE] = None
             df[ADJUSTED_P_VALIDATION if validation else ADJUSTED_P] = None
         elif arg_dict[CORRECTION_METHOD] in [
@@ -977,8 +977,7 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
                 if not validation or arg_dict[VALIDATIONS_ENABLED]
                 else None
             )
-            ## TODO: Need to check what happens here
-            df[IS_FAILING if validation else IS_SIGNIFICANT] = (
+            df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = (
                 (
                     df[P_VALUE_VALIDATION if validation else P_VALUE]
                     < df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
@@ -1056,19 +1055,22 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             .assign(**{ADJUSTED_UPPER_VALIDATION if validation else ADJUSTED_UPPER: adjusted_upper})
         )
 
-    return (
-        df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
-        .assign(
-            **{
-                P_VALUE_VALIDATION
-                if validation
-                else P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict, validation=validation)
-            }
+    if (not validation) or (validation and arg_dict[VALIDATIONS_ENABLED]):
+        return (
+            df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
+            .assign(
+                **{
+                    P_VALUE_VALIDATION
+                    if validation
+                    else P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict, validation=validation)
+                }
+            )
+            .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict, validation=validation)
+            .pipe(_remove_alpha_p_value_if_fixed_horizon, arg_dict=arg_dict)
+            .pipe(_add_ci, arg_dict=arg_dict, validation=validation)
         )
-        .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict, validation=validation)
-        .pipe(_remove_alpha_p_value_if_fixed_horizon, arg_dict=arg_dict)
-        .pipe(_add_ci, arg_dict=arg_dict, validation=validation)
-    )
+    else:
+        return df
 
 
 def _remove_alpha_p_value_if_fixed_horizon(df: DataFrame, arg_dict: Dict) -> DataFrame:
@@ -1133,14 +1135,15 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
             .assign(**{ADJUSTED_LOWER: df[ADJUSTED_LOWER] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{ADJUSTED_UPPER: df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
-            .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]}))
+            .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
+        )
         if ALPHA_VALIDATION in df.columns:
             df = (
-                df
-                .assign(**{CI_LOWER_VALIDATION: df[CI_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                df.assign(**{CI_LOWER_VALIDATION: df[CI_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
                 .assign(**{CI_UPPER_VALIDATION: df[CI_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
                 .assign(**{ADJUSTED_LOWER_VALIDATION: df[ADJUSTED_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
-                .assign(**{ADJUSTED_UPPER_VALIDATION: df[ADJUSTED_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]}))
+                .assign(**{ADJUSTED_UPPER_VALIDATION: df[ADJUSTED_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+            )
         return df
 
 

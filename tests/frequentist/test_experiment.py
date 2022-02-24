@@ -1,8 +1,14 @@
+from enum import Enum
+
 import numpy as np
 import pandas as pd
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST
+from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST, P_VALUE_VALIDATION, \
+    ADJUSTED_ALPHA_VALIDATION, CI_LOWER_VALIDATION, CI_UPPER_VALIDATION, ADJUSTED_LOWER_VALIDATION, \
+    ADJUSTED_UPPER_VALIDATION, IS_SIGNIFICANT_VALIDATION, PREFERENCE, TANKING, GUARDRAIL, SPOT_1, TWO_SIDED, P_VALUE, \
+    ADJUSTED_P, IS_SIGNIFICANT, CI_LOWER, CI_UPPER, ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_ALPHA_POWER_SAMPLE_SIZE
+from tests.frequentist.test_ztest import DATE, GROUP, COUNT, SUM, SUM_OF_SQUARES
 
 
 class TestBootstrap(object):
@@ -146,3 +152,567 @@ class TestBootstrap(object):
         )
 
         assert len(diff) == 4
+
+
+class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
+    def setup(self):
+        self.data = pd.DataFrame(
+            [
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 2016.416,
+                    SUM_OF_SQUARES: 5082.122,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 2028.478,
+                    SUM_OF_SQUARES: 5210.193,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1991.554,
+                    SUM_OF_SQUARES: 4919.282,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1958.713,
+                    SUM_OF_SQUARES: 4818.665,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 2030.252,
+                    SUM_OF_SQUARES: 5129.574,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1966.138,
+                    SUM_OF_SQUARES: 4848.321,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1995.389,
+                    SUM_OF_SQUARES: 4992.710,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1000,
+                    SUM: 1952.098,
+                    SUM_OF_SQUARES: 4798.772,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2986.667,
+                    SUM_OF_SQUARES: 7427.582,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2989.488,
+                    SUM_OF_SQUARES: 7421.710,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 3008.681,
+                    SUM_OF_SQUARES: 7565.406,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2933.173,
+                    SUM_OF_SQUARES: 7207.038,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2986.308,
+                    SUM_OF_SQUARES: 7584.148,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 2985.802,
+                    SUM_OF_SQUARES: 7446.539,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 3008.190,
+                    SUM_OF_SQUARES: 7532.521,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_1d",
+                    COUNT: 1500,
+                    SUM: 3001.494,
+                    SUM_OF_SQUARES: 7467.535,
+                    "non_inferiority_margin": None,
+                    "preferred_direction": None,
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 2016.416,
+                    SUM_OF_SQUARES: 5082.122,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 2028.478,
+                    SUM_OF_SQUARES: 5210.193,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1991.554,
+                    SUM_OF_SQUARES: 4919.282,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1958.713,
+                    SUM_OF_SQUARES: 4818.665,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 2030.252,
+                    SUM_OF_SQUARES: 5129.574,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1966.138,
+                    SUM_OF_SQUARES: 4848.321,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1995.389,
+                    SUM_OF_SQUARES: 4992.710,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-01",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1000,
+                    SUM: 1952.098,
+                    SUM_OF_SQUARES: 4798.772,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2986.667,
+                    SUM_OF_SQUARES: 7427.582,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2989.488,
+                    SUM_OF_SQUARES: 7421.710,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 3008.681,
+                    SUM_OF_SQUARES: 7565.406,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "ios",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2933.173,
+                    SUM_OF_SQUARES: 7207.038,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2986.308,
+                    SUM_OF_SQUARES: 7584.148,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "swe",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 2985.802,
+                    SUM_OF_SQUARES: 7446.539,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "1",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 3008.190,
+                    SUM_OF_SQUARES: 7532.521,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+                {
+                    DATE: "2020-04-02",
+                    GROUP: "2",
+                    "country": "fin",
+                    "platform": "andr",
+                    "metric": "bananas_per_user_7d",
+                    COUNT: 1500,
+                    SUM: 3001.494,
+                    SUM_OF_SQUARES: 7467.535,
+                    "non_inferiority_margin": 0.01,
+                    "preferred_direction": "increase",
+                },
+            ]
+        )
+        self.data[DATE] = pd.to_datetime(self.data[DATE])
+        self.data = (
+            self.data.groupby([DATE, GROUP, "country", "platform", "metric"])
+            .sum()
+            .groupby([GROUP, "country", "platform", "metric"])
+            .cumsum()
+            .reset_index()
+            .assign(
+                non_inferiority_margin=lambda df: df["metric"].map(
+                    {"bananas_per_user_1d": None, "bananas_per_user_7d": 0.01}
+                )
+            )
+            .assign(
+                preferred_direction=lambda df: df["metric"].map(
+                    {"bananas_per_user_1d": None, "bananas_per_user_7d": "increase"}
+                )
+            )
+            .assign(final_expected_sample_size=5000)
+            .assign(method="z-test")
+        )
+        self.data["decision_type"] = TANKING
+        self.data.loc[self.data["metric"] == "bananas_per_user_7d", "decision_type"] = GUARDRAIL
+
+        self.test = spotify_confidence.Experiment(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, "country", "platform", "metric"],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column=GROUP,
+            validations=True,
+        )
+
+        self.test2 = spotify_confidence.Experiment(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, "country", "platform", "metric"],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column=GROUP,
+            validations=True,
+            decision_column="decision_type",
+        )
+
+        self.test3 = spotify_confidence.Experiment(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, "country", "platform", "metric"],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column=GROUP,
+            validations=True,
+            decision_column="decision_type",
+            sequential_test=False,
+        )
+
+        self.test4 = spotify_confidence.Experiment(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[GROUP, "country", "platform", "metric"],
+            ordinal_group_column=DATE,
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column=GROUP,
+            validations=False,
+            decision_column="decision_type",
+            sequential_test=False,
+        )
+
+    def test_validation_one_guardrail_one_success_metric(self):
+        difference_df = self.test.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert IS_SIGNIFICANT_VALIDATION in difference_df.columns
+
+    def test_validation_one_guardrail_one_validation_metric(self):
+        difference_df = self.test2.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert IS_SIGNIFICANT_VALIDATION in difference_df.columns
+
+    def test_validation_one_guardrail_one_success_metric_no_sequential(self):
+        difference_df = self.test3.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert IS_SIGNIFICANT_VALIDATION in difference_df.columns
+        for column_name in [
+            P_VALUE_VALIDATION,
+            ADJUSTED_ALPHA_VALIDATION,
+            CI_LOWER_VALIDATION,
+            CI_UPPER_VALIDATION,
+            ADJUSTED_LOWER_VALIDATION,
+            ADJUSTED_UPPER_VALIDATION,
+            IS_SIGNIFICANT_VALIDATION,
+        ]:
+            assert difference_df.loc[difference_df[PREFERENCE] == TWO_SIDED, column_name].isnull().all()
+        for column_name in [
+            P_VALUE,
+            ADJUSTED_P,
+            IS_SIGNIFICANT,
+            CI_LOWER,
+            CI_UPPER,
+            ADJUSTED_LOWER,
+            ADJUSTED_UPPER,
+            ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
+        ]:
+            assert difference_df.loc[difference_df[DATE] == "2020-04-01", column_name].isnull().all()
+
+    def test_validation_one_guardrail_one_success_metric_no_sequential_recommendation(self):
+        difference_df = self.test3.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert isinstance(self.test3.get_recommendation(difference_df), Enum)
+
+    def test_no_validation_one_guardrail_one_success_metric_no_sequential(self):
+        difference_df = self.test4.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        for column_name in [
+            P_VALUE_VALIDATION,
+            ADJUSTED_ALPHA_VALIDATION,
+            CI_LOWER_VALIDATION,
+            CI_UPPER_VALIDATION,
+            ADJUSTED_LOWER_VALIDATION,
+            ADJUSTED_UPPER_VALIDATION,
+            IS_SIGNIFICANT_VALIDATION,
+        ]:
+            assert column_name not in difference_df.columns

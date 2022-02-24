@@ -250,6 +250,7 @@ def dfmatmul(x, y, outer=True):
         out = out.item()
     return out
 
+
 class ShipmentRecommendation(Enum):
     SHIP = 1
     MAYBE_SHIP = 2
