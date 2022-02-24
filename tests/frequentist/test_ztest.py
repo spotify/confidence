@@ -19,9 +19,20 @@ from spotify_confidence.analysis.constants import (
     SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
     POWERED_EFFECT,
-    REQUIRED_SAMPLE_SIZE, IS_FAILING, P_VALUE_VALIDATION, ALPHA_VALIDATION, ADJUSTED_ALPHA_VALIDATION,
-    CI_LOWER_VALIDATION, CI_UPPER_VALIDATION, ADJUSTED_LOWER_VALIDATION, ADJUSTED_UPPER_VALIDATION, TWO_SIDED,
-    PREFERENCE, ADJUSTED_P, IS_SIGNIFICANT, ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
+    REQUIRED_SAMPLE_SIZE,
+    IS_FAILING,
+    P_VALUE_VALIDATION,
+    ALPHA_VALIDATION,
+    ADJUSTED_ALPHA_VALIDATION,
+    CI_LOWER_VALIDATION,
+    CI_UPPER_VALIDATION,
+    ADJUSTED_LOWER_VALIDATION,
+    ADJUSTED_UPPER_VALIDATION,
+    TWO_SIDED,
+    PREFERENCE,
+    ADJUSTED_P,
+    IS_SIGNIFICANT,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
 )
 
 
@@ -4001,7 +4012,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             treatment_column=GROUP,
             validations=True,
             decision_column="decision_type",
-            sequential_test=False
+            sequential_test=False,
         )
 
     def test_validation_one_guardrail_one_success_metric(self):
@@ -4036,9 +4047,24 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             verbose=True,
         )
         assert IS_FAILING in difference_df.columns
-        for column_name in [P_VALUE_VALIDATION, ADJUSTED_ALPHA_VALIDATION, CI_LOWER_VALIDATION, CI_UPPER_VALIDATION,
-            ADJUSTED_LOWER_VALIDATION, ADJUSTED_UPPER_VALIDATION, IS_FAILING]:
-            assert difference_df.loc[difference_df[PREFERENCE]==TWO_SIDED, column_name].isnull().all()
-        for column_name in [P_VALUE, ADJUSTED_P, IS_SIGNIFICANT, CI_LOWER, CI_UPPER, ADJUSTED_LOWER_VALIDATION,
-            ADJUSTED_UPPER_VALIDATION, ADJUSTED_ALPHA_POWER_SAMPLE_SIZE]:
-            assert difference_df.loc[difference_df[DATE]=="2020-04-01", column_name].isnull().all()
+        for column_name in [
+            P_VALUE_VALIDATION,
+            ADJUSTED_ALPHA_VALIDATION,
+            CI_LOWER_VALIDATION,
+            CI_UPPER_VALIDATION,
+            ADJUSTED_LOWER_VALIDATION,
+            ADJUSTED_UPPER_VALIDATION,
+            IS_FAILING,
+        ]:
+            assert difference_df.loc[difference_df[PREFERENCE] == TWO_SIDED, column_name].isnull().all()
+        for column_name in [
+            P_VALUE,
+            ADJUSTED_P,
+            IS_SIGNIFICANT,
+            CI_LOWER,
+            CI_UPPER,
+            ADJUSTED_LOWER,
+            ADJUSTED_UPPER,
+            ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
+        ]:
+            assert difference_df.loc[difference_df[DATE] == "2020-04-01", column_name].isnull().all()

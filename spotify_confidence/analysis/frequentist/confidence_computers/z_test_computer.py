@@ -43,7 +43,8 @@ from spotify_confidence.analysis.constants import (
     PREFERRED_DIRECTION_COLUMN_DEFAULT,
     INCREASE_PREFFERED,
     DECREASE_PREFFERED,
-    PREFERENCE_DICT, ALPHA_VALIDATION,
+    PREFERENCE_DICT,
+    ALPHA_VALIDATION,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -141,13 +142,9 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], v
 
     def adjusted_alphas_for_group(grp: DataFrame, validation: bool) -> Series:
         if grp[PREFERRED_DIRECTION_COLUMN_DEFAULT].isnull().any() and validation:
-            df = (
-                DataFrame(index=grp.index)
-                .assign(zb = None)
-                .assign(**{ADJUSTED_ALPHA: None})
-                )
+            df = DataFrame(index=grp.index).assign(zb=None).assign(**{ADJUSTED_ALPHA: None})
         else:
-            df =  (
+            df = (
                 sequential_bounds(
                     t=grp["sample_size_proportions"].values,
                     alpha=grp[ALPHA_VALIDATION if validation else ALPHA].values[0] / n_comparisons,
@@ -185,13 +182,18 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], v
 
     return Series(
         data=df.groupby(df.index.names, sort=False)[
-            [ALPHA_VALIDATION if validation else ALPHA, PREFERENCE_TEST, PREFERRED_DIRECTION_COLUMN_DEFAULT]]
+            [ALPHA_VALIDATION if validation else ALPHA, PREFERENCE_TEST, PREFERRED_DIRECTION_COLUMN_DEFAULT]
+        ]
         .first()
         .merge(sample_size_proportions, left_index=True, right_index=True)
         .assign(_sequential_dummy_index_=1)
         .groupby(groups_except_ordinal + ["_sequential_dummy_index_"], sort=False)[
-            ["sample_size_proportions", PREFERENCE_TEST, ALPHA_VALIDATION if validation else ALPHA, \
-             PREFERRED_DIRECTION_COLUMN_DEFAULT]
+            [
+                "sample_size_proportions",
+                PREFERENCE_TEST,
+                ALPHA_VALIDATION if validation else ALPHA,
+                PREFERRED_DIRECTION_COLUMN_DEFAULT,
+            ]
         ]
         .apply(adjusted_alphas_for_group, validation=validation)[ADJUSTED_ALPHA],
         name=ADJUSTED_ALPHA if not validation else ADJUSTED_ALPHA_VALIDATION,

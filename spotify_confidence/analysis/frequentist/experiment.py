@@ -56,7 +56,7 @@ class Experiment(ConfidenceABC):
         validations: bool = False,
         decision_column: str = None,
         sequential_test: bool = None,
-        validation_interval_size: float = 0.99
+        validation_interval_size: float = 0.99,
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -108,7 +108,7 @@ class Experiment(ConfidenceABC):
                 validations=validations,
                 decision_column=decision_column,
                 sequential_test=sequential_test,
-                validation_interval_size=validation_interval_size
+                validation_interval_size=validation_interval_size,
             )
 
         self._confidence_grapher = (

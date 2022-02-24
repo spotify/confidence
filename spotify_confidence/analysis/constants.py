@@ -172,10 +172,10 @@ ZTESTLINREG = "z-test-linreg"
 BOOTSTRAP = "bootstrap"
 METHODS = [CHI2, TTEST, ZTEST, BOOTSTRAP, ZTESTLINREG]
 REGRESSION_PARAM = "regression_parameters"
-VALIDATION="validation"
-SUCCESS="success"
-GUARDRAIL="guardrail"
-VALIDATIONS_ENABLED="validations_enabled"
+VALIDATION = "validation"
+SUCCESS = "success"
+GUARDRAIL = "guardrail"
+VALIDATIONS_ENABLED = "validations_enabled"
 
 SEQUENTIAL_TEST = "sequential_test"
 METRIC_CLASS = "metric_class"
@@ -187,5 +187,5 @@ DECISION_DICT = {
     PRE_EXPOSURE_ACTIVITY: VALIDATION,
     TANKING: VALIDATION,
     SUCCESS: SUCCESS,
-    GUARDRAIL: GUARDRAIL
+    GUARDRAIL: GUARDRAIL,
 }
