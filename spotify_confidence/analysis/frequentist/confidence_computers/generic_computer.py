@@ -1125,7 +1125,7 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
     if absolute:
         return df.assign(absolute_difference=absolute)
     else:
-        return (
+        df = (
             df.assign(absolute_difference=absolute)
             .assign(**{DIFFERENCE: df[DIFFERENCE] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{CI_LOWER: df[CI_LOWER] / df[POINT_ESTIMATE + SFX1]})
@@ -1133,8 +1133,15 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
             .assign(**{ADJUSTED_LOWER: df[ADJUSTED_LOWER] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{ADJUSTED_UPPER: df[ADJUSTED_UPPER] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
-            .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
-        )
+            .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]}))
+        if ALPHA_VALIDATION in df.columns:
+            df = (
+                df
+                .assign(**{CI_LOWER_VALIDATION: df[CI_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{CI_UPPER_VALIDATION: df[CI_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{ADJUSTED_LOWER_VALIDATION: df[ADJUSTED_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{ADJUSTED_UPPER_VALIDATION: df[ADJUSTED_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]}))
+        return df
 
 
 def _p_value(df: DataFrame, arg_dict: Dict, validation: bool) -> float:

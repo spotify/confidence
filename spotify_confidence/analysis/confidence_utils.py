@@ -14,6 +14,7 @@
 
 from collections import OrderedDict
 from concurrent.futures.thread import ThreadPoolExecutor
+from enum import Enum
 from typing import Union, Iterable, Tuple, List
 
 import numpy as np
@@ -248,3 +249,9 @@ def dfmatmul(x, y, outer=True):
     if out.size == 1:
         out = out.item()
     return out
+
+class ShipmentRecommendation(Enum):
+    SHIP = 1
+    MAYBE_SHIP = 2
+    SAFE_SHIP = 3
+    STOP = 4

@@ -1,3 +1,5 @@
+from enum import Enum
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -32,7 +34,7 @@ from spotify_confidence.analysis.constants import (
     PREFERENCE,
     ADJUSTED_P,
     IS_SIGNIFICANT,
-    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE, TANKING, GUARDRAIL,
 )
 
 
@@ -3964,8 +3966,8 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             .assign(final_expected_sample_size=5000)
             .assign(method="z-test")
         )
-        self.data["decision_type"] = "validation_metric"
-        self.data.loc[self.data["metric"] == "bananas_per_user_7d", "decision_type"] = "guardrail_metric"
+        self.data["decision_type"] = TANKING
+        self.data.loc[self.data["metric"] == "bananas_per_user_7d", "decision_type"] = GUARDRAIL
 
         self.test = spotify_confidence.Experiment(
             self.data,
@@ -4068,3 +4070,15 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
         ]:
             assert difference_df.loc[difference_df[DATE] == "2020-04-01", column_name].isnull().all()
+
+    def test_validation_one_guardrail_one_success_metric_no_sequential_recommendation(self):
+        difference_df = self.test3.multiple_difference(
+            level="1",
+            groupby=[DATE, "country", "platform", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+        assert isinstance(self.test3.get_recommendation(difference_df), Enum)
+
