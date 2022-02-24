@@ -40,7 +40,7 @@ from spotify_confidence.analysis.confidence_utils import (
     remove_group_columns,
     groupbyApplyParallel,
     is_non_inferiority,
-    reset_named_indices,
+    reset_named_indices, validate_validation_inputs,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -143,7 +143,7 @@ from spotify_confidence.analysis.constants import (
     SEQUENTIAL_TEST,
     VALIDATION_INTERVAL_SIZE,
     ALPHA_VALIDATION,
-    SAMPLE_RATIO_MISMATCH,
+    SAMPLE_RATIO_MISMATCH, DECISION_COLUMN,
 )
 
 confidence_computers = {
@@ -253,6 +253,8 @@ class GenericComputer(ConfidenceComputerABC):
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
         self._sufficient = None
+
+        validate_validation_inputs(self._df, self._decision_column, self._validations_enabled)
 
     def compute_summary(self, verbose: bool) -> DataFrame:
         return (
@@ -580,6 +582,7 @@ class GenericComputer(ConfidenceComputerABC):
             VALIDATIONS_ENABLED: self._validations_enabled,
             SEQUENTIAL_TEST: self._sequential_test,
             VALIDATION_INTERVAL_SIZE: self._validation_interval_size,
+            DECISION_COLUMN: self._decision_column
         }
         comparison_df = groupbyApplyParallel(
             comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
@@ -922,7 +925,7 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             if arg_dict[VALIDATIONS_ENABLED]:
                 adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict, validation)
                 df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-                inequal_fun = lambda x, y: (x < y) if (not x.isnull().all()) or (not y.isnull().all()) else None
+                inequal_fun = lambda x, y: ((x < y) if (not x.isnull().all()) and (not y.isnull().all()) else None)
                 df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = inequal_fun(
                     df[P_VALUE_VALIDATION if validation else P_VALUE],
                     df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA],

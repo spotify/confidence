@@ -2,13 +2,13 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import spotify_confidence
 from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST, P_VALUE_VALIDATION, \
     ADJUSTED_ALPHA_VALIDATION, CI_LOWER_VALIDATION, CI_UPPER_VALIDATION, ADJUSTED_LOWER_VALIDATION, \
     ADJUSTED_UPPER_VALIDATION, IS_SIGNIFICANT_VALIDATION, PREFERENCE, TANKING, GUARDRAIL, SPOT_1, TWO_SIDED, P_VALUE, \
     ADJUSTED_P, IS_SIGNIFICANT, CI_LOWER, CI_UPPER, ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_ALPHA_POWER_SAMPLE_SIZE
-from tests.frequentist.test_ztest import DATE, GROUP, COUNT, SUM, SUM_OF_SQUARES
 
 
 class TestBootstrap(object):
@@ -156,10 +156,11 @@ class TestBootstrap(object):
 
 class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
     def setup(self):
+        DATE, GROUP, COUNT, SUM, SUM_OF_SQUARES = "date", "variation_name", "count", "sum", "sum_of_squares"
         self.data = pd.DataFrame(
             [
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "ios",
@@ -171,7 +172,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "ios",
@@ -183,7 +184,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "ios",
@@ -195,7 +196,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "ios",
@@ -207,7 +208,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "andr",
@@ -219,7 +220,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "andr",
@@ -231,7 +232,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "andr",
@@ -243,7 +244,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "andr",
@@ -255,7 +256,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "ios",
@@ -267,7 +268,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "ios",
@@ -279,7 +280,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "ios",
@@ -291,7 +292,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "ios",
@@ -303,7 +304,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "andr",
@@ -315,7 +316,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "andr",
@@ -327,7 +328,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "andr",
@@ -339,7 +340,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "andr",
@@ -351,7 +352,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": None,
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "ios",
@@ -363,7 +364,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "ios",
@@ -375,7 +376,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "ios",
@@ -387,7 +388,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "ios",
@@ -399,7 +400,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "andr",
@@ -411,7 +412,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "andr",
@@ -423,7 +424,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "andr",
@@ -435,7 +436,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-01",
+                    "date": "2020-04-01",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "andr",
@@ -447,7 +448,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "ios",
@@ -459,7 +460,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "ios",
@@ -471,7 +472,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "ios",
@@ -483,7 +484,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "ios",
@@ -495,7 +496,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "swe",
                     "platform": "andr",
@@ -507,7 +508,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "swe",
                     "platform": "andr",
@@ -519,7 +520,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "1",
                     "country": "fin",
                     "platform": "andr",
@@ -531,7 +532,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                     "preferred_direction": "increase",
                 },
                 {
-                    DATE: "2020-04-02",
+                    "date": "2020-04-02",
                     GROUP: "2",
                     "country": "fin",
                     "platform": "andr",
@@ -544,9 +545,9 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                 },
             ]
         )
-        self.data[DATE] = pd.to_datetime(self.data[DATE])
+        self.data["date"] = pd.to_datetime(self.data["date"])
         self.data = (
-            self.data.groupby([DATE, GROUP, "country", "platform", "metric"])
+            self.data.groupby(["date", GROUP, "country", "platform", "metric"])
             .sum()
             .groupby([GROUP, "country", "platform", "metric"])
             .cumsum()
@@ -567,44 +568,13 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
         self.data["decision_type"] = TANKING
         self.data.loc[self.data["metric"] == "bananas_per_user_7d", "decision_type"] = GUARDRAIL
 
-        self.test = spotify_confidence.Experiment(
-            self.data,
-            numerator_column=SUM,
-            numerator_sum_squares_column=SUM_OF_SQUARES,
-            denominator_column=COUNT,
-            categorical_group_columns=[GROUP, "country", "platform", "metric"],
-            ordinal_group_column=DATE,
-            interval_size=1 - 0.01,
-            correction_method=SPOT_1,
-            method_column="method",
-            metric_column="metric",
-            treatment_column=GROUP,
-            validations=True,
-        )
-
-        self.test2 = spotify_confidence.Experiment(
-            self.data,
-            numerator_column=SUM,
-            numerator_sum_squares_column=SUM_OF_SQUARES,
-            denominator_column=COUNT,
-            categorical_group_columns=[GROUP, "country", "platform", "metric"],
-            ordinal_group_column=DATE,
-            interval_size=1 - 0.01,
-            correction_method=SPOT_1,
-            method_column="method",
-            metric_column="metric",
-            treatment_column=GROUP,
-            validations=True,
-            decision_column="decision_type",
-        )
-
         self.test3 = spotify_confidence.Experiment(
             self.data,
             numerator_column=SUM,
             numerator_sum_squares_column=SUM_OF_SQUARES,
             denominator_column=COUNT,
             categorical_group_columns=[GROUP, "country", "platform", "metric"],
-            ordinal_group_column=DATE,
+            ordinal_group_column="date",
             interval_size=1 - 0.01,
             correction_method=SPOT_1,
             method_column="method",
@@ -615,38 +585,26 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             sequential_test=False,
         )
 
-        self.test4 = spotify_confidence.Experiment(
+    def test_validation_one_guardrail_one_validation_metric(self):
+
+        exp = spotify_confidence.Experiment(
             self.data,
-            numerator_column=SUM,
-            numerator_sum_squares_column=SUM_OF_SQUARES,
-            denominator_column=COUNT,
-            categorical_group_columns=[GROUP, "country", "platform", "metric"],
-            ordinal_group_column=DATE,
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_of_squares",
+            denominator_column="count",
+            categorical_group_columns=["variation_name", "country", "platform", "metric"],
+            ordinal_group_column="date",
             interval_size=1 - 0.01,
             correction_method=SPOT_1,
             method_column="method",
             metric_column="metric",
-            treatment_column=GROUP,
-            validations=False,
+            treatment_column="variation_name",
+            validations=True,
             decision_column="decision_type",
-            sequential_test=False,
         )
-
-    def test_validation_one_guardrail_one_success_metric(self):
-        difference_df = self.test.multiple_difference(
+        difference_df = exp.multiple_difference(
             level="1",
-            groupby=[DATE, "country", "platform", "metric"],
-            level_as_reference=True,
-            final_expected_sample_size_column="final_expected_sample_size",
-            non_inferiority_margins=True,
-            verbose=True,
-        )
-        assert IS_SIGNIFICANT_VALIDATION in difference_df.columns
-
-    def test_validation_one_guardrail_one_validation_metric(self):
-        difference_df = self.test2.multiple_difference(
-            level="1",
-            groupby=[DATE, "country", "platform", "metric"],
+            groupby=["date", "country", "platform", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_expected_sample_size",
             non_inferiority_margins=True,
@@ -657,7 +615,7 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
     def test_validation_one_guardrail_one_success_metric_no_sequential(self):
         difference_df = self.test3.multiple_difference(
             level="1",
-            groupby=[DATE, "country", "platform", "metric"],
+            groupby=["date", "country", "platform", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_expected_sample_size",
             non_inferiority_margins=True,
@@ -684,12 +642,12 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             ADJUSTED_UPPER,
             ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
         ]:
-            assert difference_df.loc[difference_df[DATE] == "2020-04-01", column_name].isnull().all()
+            assert difference_df.loc[difference_df["date"] == "2020-04-01", column_name].isnull().all()
 
     def test_validation_one_guardrail_one_success_metric_no_sequential_recommendation(self):
         difference_df = self.test3.multiple_difference(
             level="1",
-            groupby=[DATE, "country", "platform", "metric"],
+            groupby=["date", "country", "platform", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_expected_sample_size",
             non_inferiority_margins=True,
@@ -698,9 +656,26 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
         assert isinstance(self.test3.get_recommendation(difference_df), Enum)
 
     def test_no_validation_one_guardrail_one_success_metric_no_sequential(self):
-        difference_df = self.test4.multiple_difference(
+        self.data["decision_type"] = GUARDRAIL
+        exp = spotify_confidence.Experiment(
+            self.data,
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_of_squares",
+            denominator_column="count",
+            categorical_group_columns=["variation_name", "country", "platform", "metric"],
+            ordinal_group_column="date",
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column="variation_name",
+            validations=False,
+            decision_column="decision_type",
+            sequential_test=False,
+        )
+        difference_df = exp.multiple_difference(
             level="1",
-            groupby=[DATE, "country", "platform", "metric"],
+            groupby=["date", "country", "platform", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_expected_sample_size",
             non_inferiority_margins=True,
@@ -716,3 +691,23 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
             IS_SIGNIFICANT_VALIDATION,
         ]:
             assert column_name not in difference_df.columns
+
+    def test_validation_one_guardrail_one_success_metric_wrong_decision_type(self):
+        self.data["decision_type"] = "test"
+        with pytest.raises(ValueError):
+            spotify_confidence.Experiment(
+                self.data,
+                numerator_column="sum",
+                numerator_sum_squares_column="sum_of_squares",
+                denominator_column="count",
+                categorical_group_columns=["variation_name", "country", "platform", "metric"],
+                ordinal_group_column="date",
+                interval_size=1 - 0.01,
+                correction_method=SPOT_1,
+                method_column="method",
+                metric_column="metric",
+                treatment_column="variation_name",
+                validations=True,
+                decision_column="decision_type",
+                sequential_test=False,
+            )
