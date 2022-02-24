@@ -44,7 +44,12 @@ from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
     DECREASE_PREFFERED,
     PREFERENCE_DICT,
-    ALPHA_VALIDATION, PREFERENCE, INCREASE, DECREASE, TANKING, DECISION_COLUMN,
+    ALPHA_VALIDATION,
+    PREFERENCE,
+    INCREASE,
+    DECREASE,
+    TANKING,
+    DECISION_COLUMN,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -128,7 +133,7 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], v
     n_comparisons = arg_dict[NUMBER_OF_COMPARISONS if not validation else NUMBER_OF_COMPARISONS_VALIDATION]
 
     def adjusted_alphas_for_group(grp: DataFrame, arg_dict: Dict[str, str], validation: bool) -> Series:
-        if validation and (grp[arg_dict[DECISION_COLUMN]]==TANKING).any() and (grp[PREFERENCE] == TWO_SIDED).any():
+        if validation and (grp[arg_dict[DECISION_COLUMN]] == TANKING).any() and (grp[PREFERENCE] == TWO_SIDED).any():
             df = DataFrame(index=grp.index).assign(zb=None).assign(**{ADJUSTED_ALPHA: None})
         else:
             df = (
@@ -166,8 +171,9 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], v
         data=df.groupby(df.index.names, sort=False)["current_total_" + denominator].first() / max_sample_size_by_group,
         name="sample_size_proportions",
     )
-    selected_columns = ([ALPHA_VALIDATION if validation else ALPHA, PREFERENCE_TEST, PREFERENCE] +
-                        ([arg_dict[DECISION_COLUMN]] if validation else []))
+    selected_columns = [ALPHA_VALIDATION if validation else ALPHA, PREFERENCE_TEST, PREFERENCE] + (
+        [arg_dict[DECISION_COLUMN]] if validation else []
+    )
     return Series(
         data=df.groupby(df.index.names, sort=False)[selected_columns]
         .first()

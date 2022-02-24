@@ -40,7 +40,8 @@ from spotify_confidence.analysis.confidence_utils import (
     remove_group_columns,
     groupbyApplyParallel,
     is_non_inferiority,
-    reset_named_indices, validate_validation_inputs,
+    reset_named_indices,
+    validate_validation_inputs,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -143,7 +144,8 @@ from spotify_confidence.analysis.constants import (
     SEQUENTIAL_TEST,
     VALIDATION_INTERVAL_SIZE,
     ALPHA_VALIDATION,
-    SAMPLE_RATIO_MISMATCH, DECISION_COLUMN,
+    SAMPLE_RATIO_MISMATCH,
+    DECISION_COLUMN,
 )
 
 confidence_computers = {
@@ -582,7 +584,7 @@ class GenericComputer(ConfidenceComputerABC):
             VALIDATIONS_ENABLED: self._validations_enabled,
             SEQUENTIAL_TEST: self._sequential_test,
             VALIDATION_INTERVAL_SIZE: self._validation_interval_size,
-            DECISION_COLUMN: self._decision_column
+            DECISION_COLUMN: self._decision_column,
         }
         comparison_df = groupbyApplyParallel(
             comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),

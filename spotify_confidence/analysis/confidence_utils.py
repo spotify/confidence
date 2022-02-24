@@ -23,7 +23,13 @@ from scipy.stats import norm
 
 from spotify_confidence.analysis.constants import (
     SFX1,
-    SFX2, DECISION_DICT, VALIDATION, TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT, TWO_SIDED, PRE_EXPOSURE_ACTIVITY,
+    SFX2,
+    DECISION_DICT,
+    VALIDATION,
+    TANKING,
+    PREFERRED_DIRECTION_COLUMN_DEFAULT,
+    TWO_SIDED,
+    PRE_EXPOSURE_ACTIVITY,
 )
 
 
@@ -257,6 +263,7 @@ class ShipmentRecommendation(Enum):
     SAFE_SHIP = 3
     STOP = 4
 
+
 def validate_validation_inputs(df: DataFrame, decision_column: str, validations: bool) -> Iterable:
     x = 1
     if validations and decision_column not in df.columns:
@@ -269,7 +276,9 @@ def validate_validation_inputs(df: DataFrame, decision_column: str, validations:
                 raise ValueError("A decision metric type provided is not included in DECISION_DICT.")
             if (df.loc[df[decision_column] == TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT] == TWO_SIDED).any():
                 raise ValueError("Tanking metrics must have a preferred direction.")
-            if (df.loc[df[decision_column] == PRE_EXPOSURE_ACTIVITY, PREFERRED_DIRECTION_COLUMN_DEFAULT] != TWO_SIDED).any():
+            if (
+                df.loc[df[decision_column] == PRE_EXPOSURE_ACTIVITY, PREFERRED_DIRECTION_COLUMN_DEFAULT] != TWO_SIDED
+            ).any():
                 raise ValueError("Pre-exposure bias metrics must not have a preferred direction.")
         else:
             pass
