@@ -27,7 +27,7 @@ from spotify_confidence.analysis.constants import (
     CI_UPPER,
     ADJUSTED_LOWER,
     ADJUSTED_UPPER,
-    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE, PRE_EXPOSURE_ACTIVITY, SUCCESS,
 )
 
 
@@ -731,3 +731,133 @@ class TestSequentialOrdinalPlusTwoCategorical2Tanking(object):
                 decision_column="decision_type",
                 sequential_test=False,
             )
+
+class TestMultipleValidations(object):
+    def setup(self):
+        x = 1
+        self.df = pd.DataFrame({
+            "date": pd.to_datetime([
+                "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10",
+                     "2021-02-01", "2021-02-02", "2021-02-03", "2021-02-04", "2021-02-05", "2021-02-06", "2021-02-07", "2021-02-08", "2021-02-09", "2021-02-10"]),
+            'group': [
+                'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control',
+                'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment',
+                'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control',
+                'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment',
+                'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control',
+                'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment',
+                'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control',
+                'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment',
+                'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control', 'control',
+                'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment', 'treatment'
+            ],
+            'metric': [
+                'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1', 'm1',
+                'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2', 'm2',
+                'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3', 'm3',
+                'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4', 'm4',
+                'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5', 'm5',
+            ],
+            'metric_class': [
+                PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY,
+                PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY,
+                PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY,
+                PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY, PRE_EXPOSURE_ACTIVITY,
+                TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING,
+                TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING, TANKING,
+                SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS,
+                SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS, SUCCESS,
+                GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL,
+                GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL,
+                GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL,
+                GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL, GUARDRAIL,
+            ],
+            'preferred_direction': [
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+                'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase', 'increase',
+            ],
+            'non_inferiority_margin': [
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None, None,
+                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+            ],
+            'sum': [item for sublist in [
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum(),
+               np.random.binomial(1000, 0.5, 10).cumsum()] for item in sublist],
+
+            'count': [item for sublist in [
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum(),
+                np.random.binomial(2000, 0.5, 10).cumsum()] for item in sublist]
+        })
+        self.df['sum_of_squares'] = self.df['sum']
+        self.df['method'] = 'z-test'
+        self.df['final_expected_sample_size'] = 60000
+        self.exp = spotify_confidence.Experiment(
+            self.df,
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_of_squares",
+            denominator_column="count",
+            categorical_group_columns=["group", "metric"],
+            ordinal_group_column='date',
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column="group",
+            validations=True,
+            decision_column="metric_class",
+            sequential_test=True,
+        )
+
+    def test_multiple_validations(self):
+        difference_df = self.exp.multiple_difference(
+            level="control",
+            groupby=["date", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )
+
+        recommendation = self.exp.get_recommendation(difference_df)
+
+        assert len(difference_df) == 50

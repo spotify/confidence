@@ -250,7 +250,7 @@ class GenericComputer(ConfidenceComputerABC):
         if ZTESTLINREG in self._df[self._method_column]:
             columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
         if self._sequential_test:
-            columns_that_must_exist += self._ordinal_group_column
+            columns_that_must_exist += [self._ordinal_group_column]
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 

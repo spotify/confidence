@@ -29,7 +29,7 @@ from spotify_confidence.analysis.constants import (
     TANKING,
     PREFERRED_DIRECTION_COLUMN_DEFAULT,
     TWO_SIDED,
-    PRE_EXPOSURE_ACTIVITY,
+    PRE_EXPOSURE_ACTIVITY, INCREASE_PREFFERED, DECREASE_PREFFERED,
 )
 
 
@@ -276,9 +276,7 @@ def validate_validation_inputs(df: DataFrame, decision_column: str, validations:
                 raise ValueError("A decision metric type provided is not included in DECISION_DICT.")
             if (df.loc[df[decision_column] == TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT] == TWO_SIDED).any():
                 raise ValueError("Tanking metrics must have a preferred direction.")
-            if (
-                df.loc[df[decision_column] == PRE_EXPOSURE_ACTIVITY, PREFERRED_DIRECTION_COLUMN_DEFAULT] != TWO_SIDED
-            ).any():
+            if (df.loc[df[decision_column] == PRE_EXPOSURE_ACTIVITY, PREFERRED_DIRECTION_COLUMN_DEFAULT] == None).any():
                 raise ValueError("Pre-exposure bias metrics must not have a preferred direction.")
         else:
             pass
