@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from enum import Enum
 from typing import Union, Iterable, Tuple, Dict, List
 
 from pandas import DataFrame
@@ -26,8 +26,20 @@ from ..confidence_utils import (
     listify,
     get_all_categorical_group_columns,
     get_all_group_columns,
+    ShipmentRecommendation,
 )
-from ..constants import BONFERRONI, NIM_TYPE, METHODS
+from ..constants import (
+    BONFERRONI,
+    NIM_TYPE,
+    METHODS,
+    SPOT_1,
+    IS_SIGNIFICANT,
+    GUARDRAIL,
+    SUCCESS,
+    DECISION_DICT,
+    VALIDATION,
+    IS_SIGNIFICANT_VALIDATION,
+)
 from ..frequentist.sample_ratio_test import sample_ratio_test
 from ...chartgrid import ChartGrid
 
@@ -53,6 +65,10 @@ class Experiment(ConfidenceABC):
         feature_column: str = None,
         feature_sum_squares_column: str = None,
         feature_cross_sum_column: str = None,
+        validations: bool = False,
+        decision_column: str = None,
+        sequential_test: bool = None,
+        validation_interval_size: float = 0.99,
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -72,6 +88,12 @@ class Experiment(ConfidenceABC):
         if not all(self._df[method_column].map(lambda m: m in METHODS)):
             raise ValueError(f"Values of method column must be in {METHODS}")
 
+        self._validations_enabled = validations
+        if validations and not correction_method == SPOT_1:
+            raise ValueError(f"Validation tests can only be used with the {SPOT_1} correction method")
+        self._validations_enabled = validations
+        self._decision_column = decision_column
+        self._sequential_test = sequential_test
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
@@ -95,6 +117,10 @@ class Experiment(ConfidenceABC):
                 feature_column=feature_column,
                 feature_sum_squares_column=feature_sum_squares_column,
                 feature_cross_sum_column=feature_cross_sum_column,
+                validations=validations,
+                decision_column=decision_column,
+                sequential_test=sequential_test,
+                validation_interval_size=validation_interval_size,
             )
 
         self._confidence_grapher = (
@@ -289,3 +315,35 @@ class Experiment(ConfidenceABC):
                     f"{self._ordinal_group_column} must be in groupby argument to use "
                     f"sequential testing with final_expected_sample_size"
                 )
+
+    def get_recommendation(self, df: DataFrame) -> Enum:
+        x = 1
+        if self._decision_column is None:
+            raise KeyError("A column with decision metric types must be given to obtain a recommendation.")
+        if (df[self._decision_column] == SUCCESS).any():
+            success = df.loc[df[self._decision_column] == SUCCESS, IS_SIGNIFICANT].any()
+        else:
+            success = None
+
+        if (df[self._decision_column] == GUARDRAIL).any():
+            guardrail = df.loc[df[self._decision_column] == GUARDRAIL, IS_SIGNIFICANT].all()
+        else:
+            guardrail = None
+
+        if (df[self._decision_column].map(DECISION_DICT) == VALIDATION).any():
+            validation = not df.loc[
+                df[self._decision_column].map(DECISION_DICT) == VALIDATION, IS_SIGNIFICANT_VALIDATION
+            ].any()
+        else:
+            validation = None
+
+        if not validation:
+            enum = 1
+        elif validation and not guardrail:
+            enum = 2
+        elif validation and guardrail and not success:
+            enum = 3
+        elif validation and guardrail and success:
+            enum = 4
+
+        return ShipmentRecommendation(enum)

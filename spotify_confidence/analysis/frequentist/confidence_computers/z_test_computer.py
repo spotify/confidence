@@ -38,6 +38,18 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_SIMES_HOCHBERG,
     NIM,
     ADJUSTED_ALPHA,
+    NUMBER_OF_COMPARISONS_VALIDATION,
+    ADJUSTED_ALPHA_VALIDATION,
+    PREFERRED_DIRECTION_COLUMN_DEFAULT,
+    INCREASE_PREFFERED,
+    DECREASE_PREFFERED,
+    PREFERENCE_DICT,
+    ALPHA_VALIDATION,
+    PREFERENCE,
+    INCREASE,
+    DECREASE,
+    TANKING,
+    DECISION_COLUMN,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -87,13 +99,13 @@ def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+def p_value(df: DataFrame, arg_dict: Dict[str, str], validation: bool) -> Series:
     _, p_value = _zstat_generic(
         value1=df[POINT_ESTIMATE + SFX2],
         value2=df[POINT_ESTIMATE + SFX1],
         std_diff=df[STD_ERR],
         alternative=df[PREFERENCE_TEST].values[0],
-        diff=df[NULL_HYPOTHESIS],
+        diff=0 if validation else df[NULL_HYPOTHESIS],
     )
     return p_value
 
@@ -114,31 +126,35 @@ def achieved_power(df: DataFrame, mde: float, alpha: float, arg_dict: Dict[str, 
     return power_calculation(mde, var_pooled, alpha, n1, n2)
 
 
-def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
+def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], validation: bool):
     denominator = arg_dict[DENOMINATOR]
     final_expected_sample_size_column = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
     ordinal_group_column = arg_dict[ORDINAL_GROUP_COLUMN]
-    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
+    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS if not validation else NUMBER_OF_COMPARISONS_VALIDATION]
 
-    def adjusted_alphas_for_group(grp: DataFrame) -> Series:
-        return (
-            sequential_bounds(
-                t=grp["sample_size_proportions"].values,
-                alpha=grp[ALPHA].values[0] / n_comparisons,
-                sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1,
-            )
-            .df.set_index(grp.index)
-            .assign(
-                **{
-                    ADJUSTED_ALPHA: lambda df: df.apply(
-                        lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
-                        if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
-                        else 1 - st.norm.cdf(row["zb"]),
-                        axis=1,
-                    )
-                }
-            )
-        )[["zb", ADJUSTED_ALPHA]]
+    def adjusted_alphas_for_group(grp: DataFrame, arg_dict: Dict[str, str], validation: bool) -> Series:
+        if validation and (grp[arg_dict[DECISION_COLUMN]] == TANKING).any() and (grp[PREFERENCE] == TWO_SIDED).any():
+            df = DataFrame(index=grp.index).assign(zb=None).assign(**{ADJUSTED_ALPHA: None})
+        else:
+            df = (
+                sequential_bounds(
+                    t=grp["sample_size_proportions"].values,
+                    alpha=grp[ALPHA_VALIDATION if validation else ALPHA].values[0] / n_comparisons,
+                    sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1,
+                )
+                .df.set_index(grp.index)
+                .assign(
+                    **{
+                        ADJUSTED_ALPHA: lambda df: df.apply(
+                            lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
+                            if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
+                            else 1 - st.norm.cdf(row["zb"]),
+                            axis=1,
+                        )
+                    }
+                )
+            )[["zb", ADJUSTED_ALPHA]]
+        return df
 
     groups_except_ordinal = [column for column in df.index.names if column != ordinal_group_column]
     max_sample_size_by_group = (
@@ -155,17 +171,19 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
         data=df.groupby(df.index.names, sort=False)["current_total_" + denominator].first() / max_sample_size_by_group,
         name="sample_size_proportions",
     )
-
+    selected_columns = [ALPHA_VALIDATION if validation else ALPHA, PREFERENCE_TEST, PREFERENCE] + (
+        [arg_dict[DECISION_COLUMN]] if validation else []
+    )
     return Series(
-        data=df.groupby(df.index.names, sort=False)[[ALPHA, PREFERENCE_TEST]]
+        data=df.groupby(df.index.names, sort=False)[selected_columns]
         .first()
         .merge(sample_size_proportions, left_index=True, right_index=True)
         .assign(_sequential_dummy_index_=1)
         .groupby(groups_except_ordinal + ["_sequential_dummy_index_"], sort=False)[
-            ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
+            ["sample_size_proportions"] + selected_columns
         ]
-        .apply(adjusted_alphas_for_group)[ADJUSTED_ALPHA],
-        name=ADJUSTED_ALPHA,
+        .apply(adjusted_alphas_for_group, arg_dict=arg_dict, validation=validation)[ADJUSTED_ALPHA],
+        name=ADJUSTED_ALPHA if not validation else ADJUSTED_ALPHA_VALIDATION,
     )
 
 
