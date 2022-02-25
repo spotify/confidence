@@ -265,7 +265,6 @@ class ShipmentRecommendation(Enum):
 
 
 def validate_validation_inputs(df: DataFrame, decision_column: str, validations: bool) -> Iterable:
-    x = 1
     if validations and decision_column not in df.columns:
         raise KeyError("To use validations, a decision column must be provided.")
     elif (not validations) and (df[decision_column].map(DECISION_DICT) == VALIDATION).any():
