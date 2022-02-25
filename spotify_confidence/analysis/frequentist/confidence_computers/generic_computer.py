@@ -120,6 +120,7 @@ from spotify_confidence.analysis.constants import (
     CHI2,
     TTEST,
     ZTEST,
+    SRMTEST,
     NIM_TYPE,
     CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     NIM_COLUMN_DEFAULT,
@@ -148,7 +149,7 @@ from spotify_confidence.analysis.constants import (
     SAMPLE_RATIO_MISMATCH,
     DECISION_COLUMN,
     SRMTEST,
-    ABSOLUTE_DIFFERENCE,
+    ABSOLUTE_DIFFERENCE, TANKING, PRE_EXPOSURE_ACTIVITY,
 )
 
 confidence_computers = {
@@ -255,6 +256,9 @@ class GenericComputer(ConfidenceComputerABC):
             columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
         if self._sequential_test:
             columns_that_must_exist += [self._ordinal_group_column]
+        if self._df[self._decision_column].isin([TANKING, PRE_EXPOSURE_ACTIVITY]).any():
+            columns_that_must_exist += [PREFERRED_DIRECTION_COLUMN_DEFAULT]
+
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
@@ -595,21 +599,27 @@ class GenericComputer(ConfidenceComputerABC):
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
 
-        srm_pvalue_series = (
-            df.groupby([self._treatment_column, self._ordinal_group_column, self._numerator])[self._denominator]
-            .sum()
-            .reset_index()
-            .groupby("date")
-            .apply(confidence_computers[SRMTEST].sample_ratio_test, arg_dict)
-        )
-        srm_pvalue_series.name = "srm_p_value"
-        comparison_df = comparison_df.join(srm_pvalue_series)
-        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT_VALIDATION] = (
-            comparison_df.loc[comparison_df[self._method_column] == SRMTEST, "srm_p_value"]
-            <= comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ADJUSTED_ALPHA_VALIDATION]
-        )
-        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT] = None
-        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ABSOLUTE_DIFFERENCE] = None
+        if self._validations_enabled and df[self._method_column].isin([SRMTEST]).any() and df[self._decision_column].isin([SAMPLE_RATIO_MISMATCH]).any():
+            srm_pvalue_series = (
+                df.query(f"{self._method_column} == '{SRMTEST}' and {self._decision_column} == '{SAMPLE_RATIO_MISMATCH}'")
+                .groupby([self._treatment_column, self._ordinal_group_column, self._numerator])[self._denominator]
+                .sum()
+                .reset_index()
+                .groupby("date")
+                .apply(confidence_computers[SRMTEST].sample_ratio_test, arg_dict)
+            )
+            srm_pvalue_series.name = P_VALUE_VALIDATION + "_SRM"
+            comparison_df = comparison_df.join(srm_pvalue_series)
+            comparison_df.loc[comparison_df[self._method_column] == SRMTEST, P_VALUE_VALIDATION] = (
+                comparison_df.loc[comparison_df[self._method_column] == SRMTEST, P_VALUE_VALIDATION + "_SRM"]
+            )
+            comparison_df = comparison_df.drop(P_VALUE_VALIDATION + "_SRM", axis=1)
+            comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT_VALIDATION] = (
+                comparison_df.loc[comparison_df[self._method_column] == SRMTEST, P_VALUE_VALIDATION]
+                <= comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ADJUSTED_ALPHA_VALIDATION]
+            )
+            #comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT] = None
+            #comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ABSOLUTE_DIFFERENCE] = None
         return comparison_df
 
     def compute_sample_size(

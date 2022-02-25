@@ -18,7 +18,7 @@ from spotify_confidence.analysis.constants import (
     CORRECTION_METHODS,
     SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
-    SRMTEST,
+    SRMTEST, IS_SIGNIFICANT_VALIDATION, SAMPLE_RATIO_MISMATCH,
 )
 
 
@@ -74,6 +74,20 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                     SRMTEST,
                     SRMTEST,
                 ],
+                "decision_type": [
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                    SAMPLE_RATIO_MISMATCH,
+                ],
+                "preferred_direction": [
+                    None, None, None, None, None, None, None, None, None
+                ]
             }
         ).assign(final_sample_size=900)
 
@@ -89,14 +103,15 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             treatment_column="variation_name",
             validations=True,
             correction_method=SPOT_1,
+            decision_column="decision_type"
         )
 
-    def test_multiple_difference_plot_groupby(self):
+    def test_srm(self):
         outcome = self.test.multiple_difference(
             level="control",
             groupby=["date", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_sample_size",
         )
-        assert outcome["is_failing_validation"][0] == 0
-        assert outcome["is_failing_validation"][5] == 1
+        assert outcome[IS_SIGNIFICANT_VALIDATION][0] == 0
+        assert outcome[IS_SIGNIFICANT_VALIDATION][5] == 1
