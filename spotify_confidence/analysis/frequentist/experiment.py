@@ -317,6 +317,7 @@ class Experiment(ConfidenceABC):
                 )
 
     def get_recommendation(self, df: DataFrame) -> Enum:
+        x = 1
         if self._decision_column is None:
             raise KeyError("A column with decision metric types must be given to obtain a recommendation.")
         if (df[self._decision_column] == SUCCESS).any():

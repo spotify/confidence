@@ -18,7 +18,9 @@ from spotify_confidence.analysis.constants import (
     CORRECTION_METHODS,
     SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
-    SRMTEST, IS_SIGNIFICANT_VALIDATION, SAMPLE_RATIO_MISMATCH,
+    SRMTEST,
+    IS_SIGNIFICANT_VALIDATION,
+    SAMPLE_RATIO_MISMATCH,
 )
 
 
@@ -85,9 +87,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                     SAMPLE_RATIO_MISMATCH,
                     SAMPLE_RATIO_MISMATCH,
                 ],
-                "preferred_direction": [
-                    None, None, None, None, None, None, None, None, None
-                ]
+                "preferred_direction": [None, None, None, None, None, None, None, None, None],
             }
         ).assign(final_sample_size=900)
 
@@ -103,7 +103,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
             treatment_column="variation_name",
             validations=True,
             correction_method=SPOT_1,
-            decision_column="decision_type"
+            decision_column="decision_type",
         )
 
     def test_srm(self):

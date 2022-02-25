@@ -31,7 +31,9 @@ from spotify_confidence.analysis.constants import (
     TWO_SIDED,
     PRE_EXPOSURE_ACTIVITY,
     INCREASE_PREFFERED,
-    DECREASE_PREFFERED, SAMPLE_RATIO_MISMATCH, SRMTEST,
+    DECREASE_PREFFERED,
+    SAMPLE_RATIO_MISMATCH,
+    SRMTEST,
 )
 
 
@@ -273,8 +275,12 @@ def validate_validation_inputs(df: DataFrame, decision_column: str, method_colum
         raise KeyError("Inconsistent input: validations are disabled, but validation metrics are provided.")
     else:
         if validations:
-            if (df[decision_column].isin([TANKING, PRE_EXPOSURE_ACTIVITY]).any() and (PREFERRED_DIRECTION_COLUMN_DEFAULT not in df.columns)):
-                raise ValueError(f"{PREFERRED_DIRECTION_COLUMN_DEFAULT} must be provided when tanking and pre-exposure bias metrics are used.")
+            if df[decision_column].isin([TANKING, PRE_EXPOSURE_ACTIVITY]).any() and (
+                PREFERRED_DIRECTION_COLUMN_DEFAULT not in df.columns
+            ):
+                raise ValueError(
+                    f"{PREFERRED_DIRECTION_COLUMN_DEFAULT} must be provided when tanking and pre-exposure bias metrics are used."
+                )
             if df[decision_column].map(DECISION_DICT).isnull().any():
                 raise ValueError("A decision metric type provided is not included in DECISION_DICT.")
             if (df.loc[df[decision_column] == TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT] == TWO_SIDED).any():

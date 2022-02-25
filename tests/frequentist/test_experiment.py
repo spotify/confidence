@@ -29,7 +29,8 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_UPPER,
     ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
     PRE_EXPOSURE_ACTIVITY,
-    SUCCESS, SAMPLE_RATIO_MISMATCH,
+    SUCCESS,
+    SAMPLE_RATIO_MISMATCH,
 )
 
 
@@ -1422,6 +1423,7 @@ class TestMultipleValidations(object):
 
         assert len(difference_df) == 50
 
+
 class TestAllValidations(object):
     def setup(self):
         x = 1
@@ -2077,10 +2079,12 @@ class TestAllValidations(object):
         )
         self.df["sum_of_squares"] = self.df["sum"]
         self.df["method"] = "z-test"
-        self.df.loc[self.df["metric_class"]==SAMPLE_RATIO_MISMATCH, "method"] = "srm-test"
-        self.df.loc[self.df["metric_class"]==SAMPLE_RATIO_MISMATCH, "sum"] = 0.5
+        self.df.loc[self.df["metric_class"] == SAMPLE_RATIO_MISMATCH, "method"] = "srm-test"
+        self.df.loc[self.df["metric_class"] == SAMPLE_RATIO_MISMATCH, "sum"] = 0.5
         self.df["final_expected_sample_size"] = 60000
-        self.exp = spotify_confidence.Experiment(
+
+    def test_all_validations(self):
+        experiment = spotify_confidence.Experiment(
             self.df,
             numerator_column="sum",
             numerator_sum_squares_column="sum_of_squares",
@@ -2096,18 +2100,65 @@ class TestAllValidations(object):
             decision_column="metric_class",
             sequential_test=True,
         )
-
-    def test_all_validations(self):
-        difference_df = self.exp.multiple_difference(
+        difference_df = experiment.multiple_difference(
             level="control",
             groupby=["date", "metric"],
             level_as_reference=True,
             final_expected_sample_size_column="final_expected_sample_size",
             non_inferiority_margins=True,
-            verbose=True
-        )[["date", "metric", "metric_class", "difference", "is_significant", "is_significant_validation", "non-inferiority margin",
-           "preference", "metric_class"]]
+            verbose=True,
+        )[
+            [
+                "date",
+                "metric",
+                "metric_class",
+                "difference",
+                "is_significant",
+                "is_significant_validation",
+                "non-inferiority margin",
+                "preference",
+            ]
+        ]
 
-        recommendation = self.exp.get_recommendation(difference_df)
+        recommendation = experiment.get_recommendation(difference_df)
+        assert len(difference_df) == 50
+
+    def test_all_validations_no_seq(self):
+
+        experiment = spotify_confidence.Experiment(
+            self.df,
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_of_squares",
+            denominator_column="count",
+            categorical_group_columns=["group", "metric"],
+            ordinal_group_column="date",
+            interval_size=1 - 0.01,
+            correction_method=SPOT_1,
+            method_column="method",
+            metric_column="metric",
+            treatment_column="group",
+            validations=True,
+            decision_column="metric_class",
+            sequential_test=False,
+        )
+        difference_df = experiment.multiple_difference(
+            level="control",
+            groupby=["date", "metric"],
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+            non_inferiority_margins=True,
+            verbose=True,
+        )[
+            [
+                "date",
+                "metric",
+                "metric_class",
+                "difference",
+                "is_significant",
+                "is_significant_validation",
+                "non-inferiority margin",
+                "preference",
+            ]
+        ]
 
         assert len(difference_df) == 50
