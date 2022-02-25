@@ -26,6 +26,7 @@ import spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_
 import spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer as t_test_computer
 import spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer as z_test_computers
 import spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer as z_test_linreg_computer
+from spotify_confidence.analysis.frequentist.confidence_computers import srm_test_computer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.confidence_utils import (
     get_remaning_groups,
@@ -146,6 +147,8 @@ from spotify_confidence.analysis.constants import (
     ALPHA_VALIDATION,
     SAMPLE_RATIO_MISMATCH,
     DECISION_COLUMN,
+    SRMTEST,
+    ABSOLUTE_DIFFERENCE,
 )
 
 confidence_computers = {
@@ -154,6 +157,7 @@ confidence_computers = {
     ZTEST: z_test_computers,
     BOOTSTRAP: bootstrap_computer,
     ZTESTLINREG: z_test_linreg_computer,
+    SRMTEST: srm_test_computer,
 }
 
 
@@ -390,7 +394,7 @@ class GenericComputer(ConfidenceComputerABC):
                     POWERED_EFFECT,
                     REQUIRED_SAMPLE_SIZE,
                 ]
-                + [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT]
+                + [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT, IS_SIGNIFICANT_VALIDATION]
                 + ([NIM, NULL_HYPOTHESIS, PREFERENCE] if nims is not None else [])
             ]
         )
@@ -590,6 +594,22 @@ class GenericComputer(ConfidenceComputerABC):
             comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
+
+        srm_pvalue_series = (
+            df.groupby([self._treatment_column, self._ordinal_group_column, self._numerator])[self._denominator]
+            .sum()
+            .reset_index()
+            .groupby("date")
+            .apply(confidence_computers[SRMTEST].sample_ratio_test, arg_dict)
+        )
+        srm_pvalue_series.name = "srm_p_value"
+        comparison_df = comparison_df.join(srm_pvalue_series)
+        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT_VALIDATION] = (
+            comparison_df.loc[comparison_df[self._method_column] == SRMTEST, "srm_p_value"]
+            <= comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ADJUSTED_ALPHA_VALIDATION]
+        )
+        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT] = None
+        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ABSOLUTE_DIFFERENCE] = None
         return comparison_df
 
     def compute_sample_size(
@@ -898,7 +918,8 @@ def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred
 
 
 def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return (
+
+    df = (
         df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
         .assign(**{STD_ERR: confidence_computers[df[arg_dict[METHOD]].values[0]].std_err(df, arg_dict)})
         .pipe(_add_p_value_and_ci, arg_dict=arg_dict, validation=False)
@@ -907,6 +928,8 @@ def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
         .pipe(_adjust_if_absolute, absolute=arg_dict[ABSOLUTE])
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
     )
+
+    return df
 
 
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
@@ -998,19 +1021,17 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
     def _compute_sequential_adjusted_alpha(
         df: DataFrame, method_column: str, arg_dict: Dict, validation: bool
     ) -> Series:
-        if all(df[method_column] == "z-test"):
-            return confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict, validation)
+        if df[method_column].isin(["z-test", "srm-test"]).all():
+            return confidence_computers[df[method_column].values[0]].compute_sequential_adjusted_alpha(
+                df, arg_dict, validation
+            )
         else:
-            raise NotImplementedError("Sequential testing is only supported for z-tests")
+            raise NotImplementedError("Sequential testing is only supported for z-tests and srm-tests")
 
     def _add_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(
             df, ALPHA_VALIDATION if validation else ALPHA, arg_dict
         )
-
-        if (df[PREFERENCE] == TWO_SIDED).all() and validation:
-            lower[:] = None
-            upper[:] = None
 
         if (
             arg_dict[CORRECTION_METHOD]
