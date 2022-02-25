@@ -22,7 +22,7 @@ from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
 from spotify_confidence.analysis.frequentist.experiment import Experiment
 
 
-class ZTest(Experiment):
+class SRMTest(Experiment):
     def __init__(
         self,
         data_frame: DataFrame,
@@ -39,7 +39,7 @@ class ZTest(Experiment):
         treatment_column: Union[str, None] = None,
         power: float = 0.8
     ):
-        super(ZTest, self).__init__(
+        super(SRMTest, self).__init__(
             data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: ZTEST}),
             numerator_column=numerator_column,
             numerator_sum_squares_column=numerator_sum_squares_column,

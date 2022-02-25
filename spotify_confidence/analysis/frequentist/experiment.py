@@ -27,7 +27,7 @@ from ..confidence_utils import (
     get_all_categorical_group_columns,
     get_all_group_columns,
 )
-from ..constants import BONFERRONI, NIM_TYPE, METHODS
+from ..constants import BONFERRONI, NIM_TYPE, METHODS, SPOT_1
 from ..frequentist.sample_ratio_test import sample_ratio_test
 from ...chartgrid import ChartGrid
 
@@ -53,6 +53,8 @@ class Experiment(ConfidenceABC):
         feature_column: str = None,
         feature_sum_squares_column: str = None,
         feature_cross_sum_column: str = None,
+        validations: bool = False,
+        decision_column: str = None,
     ):
 
         validate_categorical_columns(categorical_group_columns)
@@ -72,6 +74,10 @@ class Experiment(ConfidenceABC):
         if not all(self._df[method_column].map(lambda m: m in METHODS)):
             raise ValueError(f"Values of method column must be in {METHODS}")
 
+        self._validations_enabled = validations
+        if validations and not correction_method == SPOT_1:
+            raise ValueError(f"Validation tests can only be used with the {SPOT_1} correction method")
+        self._decision_column = decision_column
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
@@ -95,6 +101,8 @@ class Experiment(ConfidenceABC):
                 feature_column=feature_column,
                 feature_sum_squares_column=feature_sum_squares_column,
                 feature_cross_sum_column=feature_cross_sum_column,
+                validations=validations,
+                decision_column=decision_column
             )
 
         self._confidence_grapher = (

@@ -38,6 +38,12 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_SIMES_HOCHBERG,
     NIM,
     ADJUSTED_ALPHA,
+    NUMBER_OF_COMPARISONS_VALIDATION,
+    ADJUSTED_ALPHA_VALIDATION,
+    PREFERRED_DIRECTION_COLUMN_DEFAULT,
+    INCREASE_PREFFERED,
+    DECREASE_PREFFERED,
+    PREFERENCE_DICT,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -87,14 +93,27 @@ def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
-    _, p_value = _zstat_generic(
-        value1=df[POINT_ESTIMATE + SFX2],
-        value2=df[POINT_ESTIMATE + SFX1],
-        std_diff=df[STD_ERR],
-        alternative=df[PREFERENCE_TEST].values[0],
-        diff=df[NULL_HYPOTHESIS],
-    )
+def p_value(df: DataFrame, arg_dict: Dict[str, str], validation: bool) -> Series:
+    if not validation:
+        _, p_value = _zstat_generic(
+            value1=df[POINT_ESTIMATE + SFX2],
+            value2=df[POINT_ESTIMATE + SFX1],
+            std_diff=df[STD_ERR],
+            alternative=df[PREFERENCE_TEST].values[0],
+            diff=df[NULL_HYPOTHESIS],
+        )
+    elif df[PREFERRED_DIRECTION_COLUMN_DEFAULT].values[0] in [INCREASE_PREFFERED, DECREASE_PREFFERED]:
+        _, p_value = _zstat_generic(
+            value1=df[POINT_ESTIMATE + SFX2],
+            value2=df[POINT_ESTIMATE + SFX1],
+            std_diff=df[STD_ERR],
+            alternative="larger"
+            if df[PREFERRED_DIRECTION_COLUMN_DEFAULT].values[0] == DECREASE_PREFFERED
+            else "smaller",
+            diff=df[NULL_HYPOTHESIS],
+        )
+    else:
+        p_value = float("nan")
     return p_value
 
 
@@ -114,25 +133,25 @@ def achieved_power(df: DataFrame, mde: float, alpha: float, arg_dict: Dict[str, 
     return power_calculation(mde, var_pooled, alpha, n1, n2)
 
 
-def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
+def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], validation: bool):
     denominator = arg_dict[DENOMINATOR]
     final_expected_sample_size_column = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
     ordinal_group_column = arg_dict[ORDINAL_GROUP_COLUMN]
-    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
+    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS if not validation else NUMBER_OF_COMPARISONS_VALIDATION]
 
-    def adjusted_alphas_for_group(grp: DataFrame) -> Series:
+    def adjusted_alphas_for_group(grp: DataFrame, validation: bool) -> Series:
         return (
             sequential_bounds(
                 t=grp["sample_size_proportions"].values,
                 alpha=grp[ALPHA].values[0] / n_comparisons,
-                sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() else 1,
+                sides=2 if (grp[PREFERENCE_TEST] == TWO_SIDED).all() and not validation else 1,
             )
             .df.set_index(grp.index)
             .assign(
                 **{
                     ADJUSTED_ALPHA: lambda df: df.apply(
                         lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
-                        if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
+                        if not validation and (grp[PREFERENCE_TEST] == TWO_SIDED).all()
                         else 1 - st.norm.cdf(row["zb"]),
                         axis=1,
                     )
@@ -164,8 +183,8 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
         .groupby(groups_except_ordinal + ["_sequential_dummy_index_"], sort=False)[
             ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
         ]
-        .apply(adjusted_alphas_for_group)[ADJUSTED_ALPHA],
-        name=ADJUSTED_ALPHA,
+        .apply(adjusted_alphas_for_group, validation=validation)[ADJUSTED_ALPHA],
+        name=ADJUSTED_ALPHA if not validation else ADJUSTED_ALPHA_VALIDATION,
     )
 
 
