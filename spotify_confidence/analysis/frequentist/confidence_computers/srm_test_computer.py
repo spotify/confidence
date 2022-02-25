@@ -53,26 +53,21 @@ def sequential_bounds(t: np.array, alpha: float, sides: int, state: DataFrame = 
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
-
-def sample_ratio_test(
-    df: DataFrame, arg_dict: dict
-) -> Tuple[float, DataFrame]:
+def sample_ratio_test(df: DataFrame, arg_dict: dict) -> Tuple[float, DataFrame]:
     n_tot = df[arg_dict[DENOMINATOR]].sum()
     expected_proportions = df[arg_dict[NUMERATOR]]
-    observed_proportions = df[arg_dict[DENOMINATOR]]/n_tot
+    observed_proportions = df[arg_dict[DENOMINATOR]] / n_tot
     sq_diff = np.power(observed_proportions - expected_proportions, 2)
 
-    chi2_stat = n_tot *sq_diff.divide(expected_proportions).sum()
+    chi2_stat = n_tot * sq_diff.divide(expected_proportions).sum()
     deg_freedom = df.shape[0] - 1
     p_value = 1 - st.chi2.cdf(chi2_stat, deg_freedom)
 
     return p_value
 
 
-
-def p_value(df: DataFrame, arg_dict: Dict[str, str], validation: bool=True) -> Series:
+def p_value(df: DataFrame, arg_dict: Dict[str, str], validation: bool = True) -> Series:
     return None
-
 
 
 def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
@@ -81,6 +76,7 @@ def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Seri
 
 def point_estimate(df: DataFrame, arg_dict: Dict[str, str]) -> float:
     return None
+
 
 def variance(df: DataFrame, arg_dict: Dict[str, str]) -> float:
     return None
@@ -91,8 +87,10 @@ def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
     df[CI_UPPER] = None
     return df
 
+
 def std_err(df: Series, arg_dict: Dict[str, str]) -> float:
     return None
+
 
 def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], validation: bool):
     denominator = arg_dict[DENOMINATOR]
@@ -147,6 +145,3 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], v
         .apply(adjusted_alphas_for_group, validation=validation)[ADJUSTED_ALPHA],
         name=ADJUSTED_ALPHA if not validation else ADJUSTED_ALPHA_VALIDATION,
     )
-
-
-

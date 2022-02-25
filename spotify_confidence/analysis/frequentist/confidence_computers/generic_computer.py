@@ -42,6 +42,7 @@ from spotify_confidence.analysis.confidence_utils import (
     groupbyApplyParallel,
     is_non_inferiority,
     reset_named_indices,
+    validate_validation_inputs,
 )
 from spotify_confidence.analysis.constants import (
     NUMERATOR,
@@ -129,15 +130,26 @@ from spotify_confidence.analysis.constants import (
     NUMBER_OF_COMPARISONS_VALIDATION,
     ADJUSTED_ALPHA_VALIDATION,
     P_VALUE_VALIDATION,
-    IS_FAILING,
+    IS_SIGNIFICANT_VALIDATION,
     ADJUSTED_P_VALIDATION,
     CI_LOWER_VALIDATION,
     CI_UPPER_VALIDATION,
     ADJUSTED_LOWER_VALIDATION,
-    ADJUSTED_UPPER_VALIDATION, VALIDATION, VALIDATIONS_ENABLED,
-    SUCCESS, GUARDRAIL,
+    ADJUSTED_UPPER_VALIDATION,
+    VALIDATION,
+    VALIDATIONS_ENABLED,
+    SUCCESS,
+    GUARDRAIL,
+    METRIC_CLASS,
+    DECISION_DICT,
+    SEQUENTIAL_TEST,
+    VALIDATION_INTERVAL_SIZE,
+    ALPHA_VALIDATION,
+    SAMPLE_RATIO_MISMATCH,
+    DECISION_COLUMN,
     SRMTEST,
-    ABSOLUTE_DIFFERENCE)
+    ABSOLUTE_DIFFERENCE,
+)
 
 confidence_computers = {
     CHI2: chi_squared_computer,
@@ -172,7 +184,9 @@ class GenericComputer(ConfidenceComputerABC):
         feature_sum_squares_column: Union[str, None],
         feature_cross_sum_column: Union[str, None],
         validations: Union[bool, None],
-        decision_column: Union[str, None]
+        decision_column: Union[str, None],
+        sequential_test: Union[bool, None],
+        validation_interval_size: float,
     ):
 
         self._df = data_frame.reset_index(drop=True)
@@ -209,6 +223,7 @@ class GenericComputer(ConfidenceComputerABC):
         self._feature_cross = feature_cross_sum_column
         self._decision_column = decision_column
         self._validations_enabled = validations
+        self._validation_interval_size = validation_interval_size
 
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
@@ -221,6 +236,7 @@ class GenericComputer(ConfidenceComputerABC):
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
         self._bootstrap_samples_column = bootstrap_samples_column
+        self._sequential_test = sequential_test
 
         columns_that_must_exist = []
         if (
@@ -237,10 +253,14 @@ class GenericComputer(ConfidenceComputerABC):
             columns_that_must_exist += [self._bootstrap_samples_column]
         if ZTESTLINREG in self._df[self._method_column]:
             columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
+        if self._sequential_test:
+            columns_that_must_exist += [self._ordinal_group_column]
 
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, self._ordinal_group_column)
 
         self._sufficient = None
+
+        validate_validation_inputs(self._df, self._decision_column, self._validations_enabled)
 
     def compute_summary(self, verbose: bool) -> DataFrame:
         return (
@@ -374,7 +394,7 @@ class GenericComputer(ConfidenceComputerABC):
                     POWERED_EFFECT,
                     REQUIRED_SAMPLE_SIZE,
                 ]
-                + [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT,IS_FAILING]
+                + [ADJUSTED_LOWER, ADJUSTED_UPPER, ADJUSTED_P, IS_SIGNIFICANT, IS_SIGNIFICANT_VALIDATION]
                 + ([NIM, NULL_HYPOTHESIS, PREFERENCE] if nims is not None else [])
             ]
         )
@@ -439,17 +459,15 @@ class GenericComputer(ConfidenceComputerABC):
 
             if len(groupby) == 0:
                 return df.assign(
-                    **{f"current_total_{self._denominator}": self._sufficient_statistics[
-                        self._denominator].sum()}
+                    **{f"current_total_{self._denominator}": self._sufficient_statistics[self._denominator].sum()}
                 )
             else:
                 return df.merge(
                     df.groupby(groupby, sort=False)[self._denominator]
-                        .sum()
-                        .reset_index()
-                        .rename(columns={self._denominator: f"current_total_{self._denominator}"})
+                    .sum()
+                    .reset_index()
+                    .rename(columns={self._denominator: f"current_total_{self._denominator}"})
                 )
-
 
         return (
             self._sufficient_statistics.assign(
@@ -524,9 +542,7 @@ class GenericComputer(ConfidenceComputerABC):
                     f"current_total_{self._denominator}",
                     PREFERRED_DIRECTION_COLUMN_DEFAULT,
                 ]
-                + ([self._decision_column]
-                if self._decision_column is not None
-                else []),
+                + ([self._decision_column] if self._decision_column is not None else []),
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -545,14 +561,14 @@ class GenericComputer(ConfidenceComputerABC):
             self._correction_method,
             number_of_level_comparisons=comparison_df.groupby(["level_1", "level_2"], sort=False).ngroups,
             groupby=groups_except_ordinal,
-            validations=False
+            validations=False,
         )
         n_comparisons_validation = self._get_num_comparisons(
             comparison_df,
             BONFERRONI,
             number_of_level_comparisons=comparison_df.groupby(["level_1", "level_2"], sort=False).ngroups,
             groupby=groups_except_ordinal,
-            validations=True
+            validations=True,
         )
 
         arg_dict = {
@@ -570,21 +586,28 @@ class GenericComputer(ConfidenceComputerABC):
             NUMBER_OF_COMPARISONS: n_comparisons,
             NUMBER_OF_COMPARISONS_VALIDATION: n_comparisons_validation,
             VALIDATIONS_ENABLED: self._validations_enabled,
+            SEQUENTIAL_TEST: self._sequential_test,
+            VALIDATION_INTERVAL_SIZE: self._validation_interval_size,
+            DECISION_COLUMN: self._decision_column,
         }
         comparison_df = groupbyApplyParallel(
             comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
 
-        srm_pvalue_series=(df.groupby([self._treatment_column,self._ordinal_group_column,self._numerator])[self._denominator]
-                          .sum()
-                          .reset_index()
-                          .groupby("date")
-                          .apply(confidence_computers[SRMTEST]
-                          .sample_ratio_test, arg_dict))
-        srm_pvalue_series.name="srm_p_value"
+        srm_pvalue_series = (
+            df.groupby([self._treatment_column, self._ordinal_group_column, self._numerator])[self._denominator]
+            .sum()
+            .reset_index()
+            .groupby("date")
+            .apply(confidence_computers[SRMTEST].sample_ratio_test, arg_dict)
+        )
+        srm_pvalue_series.name = "srm_p_value"
         comparison_df = comparison_df.join(srm_pvalue_series)
-        comparison_df.loc[comparison_df[self._method_column]==SRMTEST,IS_FAILING] = comparison_df.loc[comparison_df[self._method_column]==SRMTEST,"srm_p_value"] <= comparison_df.loc[comparison_df[self._method_column]==SRMTEST,ADJUSTED_ALPHA_VALIDATION]
+        comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT_VALIDATION] = (
+            comparison_df.loc[comparison_df[self._method_column] == SRMTEST, "srm_p_value"]
+            <= comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ADJUSTED_ALPHA_VALIDATION]
+        )
         comparison_df.loc[comparison_df[self._method_column] == SRMTEST, IS_SIGNIFICANT] = None
         comparison_df.loc[comparison_df[self._method_column] == SRMTEST, ABSOLUTE_DIFFERENCE] = None
         return comparison_df
@@ -656,7 +679,7 @@ class GenericComputer(ConfidenceComputerABC):
             self._correction_method,
             number_of_level_comparisons=len(treatment_weights) - 1,
             groupby=group_columns,
-            validations=False
+            validations=False,
         )
         arg_dict = {
             MDE: mde_column,
@@ -743,10 +766,15 @@ class GenericComputer(ConfidenceComputerABC):
         )[["level_1", "level_2", "achieved_power"]]
 
     def _get_num_comparisons(
-        self, df: DataFrame, correction_method: str, number_of_level_comparisons: int, groupby: Iterable, validations: bool
+        self,
+        df: DataFrame,
+        correction_method: str,
+        number_of_level_comparisons: int,
+        groupby: Iterable,
+        validations: bool,
     ) -> int:
         if self._validations_enabled and self._decision_column is not None and not validations:
-            df = df.query(f"{self._decision_column} != {VALIDATION}")
+            df = df.loc[df[self._decision_column].map(DECISION_DICT) != VALIDATION]
         if correction_method == BONFERRONI:
             return max(
                 1,
@@ -809,12 +837,18 @@ class GenericComputer(ConfidenceComputerABC):
 
                     return max(1, number_of_level_comparisons * max(1, number_success_metrics) * number_segments)
                 else:
-                    MULTIPLICITY_ADJUST = [SUCCESS, GUARDRAIL, VALIDATION] if validations else [SUCCESS]
+                    MULTIPLICITY_ADJUST = DECISION_DICT.keys() if validations else [SUCCESS]
                     number_of_metrics = (
                         df.query(f"{self._decision_column} == {MULTIPLICITY_ADJUST}")
-                          .groupby(self._metric_column, sort=False)
-                          .ngroups)
-                    return max(1, number_of_level_comparisons * max(1, number_of_metrics) * number_segments)
+                        .groupby(self._metric_column, sort=False)
+                        .ngroups
+                    )
+                    if SAMPLE_RATIO_MISMATCH in df[self._decision_column]:
+                        number_of_metrics += -1
+                        number_of_srm = 1
+                    else:
+                        number_of_srm = 0
+                    return max(1, number_of_level_comparisons * number_of_metrics * number_segments + number_of_srm)
 
         else:
             raise ValueError(f"Unsupported correction method: {correction_method}.")
@@ -901,7 +935,7 @@ def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
     def _add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
         n_comparisons = arg_dict[NUMBER_OF_COMPARISONS_VALIDATION if validation else NUMBER_OF_COMPARISONS]
-        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None and (arg_dict[SEQUENTIAL_TEST] is not False or validation):
             if arg_dict[CORRECTION_METHOD] not in [
                 BONFERRONI,
                 BONFERRONI_ONLY_COUNT_TWOSIDED,
@@ -916,11 +950,13 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             if arg_dict[VALIDATIONS_ENABLED]:
                 adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict, validation)
                 df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-                df[IS_FAILING if validation else IS_SIGNIFICANT] = (
-                    df[P_VALUE_VALIDATION if validation else P_VALUE] < df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
+                inequal_fun = lambda x, y: ((x < y) if (not x.isnull().all()) and (not y.isnull().all()) else None)
+                df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = inequal_fun(
+                    df[P_VALUE_VALIDATION if validation else P_VALUE],
+                    df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA],
                 )
             elif validation and not arg_dict[VALIDATIONS_ENABLED]:
-                df[IS_FAILING if validation else IS_SIGNIFICANT] = bool('nan')
+                df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = None
             df[P_VALUE_VALIDATION if validation else P_VALUE] = None
             df[ADJUSTED_P_VALIDATION if validation else ADJUSTED_P] = None
         elif arg_dict[CORRECTION_METHOD] in [
@@ -959,27 +995,43 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
             SPOT_1,
         ]:
-            df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA] = (df[ALPHA] / n_comparisons) \
-                if not validation or arg_dict[VALIDATIONS_ENABLED] else float('nan')
-            df[ADJUSTED_P_VALIDATION if validation else ADJUSTED_P] = df[P_VALUE_VALIDATION if validation else P_VALUE].map(
-                lambda p: min(p * n_comparisons, 1)
-            ) if not validation or arg_dict[VALIDATIONS_ENABLED] else float('nan')
-            df[IS_FAILING if validation else IS_SIGNIFICANT] = (
-                df[P_VALUE_VALIDATION if validation else P_VALUE] < df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
-            ) if not validation or arg_dict[VALIDATIONS_ENABLED] else bool('nan')
+            df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA] = (
+                (df[ALPHA_VALIDATION if validation else ALPHA] / n_comparisons)
+                if not validation or arg_dict[VALIDATIONS_ENABLED]
+                else None
+            )
+            df[ADJUSTED_P_VALIDATION if validation else ADJUSTED_P] = (
+                (df[P_VALUE_VALIDATION if validation else P_VALUE].map(lambda p: min(p * n_comparisons, 1)))
+                if not validation or arg_dict[VALIDATIONS_ENABLED]
+                else None
+            )
+            df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = (
+                (
+                    df[P_VALUE_VALIDATION if validation else P_VALUE]
+                    < df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA]
+                )
+                if not validation or arg_dict[VALIDATIONS_ENABLED]
+                else None
+            )
         else:
             raise ValueError("Can't figure out which correction method to use :(")
 
         return df
 
-    def _compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict, validation: bool) -> Series:
-        if df[method_column].isin(["z-test","srm-test"]).all():
-            return confidence_computers[df[method_column].values[0]].compute_sequential_adjusted_alpha(df, arg_dict, validation)
+    def _compute_sequential_adjusted_alpha(
+        df: DataFrame, method_column: str, arg_dict: Dict, validation: bool
+    ) -> Series:
+        if df[method_column].isin(["z-test", "srm-test"]).all():
+            return confidence_computers[df[method_column].values[0]].compute_sequential_adjusted_alpha(
+                df, arg_dict, validation
+            )
         else:
             raise NotImplementedError("Sequential testing is only supported for z-tests and srm-tests")
 
     def _add_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> DataFrame:
-        lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
+        lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(
+            df, ALPHA_VALIDATION if validation else ALPHA, arg_dict
+        )
 
         if (
             arg_dict[CORRECTION_METHOD]
@@ -1029,23 +1081,40 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
             .assign(**{ADJUSTED_UPPER_VALIDATION if validation else ADJUSTED_UPPER: adjusted_upper})
         )
 
-    return (
-        df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
-        .assign(
-            **{
-                P_VALUE_VALIDATION
-                if validation
-                else P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict, validation=validation)
-            }
+    if (not validation) or (validation and arg_dict[VALIDATIONS_ENABLED]):
+        return (
+            df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
+            .assign(
+                **{
+                    P_VALUE_VALIDATION
+                    if validation
+                    else P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict, validation=validation)
+                }
+            )
+            .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict, validation=validation)
+            .pipe(_remove_alpha_p_value_if_fixed_horizon, arg_dict=arg_dict)
+            .pipe(_add_ci, arg_dict=arg_dict, validation=validation)
         )
-        .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict, validation=validation)
-        .pipe(_add_ci, arg_dict=arg_dict, validation=validation)
-    )
+    else:
+        return df
+
+
+def _remove_alpha_p_value_if_fixed_horizon(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    if arg_dict[SEQUENTIAL_TEST] == False and arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+        df.iloc[
+            (
+                df.index.get_level_values(arg_dict[ORDINAL_GROUP_COLUMN])
+                < df.reset_index()[arg_dict[ORDINAL_GROUP_COLUMN]].max()
+            ),
+            [df.columns.get_loc(col) for col in [ALPHA, ADJUSTED_ALPHA, P_VALUE, ADJUSTED_P, IS_SIGNIFICANT]],
+        ] = None
+
+    return df
 
 
 def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
     alpha_0 = 1 - arg_dict[INTERVAL_SIZE]
-    return df.assign(
+    df = df.assign(
         **{
             ALPHA: df.apply(
                 lambda row: 2 * alpha_0
@@ -1054,14 +1123,37 @@ def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
                 axis=1,
             )
         }
-    ).assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
+    )
+
+    if arg_dict[VALIDATIONS_ENABLED]:
+        alphav_0 = 1 - arg_dict[VALIDATION_INTERVAL_SIZE]
+        df = df.assign(
+            **{
+                ALPHA_VALIDATION: df.apply(
+                    lambda row: 2 * alphav_0
+                    if arg_dict[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
+                    else alphav_0,
+                    axis=1,
+                )
+            }
+        )
+
+    if arg_dict[SEQUENTIAL_TEST] == False and arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+        df.iloc[
+            (
+                df.index.get_level_values(arg_dict[ORDINAL_GROUP_COLUMN])
+                < df.reset_index()[arg_dict[ORDINAL_GROUP_COLUMN]].max()
+            ),
+            df.columns.get_loc(ALPHA),
+        ] = None
+    return df.assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
 
 
 def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
     if absolute:
         return df.assign(absolute_difference=absolute)
     else:
-        return (
+        df = (
             df.assign(absolute_difference=absolute)
             .assign(**{DIFFERENCE: df[DIFFERENCE] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{CI_LOWER: df[CI_LOWER] / df[POINT_ESTIMATE + SFX1]})
@@ -1071,6 +1163,14 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
             .assign(**{NULL_HYPOTHESIS: df[NULL_HYPOTHESIS] / df[POINT_ESTIMATE + SFX1]})
             .assign(**{POWERED_EFFECT: df[POWERED_EFFECT] / df[POINT_ESTIMATE + SFX1]})
         )
+        if ALPHA_VALIDATION in df.columns:
+            df = (
+                df.assign(**{CI_LOWER_VALIDATION: df[CI_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{CI_UPPER_VALIDATION: df[CI_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{ADJUSTED_LOWER_VALIDATION: df[ADJUSTED_LOWER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+                .assign(**{ADJUSTED_UPPER_VALIDATION: df[ADJUSTED_UPPER_VALIDATION] / df[POINT_ESTIMATE + SFX1]})
+            )
+        return df
 
 
 def _p_value(df: DataFrame, arg_dict: Dict, validation: bool) -> float:

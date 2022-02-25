@@ -37,7 +37,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                     "control",
                     "test2",
                 ],
-                "sample_size": [100,99,102,200,196,204,300,275,306],
+                "sample_size": [100, 99, 102, 200, 196, 204, 300, 275, 306],
                 "date": pd.to_datetime(
                     [
                         "2021-04-01",
@@ -51,7 +51,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
                         "2021-04-03",
                     ]
                 ),
-                "expected_proportions":[0.3,0.3,0.4,0.3,0.3,0.4,0.3,0.3,0.4],
+                "expected_proportions": [0.3, 0.3, 0.4, 0.3, 0.3, 0.4, 0.3, 0.3, 0.4],
                 "metric": [
                     "m1",
                     "m1",

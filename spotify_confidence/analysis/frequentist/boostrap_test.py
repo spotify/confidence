@@ -28,7 +28,7 @@ class BootstrapTest(GenericTest):
     def __init__(
         self,
         data_frame: DataFrame,
-        bootstrap_samples_column:[],
+        bootstrap_samples_column: [],
         categorical_group_columns: Union[str, Iterable],
         ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
@@ -63,5 +63,5 @@ class BootstrapTest(GenericTest):
             confidence_computer,
             confidence_grapher,
             METHOD_COLUMN_NAME,
-            bootstrap_samples_column
+            bootstrap_samples_column,
         )

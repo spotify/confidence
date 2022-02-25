@@ -38,4 +38,5 @@ __all__ = [
     "examples",
     "options",
     "SampleSize",
+    "get_recommendation",
 ]

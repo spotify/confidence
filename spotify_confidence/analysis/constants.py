@@ -57,10 +57,12 @@ REQUIRED_SAMPLE_SIZE = "required_sample_size"
 REQUIRED_SAMPLE_SIZE_METRIC = "required_sample_size_for_metric"
 OPTIMAL_KAPPA = "optimal_kappa"
 OPTIMAL_WEIGHTS = "optimal_weigghts"
-IS_FAILING = "is_failing_validation"
+IS_SIGNIFICANT_VALIDATION = "is_significant_validation"
 P_VALUE_VALIDATION = "p-value_validation"
 ADJUSTED_P_VALIDATION = "adjusted p-value validation"
 ADJUSTED_ALPHA_VALIDATION = "adjusted_alpha_validation"
+VALIDATION_INTERVAL_SIZE = "validation_interval_size"
+ALPHA_VALIDATION = "alpha_validation"
 CI_LOWER_VALIDATION, CI_UPPER_VALIDATION = "ci_lower_validation", "ci_upper_validation"
 ADJUSTED_LOWER_VALIDATION, ADJUSTED_UPPER_VALIDATION = "adjusted ci_lower_validation", "adjusted ci_upper_validation"
 
@@ -161,7 +163,9 @@ DECREASE_PREFFERED = "decrease"
 TWO_SIDED = "two-sided"
 PREFERENCE = "preference"
 PREFERENCE_TEST = "preference_used_in_test"
-PREFERENCE_DICT = {"smaller": DECREASE_PREFFERED, "larger": INCREASE_PREFFERED, TWO_SIDED: TWO_SIDED}
+DECREASE = "smaller"
+INCREASE = "larger"
+PREFERENCE_DICT = {DECREASE: DECREASE_PREFFERED, INCREASE: INCREASE_PREFFERED, TWO_SIDED: TWO_SIDED}
 NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]
 METHOD_COLUMN_NAME = "_method"
 CHI2 = "chi-squared"
@@ -172,7 +176,21 @@ BOOTSTRAP = "bootstrap"
 SRMTEST = "srm-test"
 METHODS = [CHI2, TTEST, ZTEST, BOOTSTRAP, ZTESTLINREG, SRMTEST]
 REGRESSION_PARAM = "regression_parameters"
-VALIDATION="validation"
-SUCCESS="success"
-GUARDRAIL="guardrail"
-VALIDATIONS_ENABLED="validations_enabled"
+VALIDATION = "validation"
+SUCCESS = "success"
+GUARDRAIL = "guardrail"
+VALIDATIONS_ENABLED = "validations_enabled"
+
+DECISION_COLUMN = "decision_column"
+SEQUENTIAL_TEST = "sequential_test"
+METRIC_CLASS = "metric_class"
+SAMPLE_RATIO_MISMATCH = "sample ratio mismatch"
+PRE_EXPOSURE_ACTIVITY = "pre-exposure activity"
+TANKING = "tanking"
+DECISION_DICT = {
+    SAMPLE_RATIO_MISMATCH: VALIDATION,
+    PRE_EXPOSURE_ACTIVITY: VALIDATION,
+    TANKING: VALIDATION,
+    SUCCESS: SUCCESS,
+    GUARDRAIL: GUARDRAIL,
+}

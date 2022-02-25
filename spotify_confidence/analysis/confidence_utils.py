@@ -14,6 +14,7 @@
 
 from collections import OrderedDict
 from concurrent.futures.thread import ThreadPoolExecutor
+from enum import Enum
 from typing import Union, Iterable, Tuple, List
 
 import numpy as np
@@ -23,6 +24,14 @@ from scipy.stats import norm
 from spotify_confidence.analysis.constants import (
     SFX1,
     SFX2,
+    DECISION_DICT,
+    VALIDATION,
+    TANKING,
+    PREFERRED_DIRECTION_COLUMN_DEFAULT,
+    TWO_SIDED,
+    PRE_EXPOSURE_ACTIVITY,
+    INCREASE_PREFFERED,
+    DECREASE_PREFFERED,
 )
 
 
@@ -248,3 +257,29 @@ def dfmatmul(x, y, outer=True):
     if out.size == 1:
         out = out.item()
     return out
+
+
+class ShipmentRecommendation(Enum):
+    SHIP = 1
+    MAYBE_SHIP = 2
+    SAFE_SHIP = 3
+    STOP = 4
+
+
+def validate_validation_inputs(df: DataFrame, decision_column: str, validations: bool) -> Iterable:
+    if validations and decision_column not in df.columns:
+        raise KeyError("To use validations, a decision column must be provided.")
+    elif (not validations) and (df[decision_column].map(DECISION_DICT) == VALIDATION).any():
+        raise KeyError("Inconsistent input: validations are disabled, but validation metrics are provided.")
+    else:
+        if validations:
+            if df[decision_column].map(DECISION_DICT).isnull().any():
+                raise ValueError("A decision metric type provided is not included in DECISION_DICT.")
+            if (df.loc[df[decision_column] == TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT] == TWO_SIDED).any():
+                raise ValueError("Tanking metrics must have a preferred direction.")
+            if (
+                df.loc[df[decision_column] == PRE_EXPOSURE_ACTIVITY, PREFERRED_DIRECTION_COLUMN_DEFAULT] == None
+            ).any():
+                raise ValueError("Pre-exposure bias metrics must not have a preferred direction.")
+        else:
+            pass
