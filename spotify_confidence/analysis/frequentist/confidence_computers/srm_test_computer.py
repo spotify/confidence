@@ -67,29 +67,29 @@ def sample_ratio_test(df: DataFrame, arg_dict: dict) -> Tuple[float, DataFrame]:
 
 
 def p_value(df: DataFrame, arg_dict: Dict[str, str], validation: bool = True) -> Series:
-    return None
+    return float('nan')
 
 
 def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
-    return (None, None)
+    return (float('nan'), float('nan'))
 
 
 def point_estimate(df: DataFrame, arg_dict: Dict[str, str]) -> float:
-    return None
+    return float('nan')
 
 
 def variance(df: DataFrame, arg_dict: Dict[str, str]) -> float:
-    return None
+    return float('nan')
 
 
 def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
-    df[CI_LOWER] = None
-    df[CI_UPPER] = None
+    df[CI_LOWER] = float('nan')
+    df[CI_UPPER] = float('nan')
     return df
 
 
 def std_err(df: Series, arg_dict: Dict[str, str]) -> float:
-    return None
+    return float('nan')
 
 
 def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str], validation: bool):

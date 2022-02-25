@@ -264,7 +264,7 @@ class GenericComputer(ConfidenceComputerABC):
 
         self._sufficient = None
 
-        validate_validation_inputs(self._df, self._decision_column, self._validations_enabled)
+        validate_validation_inputs(self._df, self._decision_column, self._method_column, self._validations_enabled)
 
     def compute_summary(self, verbose: bool) -> DataFrame:
         return (
@@ -957,13 +957,14 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict, validation: bool) -> Data
                     f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
                     f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
                 )
-            if arg_dict[VALIDATIONS_ENABLED]:
+            if arg_dict[VALIDATIONS_ENABLED] or not validation:
                 adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict, validation)
                 df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-                inequal_fun = lambda x, y: ((x < y) if (not x.isnull().all()) and (not y.isnull().all()) else None)
+                inequal_fun = lambda x, y, z: ((x < y) if (not x.isnull().all()) and (not y.isnull().all()) and z else None)
                 df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = inequal_fun(
                     df[P_VALUE_VALIDATION if validation else P_VALUE],
                     df[ADJUSTED_ALPHA_VALIDATION if validation else ADJUSTED_ALPHA],
+                    not (df[arg_dict[DECISION_COLUMN]].map(DECISION_DICT)==VALIDATION).any() or validation
                 )
             elif validation and not arg_dict[VALIDATIONS_ENABLED]:
                 df[IS_SIGNIFICANT_VALIDATION if validation else IS_SIGNIFICANT] = None

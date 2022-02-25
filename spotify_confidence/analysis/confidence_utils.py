@@ -31,7 +31,7 @@ from spotify_confidence.analysis.constants import (
     TWO_SIDED,
     PRE_EXPOSURE_ACTIVITY,
     INCREASE_PREFFERED,
-    DECREASE_PREFFERED,
+    DECREASE_PREFFERED, SAMPLE_RATIO_MISMATCH, SRMTEST,
 )
 
 
@@ -266,7 +266,7 @@ class ShipmentRecommendation(Enum):
     STOP = 4
 
 
-def validate_validation_inputs(df: DataFrame, decision_column: str, validations: bool) -> Iterable:
+def validate_validation_inputs(df: DataFrame, decision_column: str, method_column: str, validations: bool) -> Iterable:
     if validations and decision_column not in df.columns:
         raise KeyError("To use validations, a decision column must be provided.")
     elif (not validations) and (df[decision_column].map(DECISION_DICT) == VALIDATION).any():
@@ -279,6 +279,8 @@ def validate_validation_inputs(df: DataFrame, decision_column: str, validations:
                 raise ValueError("A decision metric type provided is not included in DECISION_DICT.")
             if (df.loc[df[decision_column] == TANKING, PREFERRED_DIRECTION_COLUMN_DEFAULT] == TWO_SIDED).any():
                 raise ValueError("Tanking metrics must have a preferred direction.")
+            if (df.loc[df[decision_column] == SAMPLE_RATIO_MISMATCH, method_column] != SRMTEST).any():
+                raise ValueError("Sample ratio mismatch metric does not have the srm-test method.")
             if (
                 df.loc[df[decision_column] == PRE_EXPOSURE_ACTIVITY, PREFERRED_DIRECTION_COLUMN_DEFAULT] == None
             ).any():
