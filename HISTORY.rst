@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.3 (2022-03-09)
+------------------
+
+* Added more complete support for variance reduction
+
 2.6.2 (2022-02-16)
 ------------------
 

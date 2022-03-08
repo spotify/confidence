@@ -125,6 +125,9 @@ from spotify_confidence.analysis.constants import (
     INCREASE_PREFFERED,
     DECREASE_PREFFERED,
     ZTESTLINREG,
+    ORIGINAL_POINT_ESTIMATE,
+    ORIGINAL_VARIANCE,
+    VARIANCE_REDUCTION,
 )
 
 confidence_computers = {
@@ -499,7 +502,8 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .pipe(
                 drop_and_rename_columns,
-                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"],
+                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"]
+                + ([ORIGINAL_POINT_ESTIMATE] if ORIGINAL_POINT_ESTIMATE in df.columns else []),
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -830,7 +834,23 @@ def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
         .pipe(_powered_effect_and_required_sample_size_from_difference_df, arg_dict=arg_dict)
         .pipe(_adjust_if_absolute, absolute=arg_dict[ABSOLUTE])
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
+        .pipe(_add_variance_reduction_rate, arg_dict=arg_dict)
     )
+
+
+def _add_variance_reduction_rate(df: DataFrame, arg_dict: Dict) -> DataFrame:
+    denominator = arg_dict[DENOMINATOR]
+    method_column = arg_dict[METHOD]
+    if (df[method_column] == ZTESTLINREG).any():
+        variance_no_reduction = (
+            df[ORIGINAL_VARIANCE + SFX1] / df[denominator + SFX1]
+            + df[ORIGINAL_VARIANCE + SFX2] / df[denominator + SFX2]
+        )
+        variance_w_reduction = (
+            df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2]
+        )
+        df = df.assign(**{VARIANCE_REDUCTION: 1 - np.divide(variance_w_reduction, variance_no_reduction)})
+    return df
 
 
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
@@ -999,9 +1019,9 @@ def _p_value(df: DataFrame, arg_dict: Dict) -> float:
 
 
 def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] != ZTEST and arg_dict[MDE] in df:
+    if df[arg_dict[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] and arg_dict[MDE] in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
-    elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
+    elif df[arg_dict[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] or (df[ADJUSTED_POWER].isna()).any():
         df[POWERED_EFFECT] = None
         df[REQUIRED_SAMPLE_SIZE] = None
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
