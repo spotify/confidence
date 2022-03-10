@@ -31,7 +31,7 @@ class TestSampleSizeCalc(object):
 
         #: Reference sample size calculated with G*Power.
         g_power_n_tot = 630710
-        np.allclose(n_tot, g_power_n_tot, 0.005)
+        assert np.allclose(n_tot, g_power_n_tot, 0.005)
 
     def test_binomial_alpha_power(self):
         n_tot, _, _ = conf.SampleSize.binomial(
