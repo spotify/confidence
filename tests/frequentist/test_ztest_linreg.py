@@ -209,7 +209,9 @@ class TestUnivariateNoFeatures(object):
 
     def test_summary(self):
         summary_ztest = self.ztest.summary(verbose=True).drop(["_method"], axis=1)
-        summary_ztestlinreg = self.ztestlinreg.summary(verbose=True).drop(["_method"], axis=1)
+        summary_ztestlinreg = self.ztestlinreg.summary(verbose=True).drop(
+            ["_method", "original_variance", "original_point_estimate"], axis=1
+        )
         pd.testing.assert_frame_equal(summary_ztest, summary_ztestlinreg)
 
 
