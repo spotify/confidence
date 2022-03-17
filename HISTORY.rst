@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.4 (2022-03-17)
+------------------
+
+* Enabling sequential testing also for variance reduction
+
 2.6.3 (2022-03-09)
 ------------------
 

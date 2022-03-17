@@ -918,10 +918,10 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         return df
 
     def _compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict) -> Series:
-        if all(df[method_column] == "z-test"):
-            return confidence_computers["z-test"].compute_sequential_adjusted_alpha(df, arg_dict)
+        if df[method_column].isin([ZTEST, ZTESTLINREG]).all():
+            return confidence_computers[ZTEST].compute_sequential_adjusted_alpha(df, arg_dict)
         else:
-            raise NotImplementedError("Sequential testing is only supported for z-tests")
+            raise NotImplementedError("Sequential testing is only supported for z-test and z-testlinreg")
 
     def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
