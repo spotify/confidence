@@ -205,8 +205,8 @@ def axis_format_precision(numbers: Series, absolute: bool, extra_zeros: int = 0)
     return "0.{}{}".format(zeros, "" if absolute else "%"), min_value, max_value
 
 
-def to_finite(s: Series, limit: float) -> Series:
-    return s.clip(-100 * abs(limit), 100 * abs(limit))
+def to_finite(s: Series, lower_limit: float, upper_limit: float) -> Series:
+    return s.clip(-100 * abs(lower_limit), 100 * abs(upper_limit))
 
 
 def add_color_column(df: DataFrame, cols: Iterable) -> DataFrame:
