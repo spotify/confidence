@@ -192,8 +192,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         )
 
         df = (
-            difference_df.assign(**{LOWER: to_finite(difference_df[LOWER], y_min)})
-            .assign(**{UPPER: to_finite(difference_df[UPPER], y_max)})
+            difference_df.assign(**{LOWER: to_finite(difference_df[LOWER], y_min, y_max)})
+            .assign(**{UPPER: to_finite(difference_df[UPPER], y_min, y_max)})
             .assign(level_1=difference_df.level_1.map(level2str))
             .assign(level_2=difference_df.level_2.map(level2str))
             .set_index(groupby_columns)
@@ -331,8 +331,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         ch.style.color_palette.reset_palette_order()
         ch.plot.area(
             data_frame=(
-                df.assign(**{LOWER: to_finite(df[LOWER], y_min)})
-                .assign(**{UPPER: to_finite(df[UPPER], y_max)})
+                df.assign(**{LOWER: to_finite(df[LOWER], y_min, y_max)})
+                .assign(**{UPPER: to_finite(df[UPPER], y_min, y_max)})
                 .sort_values(self._ordinal_group_column)
             ),
             x_column=self._ordinal_group_column,
@@ -382,8 +382,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         ch = Chart(x_axis_type="categorical")
         ch.plot.interval(
             (
-                df.assign(**{CI_LOWER: to_finite(df[CI_LOWER], y_min)}).assign(
-                    **{CI_UPPER: to_finite(df[CI_UPPER], y_max)}
+                df.assign(**{CI_LOWER: to_finite(df[CI_LOWER], y_min, y_max)}).assign(
+                    **{CI_UPPER: to_finite(df[CI_UPPER], y_min, y_max)}
                 )
             ),
             categorical_columns=remaining_groups,

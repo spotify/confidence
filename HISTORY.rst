@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.5 (2022-03-25)
+------------------
+
+* Fixed bug in chartify_grapher that led to incorrect CIs when the relative difference between the lower or upper bounds were more than two orders of magnitude apart.
+
 2.6.4 (2022-03-17)
 ------------------
 
