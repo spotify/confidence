@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.6 (2022-03-25)
+------------------
+
+* Require jinja to <3.1.0 because of incompatibility with bokeh
+
 2.6.5 (2022-03-25)
 ------------------
 
