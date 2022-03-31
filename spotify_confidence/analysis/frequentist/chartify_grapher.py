@@ -17,7 +17,7 @@ from typing import Union, Iterable, Tuple
 import numpy as np
 from bokeh.models import tools
 from chartify import Chart
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (
@@ -182,11 +182,13 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     ) -> ChartGrid:
         LOWER, UPPER = (ADJUSTED_LOWER, ADJUSTED_UPPER) if use_adjusted_intervals else (CI_LOWER, CI_UPPER)
         axis_format, y_min, y_max = axis_format_precision(
-            numbers=(
-                difference_df[LOWER]
-                .append(difference_df[DIFFERENCE])
-                .append(difference_df[UPPER])
-                .append(difference_df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in difference_df.columns else None)
+            numbers=concat(
+                [
+                    difference_df[LOWER],
+                    difference_df[DIFFERENCE],
+                    difference_df[UPPER],
+                    difference_df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in difference_df.columns else None,
+                ],
             ),
             absolute=absolute,
         )
@@ -313,11 +315,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         df = add_color_column(level_df, remaining_groups)
         colors = "color" if remaining_groups else None
         axis_format, y_min, y_max = axis_format_precision(
-            numbers=(
-                df[LOWER]
-                .append(df[center_name])
-                .append(df[UPPER])
-                .append(df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None)
+            numbers=concat(
+                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
             ),
             absolute=absolute,
         )
@@ -376,7 +375,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         df = summary_df.set_index(remaining_groups).assign(categorical_x=lambda df: df.index.to_numpy()).reset_index()
 
         axis_format, y_min, y_max = axis_format_precision(
-            numbers=(df[CI_LOWER].append(df[POINT_ESTIMATE]).append(df[CI_UPPER])), absolute=True
+            numbers=concat([df[CI_LOWER], df[POINT_ESTIMATE], df[CI_UPPER]]), absolute=True
         )
 
         ch = Chart(x_axis_type="categorical")
@@ -521,11 +520,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         if len(chart.figure.legend) > 0:
             chart.figure.legend.click_policy = "hide"
         axis_format, y_min, y_max = axis_format_precision(
-            numbers=(
-                df[LOWER]
-                .append(df[center_name])
-                .append(df[UPPER])
-                .append(df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None)
+            numbers=concat(
+                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
             ),
             absolute=absolute,
             extra_zeros=2,
