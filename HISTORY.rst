@@ -2,6 +2,13 @@
 History
 =======
 
+2.6.7 (2022-04-22)
+------------------
+
+* Updated example notebooks
+* Updated dev requirements
+* Minor changes to get rid of deprecation warnings
+
 2.6.6 (2022-03-25)
 ------------------
 
