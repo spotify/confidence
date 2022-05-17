@@ -97,7 +97,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart_grid = ChartGrid([ch])
         else:
             chart_grid = self._categorical_difference_plot(difference_df, absolute, groupby, use_adjusted_intervals)
-        return chart_grid
+        return chart_grid.charts[0]
 
     def plot_differences(
         self,
@@ -128,7 +128,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart_grid = self._categorical_difference_plot(
                 difference_df, absolute, groupby_columns, use_adjusted_intervals
             )
-        return chart_grid
+        return chart_grid.charts[0]
 
     def plot_multiple_difference(
         self,
@@ -170,7 +170,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart_grid = self._categorical_multiple_difference_plot(
                 difference_df, absolute, groupby, level_as_reference, use_adjusted_intervals
             )
-        return chart_grid
+        return chart_grid.charts[0]
 
     def _ordinal_difference_plot(
         self, difference_df: DataFrame, absolute: bool, groupby: Union[str, Iterable], use_adjusted_intervals: bool
