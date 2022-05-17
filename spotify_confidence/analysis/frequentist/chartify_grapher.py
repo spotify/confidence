@@ -85,10 +85,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
-            ch.charts.append(self.plot_differece_group(absolute, difference_df, groupby, use_adjusted_intervals))
+            ch.charts += self.plot_differece_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
         else:
             for level_name, level_df in difference_df.groupby(categorical_groups):
-                ch.charts.append(self.plot_differece_group(absolute, level_df, groupby, use_adjusted_intervals))
+                ch.charts += self.plot_differece_group(absolute, level_df, groupby, use_adjusted_intervals).charts
         return ch
 
     def plot_differece_group(self, absolute, difference_df, groupby, use_adjusted_intervals):
@@ -97,7 +97,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart_grid = ChartGrid([ch])
         else:
             chart_grid = self._categorical_difference_plot(difference_df, absolute, groupby, use_adjusted_intervals)
-        return chart_grid.charts[0]
+        return chart_grid
 
     def plot_differences(
         self,
@@ -112,10 +112,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
-            ch.charts.append(self.plot_differences_group(absolute, difference_df, groupby, use_adjusted_intervals))
+            ch.charts += self.plot_differences_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
         else:
             for level_name, level_df in difference_df.groupby(categorical_groups):
-                ch.charts.append(self.plot_differences_group(absolute, level_df, groupby, use_adjusted_intervals))
+                ch.charts += self.plot_differences_group(absolute, level_df, groupby, use_adjusted_intervals).charts
         return ch
 
     def plot_differences_group(self, absolute, difference_df, groupby, use_adjusted_intervals):
@@ -128,7 +128,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart_grid = self._categorical_difference_plot(
                 difference_df, absolute, groupby_columns, use_adjusted_intervals
             )
-        return chart_grid.charts[0]
+        return chart_grid
 
     def plot_multiple_difference(
         self,
@@ -144,18 +144,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
-            ch.charts.append(
-                self.plot_multiple_difference_group(
-                    absolute, difference_df, groupby, level_as_reference, use_adjusted_intervals
-                )
-            )
+            ch.charts += self.plot_multiple_difference_group(
+                absolute, difference_df, groupby, level_as_reference, use_adjusted_intervals
+            ).charts
         else:
             for level_name, level_df in difference_df.groupby(categorical_groups):
-                ch.charts.append(
-                    self.plot_multiple_difference_group(
-                        absolute, level_df, groupby, level_as_reference, use_adjusted_intervals
-                    )
-                )
+                ch.charts += self.plot_multiple_difference_group(
+                    absolute, level_df, groupby, level_as_reference, use_adjusted_intervals
+                ).charts
         return ch
 
     def plot_multiple_difference_group(
@@ -170,7 +166,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart_grid = self._categorical_multiple_difference_plot(
                 difference_df, absolute, groupby, level_as_reference, use_adjusted_intervals
             )
-        return chart_grid.charts[0]
+        return chart_grid
 
     def _ordinal_difference_plot(
         self, difference_df: DataFrame, absolute: bool, groupby: Union[str, Iterable], use_adjusted_intervals: bool
