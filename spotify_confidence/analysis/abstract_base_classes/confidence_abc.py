@@ -234,6 +234,7 @@ class ConfidenceABC(ABC):
         non_inferiority_margins: NIM_TYPE,
         use_adjusted_intervals: bool,
         final_expected_sample_size_column: str,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2.
         - Difference in means or proportions, depending
@@ -272,6 +273,7 @@ class ConfidenceABC(ABC):
                     observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
+            split_plot_by_groups (bool): create a separate chart for each group in the groupby argument.
 
         Returns:
             Chartify Chart object and a DataFrame with numerical results.
@@ -286,6 +288,7 @@ class ConfidenceABC(ABC):
         non_inferiority_margins: NIM_TYPE,
         use_adjusted_intervals: bool,
         final_expected_sample_size_column: str,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2.
         - Difference in means or proportions, depending
@@ -323,6 +326,7 @@ class ConfidenceABC(ABC):
                     observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
+            split_plot_by_groups (bool): create a separate chart for each group in the groupby argument.
 
         Returns:
             Chartify Chart object and a DataFrame with numerical results.
@@ -338,6 +342,7 @@ class ConfidenceABC(ABC):
         non_inferiority_margins: NIM_TYPE,
         use_adjusted_intervals: bool,
         final_expected_sample_size_column: str,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
@@ -373,6 +378,7 @@ class ConfidenceABC(ABC):
                     observations at end of experiment.
                 Use in combination with ordinal groupby to perform a
                 sequential test. See https://cran.r-project.org/web/packages/ldbounds/index.html for details.
+            split_plot_by_groups (bool): create a separate chart for each group in the groupby argument.
 
         Returns:
             ChartGrid object and a DataFrame with numerical results.

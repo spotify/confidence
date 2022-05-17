@@ -195,6 +195,7 @@ class Experiment(ConfidenceABC):
         non_inferiority_margins: NIM_TYPE = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
+        split_plot_by_groups: bool = False,
     ) -> ChartGrid:
         difference_df = self.difference(
             level_1=level_1,
@@ -205,7 +206,7 @@ class Experiment(ConfidenceABC):
             final_expected_sample_size_column=final_expected_sample_size_column,
         )
         chartgrid = self._confidence_grapher.plot_difference(
-            difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals
+            difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals, split_plot_by_groups
         )
         return chartgrid
 
@@ -217,12 +218,13 @@ class Experiment(ConfidenceABC):
         non_inferiority_margins: NIM_TYPE = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
+        split_plot_by_groups: bool = False,
     ) -> ChartGrid:
         difference_df = self.differences(
             levels, absolute, groupby, non_inferiority_margins, final_expected_sample_size_column
         )
         chartgrid = self._confidence_grapher.plot_differences(
-            difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals
+            difference_df, absolute, groupby, non_inferiority_margins, use_adjusted_intervals, split_plot_by_groups
         )
         return chartgrid
 
@@ -235,18 +237,24 @@ class Experiment(ConfidenceABC):
         non_inferiority_margins: NIM_TYPE = None,
         use_adjusted_intervals: bool = False,
         final_expected_sample_size_column: str = None,
+        split_plot_by_groups: bool = False,
     ) -> ChartGrid:
         difference_df = self.multiple_difference(
-            level,
+            level=level,
+            absolute=absolute,
+            groupby=groupby,
+            level_as_reference=level_as_reference,
+            non_inferiority_margins=non_inferiority_margins,
+            final_expected_sample_size_column=final_expected_sample_size_column,
+        )
+        chartgrid = self._confidence_grapher.plot_multiple_difference(
+            difference_df,
             absolute,
             groupby,
             level_as_reference,
             non_inferiority_margins,
-            None,
-            final_expected_sample_size_column,
-        )
-        chartgrid = self._confidence_grapher.plot_multiple_difference(
-            difference_df, absolute, groupby, level_as_reference, non_inferiority_margins, use_adjusted_intervals
+            use_adjusted_intervals,
+            split_plot_by_groups,
         )
         return chartgrid
 
