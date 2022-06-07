@@ -73,8 +73,25 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         return ch
 
     def plot_difference(
-        self, difference_df, absolute, groupby, nims: NIM_TYPE, use_adjusted_intervals: bool
+        self,
+        difference_df,
+        absolute,
+        groupby,
+        nims: NIM_TYPE,
+        use_adjusted_intervals: bool,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
+        ch = ChartGrid()
+        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+
+        if len(categorical_groups) == 0 or not split_plot_by_groups:
+            ch.charts += self.plot_differece_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
+        else:
+            for level_name, level_df in difference_df.groupby(categorical_groups):
+                ch.charts += self.plot_differece_group(absolute, level_df, groupby, use_adjusted_intervals).charts
+        return ch
+
+    def plot_differece_group(self, absolute, difference_df, groupby, use_adjusted_intervals):
         if self._ordinal_group_column in listify(groupby):
             ch = self._ordinal_difference_plot(difference_df, absolute, groupby, use_adjusted_intervals)
             chart_grid = ChartGrid([ch])
@@ -83,12 +100,27 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         return chart_grid
 
     def plot_differences(
-        self, difference_df, absolute, groupby, nims: NIM_TYPE, use_adjusted_intervals: bool
+        self,
+        difference_df,
+        absolute,
+        groupby,
+        nims: NIM_TYPE,
+        use_adjusted_intervals: bool,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
+        ch = ChartGrid()
+        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
 
-        remaining_groups = get_remaning_groups(groupby, self._ordinal_group_column)
-        groupby_columns = self._add_level_columns(remaining_groups)
+        if len(categorical_groups) == 0 or not split_plot_by_groups:
+            ch.charts += self.plot_differences_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
+        else:
+            for level_name, level_df in difference_df.groupby(categorical_groups):
+                ch.charts += self.plot_differences_group(absolute, level_df, groupby, use_adjusted_intervals).charts
+        return ch
 
+    def plot_differences_group(self, absolute, difference_df, groupby, use_adjusted_intervals):
+        categorical_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        groupby_columns = self._add_level_columns(categorical_groups)
         if self._ordinal_group_column in listify(groupby):
             ch = self._ordinal_difference_plot(difference_df, absolute, groupby_columns, use_adjusted_intervals)
             chart_grid = ChartGrid([ch])
@@ -106,7 +138,25 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         level_as_reference,
         nims: NIM_TYPE,
         use_adjusted_intervals: bool,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
+        ch = ChartGrid()
+        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+
+        if len(categorical_groups) == 0 or not split_plot_by_groups:
+            ch.charts += self.plot_multiple_difference_group(
+                absolute, difference_df, groupby, level_as_reference, use_adjusted_intervals
+            ).charts
+        else:
+            for level_name, level_df in difference_df.groupby(categorical_groups):
+                ch.charts += self.plot_multiple_difference_group(
+                    absolute, level_df, groupby, level_as_reference, use_adjusted_intervals
+                ).charts
+        return ch
+
+    def plot_multiple_difference_group(
+        self, absolute, difference_df, groupby, level_as_reference, use_adjusted_intervals
+    ):
         if self._ordinal_group_column in listify(groupby):
             ch = self._ordinal_multiple_difference_plot(
                 difference_df, absolute, groupby, level_as_reference, use_adjusted_intervals

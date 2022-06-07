@@ -2,6 +2,11 @@
 History
 =======
 
+2.7.0 (2022-05-17)
+------------------
+
+* Added split_plots_by_group argument to difference plot methods to enable less cluttered plots. See example notebooks for example usage.
+
 2.6.7 (2022-04-22)
 ------------------
 

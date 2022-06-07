@@ -59,6 +59,7 @@ class ConfidenceGrapherABC(ABC):
         groupby: Union[str, Iterable],
         nims: NIM_TYPE,
         use_adjusted_intervals: bool,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2 with
         confidence intervals.
@@ -80,6 +81,7 @@ class ConfidenceGrapherABC(ABC):
         groupby: Union[str, Iterable],
         nims: NIM_TYPE,
         use_adjusted_intervals: bool,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
         """Plot representing the difference between group 1 and 2 with
         confidence intervals.
@@ -102,6 +104,7 @@ class ConfidenceGrapherABC(ABC):
         level_as_reference: bool,
         nims: NIM_TYPE,
         use_adjusted_intervals: bool,
+        split_plot_by_groups: bool,
     ) -> ChartGrid:
         """Compare level to all other groups or, if level_as_reference = True,
         all other groups to level.
