@@ -1,13 +1,22 @@
 import numpy as np
 import pandas as pd
 
+pd.options.display.max_columns = None
+pd.options.display.width = 1000
+
+import spotify_confidence
 from spotify_confidence.analysis.constants import (
     SPOT_1,
     REQUIRED_SAMPLE_SIZE_METRIC,
     CI_WIDTH,
     POWERED_EFFECT,
+    POINT_ESTIMATE,
+    SFX1,
+    SFX2,
+    ADJUSTED_LOWER,
 )
 from spotify_confidence.analysis.frequentist.sample_size_calculator import SampleSizeCalculator
+from spotify_confidence.analysis.frequentist.z_test import ZTest
 
 
 class TestSampleSizeCalculator(object):
@@ -524,3 +533,263 @@ class TestSampleSizeCalculator(object):
         relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
 
         assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
+
+    def test_ci_bound_equal_nim(self):
+        mde_pp = 0.15
+        baseline = 0.48
+        df = pd.DataFrame(
+            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            data=[
+                [
+                    "share_users_with_bananas",
+                    False,
+                    baseline,
+                    baseline * (1 - baseline),
+                    None,
+                    mde_pp / 100 / baseline,
+                    "increase",
+                ],
+            ],
+        )
+
+        ssc = SampleSizeCalculator(
+            data_frame=df,
+            point_estimate_column="avg",
+            var_column="var",
+            metric_column="metric_name",
+            is_binary_column="binary",
+            interval_size=0.95,
+            power=0.5,
+            correction_method="bonferroni",
+        )
+        treatment_weights = [0.5, 0.125, 0.125, 0.125, 0.125]
+        ss = ssc.sample_size(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+        )
+
+        assert len(ss) == len(df)
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] / 5573168 < 1.001
+
+        powered_effect_df = ssc.powered_effect(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
+        )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["nim"].values[0], rtol=1e-3)
+
+        df_test = pd.DataFrame(
+            data={
+                "test_group": [
+                    "control",
+                    "same as control",
+                    "MDE above control",
+                    "2% of MDE above control",
+                    "MDE below control",
+                ],
+                "num_users": [2786584, 696646, 696646, 696646, 696646],
+                "num_users_with_bananas": [1337560.32, 334390.08, 342000, 341077.8816, 340000],
+            }
+        )
+
+        test = ZTest(
+            data_frame=df_test,
+            numerator_column="num_users_with_bananas",
+            numerator_sum_squares_column="num_users_with_bananas",
+            denominator_column="num_users",
+            categorical_group_columns="test_group",
+            interval_size=0.95,
+            power=0.5,
+        )
+
+        summary = test.summary()
+        assert np.isclose(summary[POINT_ESTIMATE].values[0], 0.48)
+        assert np.isclose(summary[POINT_ESTIMATE].values[1], 0.48)
+
+        diff = test.multiple_difference(
+            level="control", level_as_reference=True, non_inferiority_margins=(mde_pp / 100 / baseline, "increase")
+        )
+
+        assert np.isclose(diff.query("level_2 == 'same as control'")[ADJUSTED_LOWER], -mde_pp / 100)
+
+    def test_ci_bound_equal_nim_2(self):
+        mde_pp = 0.15
+        baseline = 0.48
+        df = pd.DataFrame(
+            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            data=[
+                [
+                    "share_users_with_bananas",
+                    False,
+                    baseline,
+                    baseline * (1 - baseline),
+                    None,
+                    mde_pp / 100 / baseline,
+                    "increase",
+                ],
+            ],
+        )
+
+        ssc = SampleSizeCalculator(
+            data_frame=df,
+            point_estimate_column="avg",
+            var_column="var",
+            metric_column="metric_name",
+            is_binary_column="binary",
+            interval_size=0.95,
+            power=0.5,
+            correction_method="bonferroni",
+        )
+        treatment_weights = [0.75, 0.25]
+        ss = ssc.sample_size(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+        )
+
+        required_sample_size = ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0]
+
+        powered_effect_df = ssc.powered_effect(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
+        )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["nim"].values[0], rtol=1e-3)
+
+        df_test = pd.DataFrame(
+            data={
+                "test_group": [
+                    "control",
+                    "same as control",
+                ],
+                "num_users": [
+                    required_sample_size * treatment_weights[0],
+                    required_sample_size * treatment_weights[1],
+                ],
+                "num_users_with_bananas": [
+                    required_sample_size * treatment_weights[0] * baseline,
+                    required_sample_size * treatment_weights[1] * baseline,
+                ],
+            }
+        )
+
+        test = ZTest(
+            data_frame=df_test,
+            numerator_column="num_users_with_bananas",
+            numerator_sum_squares_column="num_users_with_bananas",
+            denominator_column="num_users",
+            categorical_group_columns="test_group",
+            interval_size=0.95,
+            power=0.5,
+        )
+
+        summary = test.summary()
+        assert np.isclose(summary[POINT_ESTIMATE].values[0], 0.48)
+        assert np.isclose(summary[POINT_ESTIMATE].values[1], 0.48)
+
+        diff = test.multiple_difference(
+            level="control", level_as_reference=True, non_inferiority_margins=(mde_pp / 100 / baseline, "increase")
+        )
+
+        assert np.isclose(diff[ADJUSTED_LOWER], -mde_pp / 100)
+
+    def test_ci_bound_equal_mde(self):
+        mde_pp = 0.15
+        baseline = 0.48
+        df = pd.DataFrame(
+            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            data=[
+                [
+                    "share_users_with_bananas",
+                    True,
+                    baseline,
+                    baseline * (1 - baseline),
+                    mde_pp / 100 / baseline,
+                    None,
+                    None,
+                ],
+            ],
+        )
+
+        ssc = SampleSizeCalculator(
+            data_frame=df,
+            point_estimate_column="avg",
+            var_column="var",
+            metric_column="metric_name",
+            is_binary_column="binary",
+            interval_size=0.95,
+            power=0.5,
+            correction_method="bonferroni",
+        )
+        treatment_weights = [0.75, 0.25]
+        ss = ssc.sample_size(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+        )
+
+        required_sample_size = ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0]
+
+        powered_effect_df = ssc.powered_effect(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+            sample_size=ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0],
+        )
+
+        relative_powered_effect = powered_effect_df[POWERED_EFFECT] / powered_effect_df["avg"]
+
+        assert np.isclose(relative_powered_effect.values[0], df["mde"].values[0], rtol=1e-3)
+
+        df_test = pd.DataFrame(
+            data={
+                "test_group": [
+                    "control",
+                    "same as control",
+                ],
+                "num_users": [
+                    required_sample_size * treatment_weights[0],
+                    required_sample_size * treatment_weights[1],
+                ],
+                "num_users_with_bananas": [
+                    required_sample_size * treatment_weights[0] * baseline,
+                    required_sample_size * treatment_weights[1] * baseline,
+                ],
+            }
+        )
+
+        test = ZTest(
+            data_frame=df_test,
+            numerator_column="num_users_with_bananas",
+            numerator_sum_squares_column="num_users_with_bananas",
+            denominator_column="num_users",
+            categorical_group_columns="test_group",
+            interval_size=0.95,
+            power=0.5,
+        )
+
+        summary = test.summary()
+        assert np.isclose(summary[POINT_ESTIMATE].values[0], 0.48)
+        assert np.isclose(summary[POINT_ESTIMATE].values[1], 0.48)
+
+        diff = test.multiple_difference(
+            level="control",
+            level_as_reference=True,  # non_inferiority_margins=(mde_pp / 100 / baseline, "increase")
+        )
+
+        assert np.isclose(diff[ADJUSTED_LOWER], -mde_pp / 100, rtol=0.001)
