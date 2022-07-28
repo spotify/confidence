@@ -411,7 +411,7 @@ class GenericComputer(ConfidenceComputerABC):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_is_reference must be either True or False, but is {level_as_reference}.")
         groupby = listify(groupby)
-        levels = [tuple([tuple(l) for l in levels[0]])] # ensure contents is hashable
+        levels = [tuple([tuple(l) for l in levels[0]])] # ensure contents are hashable
         unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
         validate_levels(self._sufficient_statistics, level_columns, unique_levels)
         str2level = {level2str(lv): lv for lv in unique_levels}
