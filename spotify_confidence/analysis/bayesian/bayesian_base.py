@@ -391,7 +391,7 @@ class BaseTest(object, metaclass=ABCMeta):
                 If specified, will return an interval for each level
                 of the grouped dimension, or a confidence band if the
                 grouped dimension is ordinal
-            level_as_reference: If false (default), compare level to all other
+            level_as_reference: If false, compare level to all other
              groups. If true, compare all other groups to level.
         """
         use_ordinal_axis = self._use_ordinal_axis(groupby)

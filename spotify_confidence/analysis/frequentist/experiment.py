@@ -162,7 +162,7 @@ class Experiment(ConfidenceABC):
         level: Union[str, Tuple],
         absolute: bool = True,
         groupby: Union[str, Iterable] = None,
-        level_as_reference: bool = None,
+        level_as_reference: bool = False,
         non_inferiority_margins: NIM_TYPE = None,
         final_expected_sample_size_column: str = None,
         verbose: bool = False,
