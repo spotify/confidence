@@ -2,6 +2,11 @@
 History
 =======
 
+2.7.1 (2022-08-08)
+------------------
+
+* Bug fix for calculating relative NIMs/MDEs with variance reduction.
+
 2.7.0 (2022-05-17)
 ------------------
 

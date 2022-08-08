@@ -488,6 +488,7 @@ class GenericComputer(ConfidenceComputerABC):
                 mde_column=mde_column,
                 nim_column=NIM_COLUMN_DEFAULT,
                 preferred_direction_column=PREFERRED_DIRECTION_COLUMN_DEFAULT,
+                method_column=self._method_column
             )
             .pipe(join)
             .query(
@@ -784,7 +785,7 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
         return df
 
 
-def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str) -> DataFrame:
+def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
         nim = grp[nim_column].astype(float)
         input_preference = grp[preferred_direction_column].values[0]
@@ -792,18 +793,19 @@ def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred
 
         nim_is_na = nim.isna().all()
         mde_is_na = True if mde is None else mde.isna().all()
+        estimate_column = ORIGINAL_POINT_ESTIMATE if (grp[method_column] == ZTESTLINREG).all() else POINT_ESTIMATE
         if input_preference is None or (type(input_preference) is float and isnan(input_preference)):
-            signed_nim = 0.0 if nim_is_na else nim * grp[POINT_ESTIMATE]
+            signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
             preference = TWO_SIDED
-            signed_mde = None if mde_is_na else mde * grp[POINT_ESTIMATE]
+            signed_mde = None if mde_is_na else mde * grp[estimate_column]
         elif input_preference.lower() == INCREASE_PREFFERED:
-            signed_nim = 0.0 if nim_is_na else -nim * grp[POINT_ESTIMATE]
+            signed_nim = 0.0 if nim_is_na else -nim * grp[estimate_column]
             preference = "larger"
-            signed_mde = None if mde_is_na else mde * grp[POINT_ESTIMATE]
+            signed_mde = None if mde_is_na else mde * grp[estimate_column]
         elif input_preference.lower() == DECREASE_PREFFERED:
-            signed_nim = 0.0 if nim_is_na else nim * grp[POINT_ESTIMATE]
+            signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
             preference = "smaller"
-            signed_mde = None if mde_is_na else -mde * grp[POINT_ESTIMATE]
+            signed_mde = None if mde_is_na else -mde * grp[estimate_column]
         else:
             raise ValueError(f"{input_preference.lower()} not in " f"{[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
 
