@@ -488,7 +488,7 @@ class GenericComputer(ConfidenceComputerABC):
                 mde_column=mde_column,
                 nim_column=NIM_COLUMN_DEFAULT,
                 preferred_direction_column=PREFERRED_DIRECTION_COLUMN_DEFAULT,
-                method_column=self._method_column
+                method_column=self._method_column,
             )
             .pipe(join)
             .query(
@@ -785,7 +785,9 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
         return df
 
 
-def add_nims_and_mdes(df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str) -> DataFrame:
+def add_nims_and_mdes(
+    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str
+) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
         nim = grp[nim_column].astype(float)
         input_preference = grp[preferred_direction_column].values[0]
@@ -928,14 +930,18 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
     def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
 
-        if arg_dict[CORRECTION_METHOD] in [
-            HOLM,
-            HOMMEL,
-            SIMES_HOCHBERG,
-            SPOT_1_HOLM,
-            SPOT_1_HOMMEL,
-            SPOT_1_SIMES_HOCHBERG,
-        ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
+        if (
+            arg_dict[CORRECTION_METHOD]
+            in [
+                HOLM,
+                HOMMEL,
+                SIMES_HOCHBERG,
+                SPOT_1_HOLM,
+                SPOT_1_HOMMEL,
+                SPOT_1_SIMES_HOCHBERG,
+            ]
+            and all(df[PREFERENCE_TEST] != TWO_SIDED)
+        ):
             if all(df[arg_dict[METHOD]] == "z-test"):
                 adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
                     df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
