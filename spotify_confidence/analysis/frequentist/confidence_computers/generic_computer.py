@@ -786,7 +786,7 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
 
 
 def add_nims_and_mdes(
-    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str
+    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str = None
 ) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
         nim = grp[nim_column].astype(float)
@@ -795,7 +795,7 @@ def add_nims_and_mdes(
 
         nim_is_na = nim.isna().all()
         mde_is_na = True if mde is None else mde.isna().all()
-        estimate_column = ORIGINAL_POINT_ESTIMATE if (grp[method_column] == ZTESTLINREG).all() else POINT_ESTIMATE
+        estimate_column = ORIGINAL_POINT_ESTIMATE if method_column is not None and (grp[method_column] == ZTESTLINREG).all() else POINT_ESTIMATE
         if input_preference is None or (type(input_preference) is float and isnan(input_preference)):
             signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
             preference = TWO_SIDED
