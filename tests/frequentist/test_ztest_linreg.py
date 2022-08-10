@@ -10,7 +10,7 @@ class TestUnivariateSingleMetric(object):
         np.random.seed(123)
         n = 10000
         d = np.random.randint(2, size=n)
-        x = np.random.standard_normal(size=n)
+        x = np.random.standard_normal(size=n) + 100
         y = 0.5 * d + 0.5 * x + np.random.standard_normal(size=n)
         data = pd.DataFrame({"variation_name": list(map(str, d)), "y": y, "x": x})
         data = (
@@ -221,8 +221,8 @@ class TestMultivariateSingleMetric(object):
 
         n = 10000
         d = np.random.randint(2, size=n)
-        x1 = np.random.standard_normal(size=n)
-        x2 = np.random.standard_normal(size=n)
+        x1 = np.random.standard_normal(size=n) + 50
+        x2 = np.random.standard_normal(size=n) + 100
         y = 0.5 * d + 0.5 * x1 + 0.5 * x2 + np.random.standard_normal(size=n)
         df = pd.DataFrame({"variation_name": list(map(str, d)), "y": y, "x1": x1, "x2": x2})
 
