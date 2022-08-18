@@ -411,8 +411,6 @@ class GenericComputer(ConfidenceComputerABC):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_is_reference must be either True or False, but is {level_as_reference}.")
         groupby = listify(groupby)
-        print("levels:")
-        print(levels)
         if type(levels[0][0]) != str:
             levels = [tuple([tuple(l) for l in levels[0]])] # ensure contents are hashable
         unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
