@@ -60,12 +60,17 @@ def point_estimate(df: Series, arg_dict) -> float:
 
     if REGRESSION_PARAM in df:
 
-        def lin_reg_point_estimate_delta(row: Series, arg_dict: Dict) -> Series:
-            return dfmatmul(row[REGRESSION_PARAM], row[arg_dict[FEATURE]], outer=False)
+        feature_mean = df[arg_dict[FEATURE]].sum() / df[arg_dict[DENOMINATOR]].sum()
+
+        def lin_reg_point_estimate_delta(row: Series, arg_dict: Dict, feature_mean: float) -> Series:
+            return dfmatmul(
+                row[REGRESSION_PARAM], row[arg_dict[FEATURE]] - feature_mean * row[arg_dict[DENOMINATOR]], outer=False
+            )
 
         return (
             point_estimate
-            - df.apply(lin_reg_point_estimate_delta, arg_dict=arg_dict, axis=1) / df[arg_dict[DENOMINATOR]]
+            - df.apply(lin_reg_point_estimate_delta, arg_dict=arg_dict, feature_mean=feature_mean, axis=1)
+            / df[arg_dict[DENOMINATOR]]
         )
 
     return point_estimate

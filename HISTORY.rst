@@ -2,6 +2,11 @@
 History
 =======
 
+2.7.2 (2022-08-08)
+------------------
+
+* Adding a constant to the variance reduction point estimate so that the adjusted value is close in magnitude to the origina value.
+
 2.7.1 (2022-08-08)
 ------------------
 

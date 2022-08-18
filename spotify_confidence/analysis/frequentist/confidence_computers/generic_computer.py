@@ -409,7 +409,7 @@ class GenericComputer(ConfidenceComputerABC):
         mde_column: str,
     ):
         if type(level_as_reference) is not bool:
-            raise ValueError(f"level_is_reference must be either True or False, but is {level_as_reference}.")
+            raise ValueError(f"level_as_reference must be either True or False, but is {level_as_reference}.")
         groupby = listify(groupby)
         unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
         validate_levels(self._sufficient_statistics, level_columns, unique_levels)
@@ -600,6 +600,7 @@ class GenericComputer(ConfidenceComputerABC):
                 mde_column=mde_column,
                 nim_column=nim_column,
                 preferred_direction_column=preferred_direction_column,
+                method_column=self._method_column,
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -786,7 +787,7 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
 
 
 def add_nims_and_mdes(
-    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str = None
+    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str
 ) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
         nim = grp[nim_column].astype(float)
@@ -795,11 +796,7 @@ def add_nims_and_mdes(
 
         nim_is_na = nim.isna().all()
         mde_is_na = True if mde is None else mde.isna().all()
-        estimate_column = (
-            ORIGINAL_POINT_ESTIMATE
-            if method_column is not None and (grp[method_column] == ZTESTLINREG).all()
-            else POINT_ESTIMATE
-        )
+        estimate_column = ORIGINAL_POINT_ESTIMATE if (grp[method_column] == ZTESTLINREG).all() else POINT_ESTIMATE
         if input_preference is None or (type(input_preference) is float and isnan(input_preference)):
             signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
             preference = TWO_SIDED
@@ -934,18 +931,14 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
     def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
 
-        if (
-            arg_dict[CORRECTION_METHOD]
-            in [
-                HOLM,
-                HOMMEL,
-                SIMES_HOCHBERG,
-                SPOT_1_HOLM,
-                SPOT_1_HOMMEL,
-                SPOT_1_SIMES_HOCHBERG,
-            ]
-            and all(df[PREFERENCE_TEST] != TWO_SIDED)
-        ):
+        if arg_dict[CORRECTION_METHOD] in [
+            HOLM,
+            HOMMEL,
+            SIMES_HOCHBERG,
+            SPOT_1_HOLM,
+            SPOT_1_HOMMEL,
+            SPOT_1_SIMES_HOCHBERG,
+        ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
             if all(df[arg_dict[METHOD]] == "z-test"):
                 adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
                     df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
