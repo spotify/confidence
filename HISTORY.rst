@@ -2,6 +2,11 @@
 History
 =======
 
+2.7.3 (2022-08-26)
+------------------
+
+* Fixed bug in SampleSizeCalculator.optimal_weights_and_sample_size
+
 2.7.2 (2022-08-08)
 ------------------
 
