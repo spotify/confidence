@@ -167,6 +167,15 @@ class GenericComputer(ConfidenceComputerABC):
         self._point_estimate_column = point_estimate_column
         self._var_column = var_column
         self._is_binary = is_binary_column
+        if self._point_estimate_column is not None and self._var_column is not None and self._is_binary is not None:
+            mean = self._df.query(f"{self._is_binary} == True")[self._point_estimate_column]
+            var = self._df.query(f"{self._is_binary} == True")[self._var_column]
+            if not np.allclose(var, (mean * (1 - mean))):
+                raise ValueError(
+                    f"{var_column} doesn't equal {point_estimate_column}*(1-{point_estimate_column}) "
+                    f"for all binary rows. Please check your data."
+                )
+
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         if self._numerator is not None and (self._numerator_sumsq is None or self._numerator_sumsq == self._numerator):
