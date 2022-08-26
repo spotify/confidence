@@ -640,7 +640,11 @@ class GenericComputer(ConfidenceComputerABC):
             )
         )
 
-        group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._method_column]
+        group_columns = (
+            [column for column in sample_size_df.index.names if column is not None]
+            + [self._method_column]
+            + [self._metric_column]
+        )
         arg_dict = {
             METHOD: self._method_column,
             IS_BINARY: self._is_binary,
