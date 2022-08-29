@@ -12,8 +12,6 @@ from spotify_confidence.analysis.constants import (
     FEATURE_CROSS,
     NUMERATOR,
     DENOMINATOR,
-    ORIGINAL_POINT_ESTIMATE,
-    ORIGINAL_VARIANCE,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import z_test_computer
 
@@ -103,10 +101,6 @@ def variance(df: DataFrame, arg_dict) -> Series:
 
 
 def add_point_estimate_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    df = df.assign(**{ORIGINAL_POINT_ESTIMATE: z_test_computer.point_estimate(df, arg_dict)}).assign(
-        **{ORIGINAL_VARIANCE: z_test_computer.variance(df, arg_dict)}
-    )
-
     return z_test_computer.add_point_estimate_ci(df, arg_dict)
 
 

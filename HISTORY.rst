@@ -2,6 +2,12 @@
 History
 =======
 
+2.7.3 (2022-08-26)
+------------------
+
+* Fixed bug in SampleSizeCalculator.optimal_weights_and_sample_size.
+* Added check to make point estimates and variances match for binary metrics when using the sample size calculator.
+
 2.7.2 (2022-08-08)
 ------------------
 

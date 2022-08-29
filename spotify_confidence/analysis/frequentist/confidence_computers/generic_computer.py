@@ -167,6 +167,15 @@ class GenericComputer(ConfidenceComputerABC):
         self._point_estimate_column = point_estimate_column
         self._var_column = var_column
         self._is_binary = is_binary_column
+        if self._point_estimate_column is not None and self._var_column is not None and self._is_binary is not None:
+            mean = self._df.query(f"{self._is_binary} == True")[self._point_estimate_column]
+            var = self._df.query(f"{self._is_binary} == True")[self._var_column]
+            if not np.allclose(var, (mean * (1 - mean))):
+                raise ValueError(
+                    f"{var_column} doesn't equal {point_estimate_column}*(1-{point_estimate_column}) "
+                    f"for all binary rows. Please check your data."
+                )
+
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         if self._numerator is not None and (self._numerator_sumsq is None or self._numerator_sumsq == self._numerator):
@@ -266,9 +275,33 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
+                            ORIGINAL_POINT_ESTIMATE: lambda df: df[self._point_estimate_column]
+                            if self._point_estimate_column is not None
+                            else (
+                                confidence_computers[ZTEST].point_estimate(df, arg_dict)
+                                if df[self._method_column].values[0] == ZTESTLINREG
+                                else confidence_computers[df[self._method_column].values[0]].point_estimate(
+                                    df, arg_dict
+                                )
+                            )
+                        }
+                    )
+                    .assign(
+                        **{
                             VARIANCE: lambda df: df[self._var_column]
                             if self._var_column is not None
                             else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                        }
+                    )
+                    .assign(
+                        **{
+                            ORIGINAL_VARIANCE: lambda df: df[self._var_column]
+                            if self._var_column is not None
+                            else (
+                                confidence_computers[ZTEST].variance(df, arg_dict)
+                                if df[self._method_column].values[0] == ZTESTLINREG
+                                else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                            )
                         }
                     )
                     .pipe(
@@ -503,8 +536,7 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .pipe(
                 drop_and_rename_columns,
-                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"]
-                + ([ORIGINAL_POINT_ESTIMATE] if ORIGINAL_POINT_ESTIMATE in df.columns else []),
+                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"],
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -640,7 +672,11 @@ class GenericComputer(ConfidenceComputerABC):
             )
         )
 
-        group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._method_column]
+        group_columns = (
+            [column for column in sample_size_df.index.names if column is not None]
+            + [self._method_column]
+            + [self._metric_column]
+        )
         arg_dict = {
             METHOD: self._method_column,
             IS_BINARY: self._is_binary,
@@ -796,19 +832,18 @@ def add_nims_and_mdes(
 
         nim_is_na = nim.isna().all()
         mde_is_na = True if mde is None else mde.isna().all()
-        estimate_column = ORIGINAL_POINT_ESTIMATE if (grp[method_column] == ZTESTLINREG).all() else POINT_ESTIMATE
         if input_preference is None or (type(input_preference) is float and isnan(input_preference)):
-            signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
+            signed_nim = 0.0 if nim_is_na else nim * grp[ORIGINAL_POINT_ESTIMATE]
             preference = TWO_SIDED
-            signed_mde = None if mde_is_na else mde * grp[estimate_column]
+            signed_mde = None if mde_is_na else mde * grp[ORIGINAL_POINT_ESTIMATE]
         elif input_preference.lower() == INCREASE_PREFFERED:
-            signed_nim = 0.0 if nim_is_na else -nim * grp[estimate_column]
+            signed_nim = 0.0 if nim_is_na else -nim * grp[ORIGINAL_POINT_ESTIMATE]
             preference = "larger"
-            signed_mde = None if mde_is_na else mde * grp[estimate_column]
+            signed_mde = None if mde_is_na else mde * grp[ORIGINAL_POINT_ESTIMATE]
         elif input_preference.lower() == DECREASE_PREFFERED:
-            signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
+            signed_nim = 0.0 if nim_is_na else nim * grp[ORIGINAL_POINT_ESTIMATE]
             preference = "smaller"
-            signed_mde = None if mde_is_na else -mde * grp[estimate_column]
+            signed_mde = None if mde_is_na else -mde * grp[ORIGINAL_POINT_ESTIMATE]
         else:
             raise ValueError(f"{input_preference.lower()} not in " f"{[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
 
@@ -1053,7 +1088,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            avg_column=POINT_ESTIMATE + SFX1,
+            avg_column=ORIGINAL_POINT_ESTIMATE + SFX1,
             var_column=VARIANCE + SFX1,
         )
 
@@ -1065,7 +1100,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
@@ -1078,7 +1113,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
