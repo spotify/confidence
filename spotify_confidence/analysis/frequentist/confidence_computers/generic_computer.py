@@ -167,6 +167,15 @@ class GenericComputer(ConfidenceComputerABC):
         self._point_estimate_column = point_estimate_column
         self._var_column = var_column
         self._is_binary = is_binary_column
+        if self._point_estimate_column is not None and self._var_column is not None and self._is_binary is not None:
+            mean = self._df.query(f"{self._is_binary} == True")[self._point_estimate_column]
+            var = self._df.query(f"{self._is_binary} == True")[self._var_column]
+            if not np.allclose(var, (mean * (1 - mean))):
+                raise ValueError(
+                    f"{var_column} doesn't equal {point_estimate_column}*(1-{point_estimate_column}) "
+                    f"for all binary rows. Please check your data."
+                )
+
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         if self._numerator is not None and (self._numerator_sumsq is None or self._numerator_sumsq == self._numerator):
@@ -425,7 +434,7 @@ class GenericComputer(ConfidenceComputerABC):
         mde_column: str,
     ):
         if type(level_as_reference) is not bool:
-            raise ValueError(f"level_is_reference must be either True or False, but is {level_as_reference}.")
+            raise ValueError(f"level_as_reference must be either True or False, but is {level_as_reference}.")
         groupby = listify(groupby)
         unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
         validate_levels(self._sufficient_statistics, level_columns, unique_levels)
@@ -616,6 +625,7 @@ class GenericComputer(ConfidenceComputerABC):
                 mde_column=mde_column,
                 nim_column=nim_column,
                 preferred_direction_column=preferred_direction_column,
+                method_column=self._method_column,
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -655,7 +665,11 @@ class GenericComputer(ConfidenceComputerABC):
             )
         )
 
-        group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._method_column]
+        group_columns = (
+            [column for column in sample_size_df.index.names if column is not None]
+            + [self._method_column]
+            + [self._metric_column]
+        )
         arg_dict = {
             METHOD: self._method_column,
             IS_BINARY: self._is_binary,
@@ -802,7 +816,7 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
 
 
 def add_nims_and_mdes(
-    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str = None
+    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str
 ) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
         nim = grp[nim_column].astype(float)
@@ -945,18 +959,14 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
     def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
 
-        if (
-            arg_dict[CORRECTION_METHOD]
-            in [
-                HOLM,
-                HOMMEL,
-                SIMES_HOCHBERG,
-                SPOT_1_HOLM,
-                SPOT_1_HOMMEL,
-                SPOT_1_SIMES_HOCHBERG,
-            ]
-            and all(df[PREFERENCE_TEST] != TWO_SIDED)
-        ):
+        if arg_dict[CORRECTION_METHOD] in [
+            HOLM,
+            HOMMEL,
+            SIMES_HOCHBERG,
+            SPOT_1_HOLM,
+            SPOT_1_HOMMEL,
+            SPOT_1_SIMES_HOCHBERG,
+        ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
             if all(df[arg_dict[METHOD]] == "z-test"):
                 adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
                     df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]

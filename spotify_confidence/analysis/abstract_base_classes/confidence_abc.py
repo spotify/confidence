@@ -173,7 +173,7 @@ class ConfidenceABC(ABC):
                 If specified, will plot a separate chart for each level of the
                 grouping.
             level_as_reference (bool):
-                If false (default), compare level to all other
+                If false, compare level to all other
                 groups. If true, compare all other groups to level.
             non_inferiority_margins (Union[Tuple[float, str],
                     Dict[str, Tuple[float, str]]]):
@@ -356,7 +356,7 @@ class ConfidenceABC(ABC):
                 If specified, will return an interval for each level
                 of the grouped dimension, or a confidence band if the
                 grouped dimension is ordinal
-            level_as_reference: If false (default), compare level to all other
+            level_as_reference: If false, compare level to all other
              groups. If true, compare all other groups to level.
             non_inferiority_margins (Union[Tuple[float, str],
                     Dict[str, Tuple[float, str]]]):

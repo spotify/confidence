@@ -10,13 +10,13 @@ class TestUnivariateSingleMetric(object):
         np.random.seed(123)
         n = 10000
         d = np.random.randint(2, size=n)
-        x = np.random.standard_normal(size=n)
+        x = np.random.standard_normal(size=n) + 100
         y = 0.5 * d + 0.5 * x + np.random.standard_normal(size=n)
         data = pd.DataFrame({"variation_name": list(map(str, d)), "y": y, "x": x})
         data = (
             data.assign(xy=y * x)
-            .assign(x2=x ** 2)
-            .assign(y2=y ** 2)
+            .assign(x2=x**2)
+            .assign(y2=y**2)
             .groupby(["variation_name"])
             .agg({"y": ["sum", "count"], "y2": "sum", "x": "sum", "x2": "sum", "xy": "sum"})
             .reset_index()
@@ -83,8 +83,8 @@ class TestUnivariateMultiMetric(object):
         data = pd.DataFrame({"variation_name": list(map(str, d)), "metric_name": m, "y": y, "x": x})
         data = (
             data.assign(xy=y * x)
-            .assign(x2=x ** 2)
-            .assign(y2=y ** 2)
+            .assign(x2=x**2)
+            .assign(y2=y**2)
             .groupby(["variation_name", "metric_name"])
             .agg({"y": ["sum", "count"], "y2": "sum", "x": "sum", "x2": "sum", "xy": "sum"})
             .reset_index()
@@ -221,12 +221,12 @@ class TestMultivariateSingleMetric(object):
 
         n = 10000
         d = np.random.randint(2, size=n)
-        x1 = np.random.standard_normal(size=n)
-        x2 = np.random.standard_normal(size=n)
+        x1 = np.random.standard_normal(size=n) + 50
+        x2 = np.random.standard_normal(size=n) + 100
         y = 0.5 * d + 0.5 * x1 + 0.5 * x2 + np.random.standard_normal(size=n)
         df = pd.DataFrame({"variation_name": list(map(str, d)), "y": y, "x1": x1, "x2": x2})
 
-        data = df.assign(y2=y ** 2).groupby(["variation_name"]).agg({"y": ["sum", "count"], "y2": "sum"}).reset_index()
+        data = df.assign(y2=y**2).groupby(["variation_name"]).agg({"y": ["sum", "count"], "y2": "sum"}).reset_index()
 
         data.columns = data.columns.map("_".join).str.strip("_")
 
@@ -332,7 +332,7 @@ class TestMultivariateMultipleMetrics(object):
         )
 
         data = (
-            df.assign(y2=y ** 2)
+            df.assign(y2=y**2)
             .groupby(["variation_name", "metric_name"])
             .agg({"y": ["sum", "count"], "y2": "sum"})
             .reset_index()
