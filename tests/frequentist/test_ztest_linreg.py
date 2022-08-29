@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED, INCREASE_PREFFERED
+from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED
 
 
 class TestUnivariateSingleMetric(object):
@@ -209,9 +209,7 @@ class TestUnivariateNoFeatures(object):
 
     def test_summary(self):
         summary_ztest = self.ztest.summary(verbose=True).drop(["_method"], axis=1)
-        summary_ztestlinreg = self.ztestlinreg.summary(verbose=True).drop(
-            ["_method", "original_variance", "original_point_estimate"], axis=1
-        )
+        summary_ztestlinreg = self.ztestlinreg.summary(verbose=True).drop(["_method"], axis=1)
         pd.testing.assert_frame_equal(summary_ztest, summary_ztestlinreg)
 
 
@@ -453,8 +451,8 @@ class TestUnivariateMultiMetricRequiredSampleSize(object):
         data = pd.DataFrame({"variation_name": list(map(str, d)), "metric_name": m, "y": y, "x": x})
         data = (
             data.assign(xy=y * x)
-            .assign(x2=x ** 2)
-            .assign(y2=y ** 2)
+            .assign(x2=x**2)
+            .assign(y2=y**2)
             .groupby(["variation_name", "metric_name"])
             .agg({"y": ["sum", "count"], "y2": "sum", "x": "sum", "x2": "sum", "xy": "sum"})
             .reset_index()

@@ -275,11 +275,15 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
-                            ORIGINAL_POINT_ESTIMATE: lambda df: confidence_computers[ZTEST].point_estimate(
-                                df, arg_dict
+                            ORIGINAL_POINT_ESTIMATE: lambda df: df[self._point_estimate_column]
+                            if self._point_estimate_column is not None
+                            else (
+                                confidence_computers[ZTEST].point_estimate(df, arg_dict)
+                                if df[self._method_column].values[0] == ZTESTLINREG
+                                else confidence_computers[df[self._method_column].values[0]].point_estimate(
+                                    df, arg_dict
+                                )
                             )
-                            if df[self._method_column].values[0] == ZTESTLINREG
-                            else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
                         }
                     )
                     .assign(
@@ -291,9 +295,13 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
-                            ORIGINAL_VARIANCE: lambda df: confidence_computers[ZTEST].variance(df, arg_dict)
-                            if df[self._method_column].values[0] == ZTESTLINREG
-                            else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                            ORIGINAL_VARIANCE: lambda df: df[self._var_column]
+                            if self._var_column is not None
+                            else (
+                                confidence_computers[ZTEST].variance(df, arg_dict)
+                                if df[self._method_column].values[0] == ZTESTLINREG
+                                else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                            )
                         }
                     )
                     .pipe(
@@ -528,8 +536,7 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .pipe(
                 drop_and_rename_columns,
-                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"]
-                + ([ORIGINAL_POINT_ESTIMATE] if ORIGINAL_POINT_ESTIMATE in df.columns else []),
+                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"],
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -1081,7 +1088,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            avg_column=ORIGINAL_POINT_ESTIMATE,
+            avg_column=ORIGINAL_POINT_ESTIMATE + SFX1,
             var_column=VARIANCE + SFX1,
         )
 
@@ -1093,7 +1100,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[ORIGINAL_POINT_ESTIMATE],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
@@ -1106,7 +1113,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[ORIGINAL_POINT_ESTIMATE],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
