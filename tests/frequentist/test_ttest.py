@@ -91,7 +91,7 @@ class TestCategorical(object):
         sigma2 = 2
         x2 = np.random.normal(mu2, sigma2, n2)
 
-        std_diff = np.sqrt(sigma1**2 / n1 + sigma2**2 / n2)
+        std_diff = np.sqrt(sigma1 ** 2 / n1 + sigma2 ** 2 / n2)
 
         arg_dict = {DENOMINATOR: "n"}
         diff_se = computer.std_err(

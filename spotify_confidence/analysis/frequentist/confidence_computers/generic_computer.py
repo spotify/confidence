@@ -275,11 +275,15 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
-                            ORIGINAL_POINT_ESTIMATE: lambda df: confidence_computers[ZTEST].point_estimate(
-                                df, arg_dict
+                            ORIGINAL_POINT_ESTIMATE: lambda df: df[self._point_estimate_column]
+                            if self._point_estimate_column is not None
+                            else (
+                                confidence_computers[ZTEST].point_estimate(df, arg_dict)
+                                if df[self._method_column].values[0] == ZTESTLINREG
+                                else confidence_computers[df[self._method_column].values[0]].point_estimate(
+                                    df, arg_dict
+                                )
                             )
-                            if df[self._method_column].values[0] == ZTESTLINREG
-                            else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
                         }
                     )
                     .assign(
@@ -291,9 +295,13 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
-                            ORIGINAL_VARIANCE: lambda df: confidence_computers[ZTEST].variance(df, arg_dict)
-                            if df[self._method_column].values[0] == ZTESTLINREG
-                            else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                            ORIGINAL_VARIANCE: lambda df: df[self._var_column]
+                            if self._var_column is not None
+                            else (
+                                confidence_computers[ZTEST].variance(df, arg_dict)
+                                if df[self._method_column].values[0] == ZTESTLINREG
+                                else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                            )
                         }
                     )
                     .pipe(
@@ -528,8 +536,7 @@ class GenericComputer(ConfidenceComputerABC):
             )
             .pipe(
                 drop_and_rename_columns,
-                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"]
-                + ([ORIGINAL_POINT_ESTIMATE] if ORIGINAL_POINT_ESTIMATE in df.columns else []),
+                [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"],
             )
             .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
             .assign(**{POWER: self._power})
@@ -959,14 +966,18 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
     def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
 
-        if arg_dict[CORRECTION_METHOD] in [
-            HOLM,
-            HOMMEL,
-            SIMES_HOCHBERG,
-            SPOT_1_HOLM,
-            SPOT_1_HOMMEL,
-            SPOT_1_SIMES_HOCHBERG,
-        ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
+        if (
+            arg_dict[CORRECTION_METHOD]
+            in [
+                HOLM,
+                HOMMEL,
+                SIMES_HOCHBERG,
+                SPOT_1_HOLM,
+                SPOT_1_HOMMEL,
+                SPOT_1_SIMES_HOCHBERG,
+            ]
+            and all(df[PREFERENCE_TEST] != TWO_SIDED)
+        ):
             if all(df[arg_dict[METHOD]] == "z-test"):
                 adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
                     df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
@@ -1081,7 +1092,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            avg_column=ORIGINAL_POINT_ESTIMATE,
+            avg_column=ORIGINAL_POINT_ESTIMATE + SFX1,
             var_column=VARIANCE + SFX1,
         )
 
@@ -1093,7 +1104,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[ORIGINAL_POINT_ESTIMATE],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
@@ -1106,7 +1117,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[ORIGINAL_POINT_ESTIMATE],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE + SFX1],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
