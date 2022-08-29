@@ -37,7 +37,7 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_HOMMEL,
     SPOT_1_SIMES_HOCHBERG,
     NIM,
-    ADJUSTED_ALPHA,
+    ADJUSTED_ALPHA, ORIGINAL_POINT_ESTIMATE,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -62,7 +62,7 @@ def variance(df: DataFrame, arg_dict: Dict[str, str]) -> float:
     if binary.all():
         # This equals row[POINT_ESTIMATE]*(1-row[POINT_ESTIMATE]) when the data is binary,
         # and also gives a robust fallback in case it's not
-        variance = df[numerator_sumsq] / df[denominator] - df[POINT_ESTIMATE] ** 2
+        variance = df[numerator_sumsq] / df[denominator] - df[ORIGINAL_POINT_ESTIMATE] ** 2
     else:
         variance = (df[numerator_sumsq] - np.power(df[numerator], 2) / df[denominator]) / (df[denominator] - 1)
     if (variance < 0).any():

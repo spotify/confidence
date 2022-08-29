@@ -266,8 +266,22 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
+                            ORIGINAL_POINT_ESTIMATE: lambda df: confidence_computers[ZTEST].point_estimate(df, arg_dict)
+                            if df[self._method_column].values[0] == ZTESTLINREG
+                            else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
+                        }
+                    )
+                    .assign(
+                        **{
                             VARIANCE: lambda df: df[self._var_column]
                             if self._var_column is not None
+                            else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                        }
+                    )
+                    .assign(
+                        **{
+                            ORIGINAL_VARIANCE: lambda df: confidence_computers[ZTEST].variance(df, arg_dict)
+                            if df[self._method_column].values[0] == ZTESTLINREG
                             else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
                         }
                     )
@@ -1052,6 +1066,12 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
         elif nim is None:
             non_inferiority = nim is not None
 
+        estimate_column = (
+            ORIGINAL_POINT_ESTIMATE
+            if any(df[arg_dict["method_column"]] == ZTESTLINREG)
+            else POINT_ESTIMATE + SFX1
+        )
+
         df[POWERED_EFFECT] = confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect(
             df=df.assign(kappa=kappa)
             .assign(current_number_of_units=df[f"current_total_{arg_dict[DENOMINATOR]}"])
@@ -1060,7 +1080,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            avg_column=POINT_ESTIMATE + SFX1,
+            avg_column=estimate_column,
             var_column=VARIANCE + SFX1,
         )
 
@@ -1072,7 +1092,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_avg=df[estimate_column],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
@@ -1085,7 +1105,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[POINT_ESTIMATE + SFX1],
+                control_avg=df[estimate_column],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )

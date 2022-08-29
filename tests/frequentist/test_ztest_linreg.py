@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import REGRESSION_PARAM
+from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED, INCREASE_PREFFERED
 
 
 class TestUnivariateSingleMetric(object):
@@ -160,6 +160,8 @@ class TestUnivariateMultiMetric(object):
         n0 = y_adj[idx == 0].size
         n1 = y_adj[idx == 1].size
         assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
+
+
 
 
 class TestUnivariateNoFeatures(object):
@@ -440,6 +442,72 @@ class TestMultivariateMultipleMetrics(object):
 
         diff = self.test.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True)
         assert np.allclose(b1[1], diff["difference"])
+
+
+
+class TestUnivariateMultiMetricRequiredSampleSize(object):
+    def setup(self):
+        np.random.seed(123)
+        n = 2000000
+        d = np.random.randint(2, size=n)
+        x = np.random.standard_normal(size=n)
+        y = 0.5 * d + 0.5 * x + np.random.standard_normal(size=n)
+        m = np.repeat(["metricA", "metricB"], int(n / 2))
+        data = pd.DataFrame({"variation_name": list(map(str, d)), "metric_name": m, "y": y, "x": x})
+        data = (
+            data.assign(xy=y * x)
+            .assign(x2=x ** 2)
+            .assign(y2=y ** 2)
+            .groupby(["variation_name", "metric_name"])
+            .agg({"y": ["sum", "count"], "y2": "sum", "x": "sum", "x2": "sum", "xy": "sum"})
+            .reset_index()
+        )
+
+        data.columns = data.columns.map("_".join).str.strip("_")
+        data = data.assign(non_inferiority_margin=5.0).assign(preferred_direction=DECREASE_PREFFERED)
+
+        self.n = n
+        self.x = x
+        self.y = y
+        self.d = d
+        self.m = m
+        self.data = data
+
+        self.test = spotify_confidence.ZTest(
+            data_frame=data,
+            numerator_column="y_sum",
+            numerator_sum_squares_column="y2_sum",
+            denominator_column="y_count",
+            categorical_group_columns=["variation_name"],
+            interval_size=0.99,
+            correction_method="bonferroni",
+            metric_column="metric_name",
+        )
+
+        self.test_linreg = spotify_confidence.ZTestLinreg(
+            data_frame=data,
+            numerator_column="y_sum",
+            numerator_sum_squares_column="y2_sum",
+            denominator_column="y_count",
+            categorical_group_columns=["variation_name"],
+            feature_column="x_sum",
+            feature_sum_squares_column="x2_sum",
+            feature_cross_sum_column="xy_sum",
+            interval_size=0.99,
+            correction_method="bonferroni",
+            metric_column="metric_name",
+        )
+
+    def test_summary(self):
+        summary_df = self.test.summary(verbose=True)
+        print(summary_df)
+        assert len(summary_df) == len(self.data)
+
+    def test_parameters_univariate_required_sample_size(self):
+
+        diff = self.test.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True)
+        diff_linreg = self.test_linreg.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True)
+        assert np.ceil(diff["required_sample_size"][0] * diff_linreg["variance_1"][0]/diff["variance_1"][0]) == diff_linreg["required_sample_size"][0]
 
 
 # TODO: Test for sequential data (w/ ordinal column)
