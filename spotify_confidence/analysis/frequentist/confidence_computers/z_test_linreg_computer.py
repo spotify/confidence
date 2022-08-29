@@ -11,7 +11,7 @@ from spotify_confidence.analysis.constants import (
     FEATURE_SUMSQ,
     FEATURE_CROSS,
     NUMERATOR,
-    DENOMINATOR
+    DENOMINATOR,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import z_test_computer
 

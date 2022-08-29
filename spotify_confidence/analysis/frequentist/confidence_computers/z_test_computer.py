@@ -37,7 +37,8 @@ from spotify_confidence.analysis.constants import (
     SPOT_1_HOMMEL,
     SPOT_1_SIMES_HOCHBERG,
     NIM,
-    ADJUSTED_ALPHA, ORIGINAL_POINT_ESTIMATE,
+    ADJUSTED_ALPHA,
+    ORIGINAL_POINT_ESTIMATE,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 

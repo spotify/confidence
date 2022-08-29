@@ -266,7 +266,9 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
-                            ORIGINAL_POINT_ESTIMATE: lambda df: confidence_computers[ZTEST].point_estimate(df, arg_dict)
+                            ORIGINAL_POINT_ESTIMATE: lambda df: confidence_computers[ZTEST].point_estimate(
+                                df, arg_dict
+                            )
                             if df[self._method_column].values[0] == ZTESTLINREG
                             else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
                         }
@@ -809,23 +811,18 @@ def add_nims_and_mdes(
 
         nim_is_na = nim.isna().all()
         mde_is_na = True if mde is None else mde.isna().all()
-        estimate_column = (
-            ORIGINAL_POINT_ESTIMATE
-            if method_column is not None and (grp[method_column] == ZTESTLINREG).all()
-            else POINT_ESTIMATE
-        )
         if input_preference is None or (type(input_preference) is float and isnan(input_preference)):
-            signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
+            signed_nim = 0.0 if nim_is_na else nim * grp[ORIGINAL_POINT_ESTIMATE]
             preference = TWO_SIDED
-            signed_mde = None if mde_is_na else mde * grp[estimate_column]
+            signed_mde = None if mde_is_na else mde * grp[ORIGINAL_POINT_ESTIMATE]
         elif input_preference.lower() == INCREASE_PREFFERED:
-            signed_nim = 0.0 if nim_is_na else -nim * grp[estimate_column]
+            signed_nim = 0.0 if nim_is_na else -nim * grp[ORIGINAL_POINT_ESTIMATE]
             preference = "larger"
-            signed_mde = None if mde_is_na else mde * grp[estimate_column]
+            signed_mde = None if mde_is_na else mde * grp[ORIGINAL_POINT_ESTIMATE]
         elif input_preference.lower() == DECREASE_PREFFERED:
-            signed_nim = 0.0 if nim_is_na else nim * grp[estimate_column]
+            signed_nim = 0.0 if nim_is_na else nim * grp[ORIGINAL_POINT_ESTIMATE]
             preference = "smaller"
-            signed_mde = None if mde_is_na else -mde * grp[estimate_column]
+            signed_mde = None if mde_is_na else -mde * grp[ORIGINAL_POINT_ESTIMATE]
         else:
             raise ValueError(f"{input_preference.lower()} not in " f"{[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
 
@@ -1066,12 +1063,6 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
         elif nim is None:
             non_inferiority = nim is not None
 
-        estimate_column = (
-            ORIGINAL_POINT_ESTIMATE
-            if any(df[arg_dict["method_column"]] == ZTESTLINREG)
-            else POINT_ESTIMATE + SFX1
-        )
-
         df[POWERED_EFFECT] = confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect(
             df=df.assign(kappa=kappa)
             .assign(current_number_of_units=df[f"current_total_{arg_dict[DENOMINATOR]}"])
@@ -1080,7 +1071,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             z_power=z_power,
             binary=binary,
             non_inferiority=non_inferiority,
-            avg_column=estimate_column,
+            avg_column=ORIGINAL_POINT_ESTIMATE,
             var_column=VARIANCE + SFX1,
         )
 
@@ -1092,7 +1083,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[estimate_column],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
@@ -1105,7 +1096,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 binary=binary,
                 non_inferiority=non_inferiority,
                 hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                control_avg=df[estimate_column],
+                control_avg=df[ORIGINAL_POINT_ESTIMATE],
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )

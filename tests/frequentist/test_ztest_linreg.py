@@ -162,8 +162,6 @@ class TestUnivariateMultiMetric(object):
         assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
 
 
-
-
 class TestUnivariateNoFeatures(object):
     def setup(self):
 
@@ -444,7 +442,6 @@ class TestMultivariateMultipleMetrics(object):
         assert np.allclose(b1[1], diff["difference"])
 
 
-
 class TestUnivariateMultiMetricRequiredSampleSize(object):
     def setup(self):
         np.random.seed(123)
@@ -505,9 +502,16 @@ class TestUnivariateMultiMetricRequiredSampleSize(object):
 
     def test_parameters_univariate_required_sample_size(self):
 
-        diff = self.test.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True)
-        diff_linreg = self.test_linreg.difference(level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True)
-        assert np.ceil(diff["required_sample_size"][0] * diff_linreg["variance_1"][0]/diff["variance_1"][0]) == diff_linreg["required_sample_size"][0]
+        diff = self.test.difference(
+            level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True
+        )
+        diff_linreg = self.test_linreg.difference(
+            level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True
+        )
+        assert (
+            np.ceil(diff["required_sample_size"][0] * diff_linreg["variance_1"][0] / diff["variance_1"][0])
+            == diff_linreg["required_sample_size"][0]
+        )
 
 
 # TODO: Test for sequential data (w/ ordinal column)
