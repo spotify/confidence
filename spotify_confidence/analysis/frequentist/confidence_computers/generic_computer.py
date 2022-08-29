@@ -966,18 +966,14 @@ def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
     def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
 
-        if (
-            arg_dict[CORRECTION_METHOD]
-            in [
-                HOLM,
-                HOMMEL,
-                SIMES_HOCHBERG,
-                SPOT_1_HOLM,
-                SPOT_1_HOMMEL,
-                SPOT_1_SIMES_HOCHBERG,
-            ]
-            and all(df[PREFERENCE_TEST] != TWO_SIDED)
-        ):
+        if arg_dict[CORRECTION_METHOD] in [
+            HOLM,
+            HOMMEL,
+            SIMES_HOCHBERG,
+            SPOT_1_HOLM,
+            SPOT_1_HOMMEL,
+            SPOT_1_SIMES_HOCHBERG,
+        ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
             if all(df[arg_dict[METHOD]] == "z-test"):
                 adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
                     df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
