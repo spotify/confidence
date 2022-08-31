@@ -790,3 +790,35 @@ class TestSampleSizeCalculator(object):
         )
 
         assert np.isclose(diff[ADJUSTED_LOWER], -mde_pp / 100, rtol=0.001)
+
+    def test_sample_size_with_nan(self):
+        df = pd.DataFrame(
+            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            data=[
+                ["share_bananas_1d", True, None, None, 0.00617, None, "increase"],
+                ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],
+            ],
+        )
+
+        ssc = SampleSizeCalculator(
+            data_frame=df,
+            point_estimate_column="avg",
+            var_column="var",
+            metric_column="metric_name",
+            is_binary_column="binary",
+            interval_size=0.99,
+            power=0.8,
+            correction_method=SPOT_1,
+        )
+        treatment_weights = [5000, 2000, 3000]
+        ss = ssc.sample_size(
+            treatment_weights=treatment_weights,
+            mde_column="mde",
+            nim_column="nim",
+            preferred_direction_column="preference",
+        )
+
+        assert len(ss) == len(df)
+        assert ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] is None
+        assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 95459 < 1.001
+        assert ss[CI_WIDTH].isna().all()
