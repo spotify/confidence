@@ -2,6 +2,10 @@
 History
 =======
 
+2.7.4 (2022-08-31)
+------------------
+* Fixed bug in sample size calculator check for binary metrics when there are nans
+
 2.7.3 (2022-08-26)
 ------------------
 
