@@ -264,7 +264,7 @@ class GenericComputer(ConfidenceComputerABC):
             }
             groupby = [col for col in [self._method_column, self._metric_column] if col is not None]
             self._sufficient = (
-                self._df.groupby(groupby, sort=False)
+                self._df.groupby(groupby, sort=False, group_keys=True)
                 .apply(
                     lambda df: df.assign(
                         **{
@@ -857,7 +857,11 @@ def add_nims_and_mdes(
     index_names = [name for name in df.index.names if name is not None]
     return (
         df.groupby(
-            [nim_column, preferred_direction_column] + listify(mde_column), dropna=False, as_index=False, sort=False
+            [nim_column, preferred_direction_column] + listify(mde_column),
+            dropna=False,
+            as_index=False,
+            sort=False,
+            group_keys=True,
         )
         .apply(_set_nims_and_mdes)
         .pipe(lambda df: df.reset_index(index_names))
