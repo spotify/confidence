@@ -158,7 +158,7 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
     )
 
     return Series(
-        data=df.groupby(df.index.names, sort=False)[[ALPHA, PREFERENCE_TEST]]
+        data=df.groupby(df.index.names, sort=False, group_keys=True)[[ALPHA, PREFERENCE_TEST]]
         .first()
         .merge(sample_size_proportions, left_index=True, right_index=True)
         .assign(_sequential_dummy_index_=1)

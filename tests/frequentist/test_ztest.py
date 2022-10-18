@@ -2990,7 +2990,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
         self.data[DATE] = pd.to_datetime(self.data[DATE])
         self.data = (
             self.data.groupby([DATE, GROUP, "country", "platform", "metric"])
-            .sum()
+            .sum(numeric_only=True)
             .groupby([GROUP, "country", "platform", "metric"])
             .cumsum()
             .reset_index()

@@ -205,7 +205,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     ) -> ChartGrid:
         if groupby is None:
             groupby = "dummy_groupby"
-            difference_df[groupby] = "Difference"
+            difference_df.loc[:, groupby] = "Difference"
 
         if "level_1" in groupby and "level_2" in groupby:
             title = "Change from level_1 to level_2"

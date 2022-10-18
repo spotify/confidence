@@ -58,7 +58,7 @@ def sample_ratio_test(
     n_tot = df[denominator].sum()
 
     grouped_data = df.groupby(all_group_columns, sort=False)
-    sr_df = grouped_data.sum()
+    sr_df = grouped_data.sum(numeric_only=True)
     sr_df["observed_proportion"] = np.zeros(len(sr_df))
     sr_df["expected_proportion"] = np.zeros(len(sr_df))
     sr_df["difference"] = np.zeros(len(sr_df))

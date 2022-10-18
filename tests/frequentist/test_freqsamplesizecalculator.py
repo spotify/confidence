@@ -427,7 +427,7 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] == np.float("inf")
+        assert ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] == float("inf")
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 75345 < 1.001
 
         np.testing.assert_almost_equal(ss[CI_WIDTH].values[0], 0.0047527)
