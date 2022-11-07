@@ -13,19 +13,12 @@
 # limitations under the License.
 
 from typing import Union, Iterable, List, Tuple, Dict
-from warnings import warn
 
 import numpy as np
 from numpy import isnan
 from pandas import DataFrame, Series
 from scipy import stats as st
-from statsmodels.stats.multitest import multipletests
 
-import spotify_confidence.analysis.frequentist.confidence_computers.bootstrap_computer as bootstrap_computer
-import spotify_confidence.analysis.frequentist.confidence_computers.chi_squared_computer as chi_squared_computer
-import spotify_confidence.analysis.frequentist.confidence_computers.t_test_computer as t_test_computer
-import spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer as z_test_computers
-import spotify_confidence.analysis.frequentist.confidence_computers.z_test_linreg_computer as z_test_linreg_computer
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from spotify_confidence.analysis.confidence_utils import (
     get_remaning_groups,
@@ -69,8 +62,6 @@ from spotify_confidence.analysis.constants import (
     SFX1,
     SFX2,
     STD_ERR,
-    ALPHA,
-    ADJUSTED_ALPHA,
     ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
     POWER,
     POWERED_EFFECT,
@@ -91,35 +82,12 @@ from spotify_confidence.analysis.constants import (
     PREFERENCE_TEST,
     TWO_SIDED,
     PREFERENCE_DICT,
-    BONFERRONI,
-    HOLM,
-    HOMMEL,
-    SIMES_HOCHBERG,
-    SIDAK,
-    HOLM_SIDAK,
-    FDR_BH,
-    FDR_BY,
-    FDR_TSBH,
-    FDR_TSBKY,
-    SPOT_1_HOLM,
-    SPOT_1_HOMMEL,
-    SPOT_1_SIMES_HOCHBERG,
-    SPOT_1_SIDAK,
-    SPOT_1_HOLM_SIDAK,
-    SPOT_1_FDR_BH,
-    SPOT_1_FDR_BY,
-    SPOT_1_FDR_TSBH,
-    SPOT_1_FDR_TSBKY,
-    BONFERRONI_ONLY_COUNT_TWOSIDED,
-    BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-    SPOT_1,
     CORRECTION_METHODS,
     BOOTSTRAP,
     CHI2,
     TTEST,
     ZTEST,
     NIM_TYPE,
-    CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO,
     NIM_COLUMN_DEFAULT,
     PREFERRED_DIRECTION_COLUMN_DEFAULT,
     ZTESTLINREG,
@@ -127,18 +95,19 @@ from spotify_confidence.analysis.constants import (
     ORIGINAL_VARIANCE,
     VARIANCE_REDUCTION,
 )
-from spotify_confidence.analysis.frequentist.confidence_computers.nims_and_mdes import (
+from spotify_confidence.analysis.frequentist.confidence_computers import confidence_computers
+from spotify_confidence.analysis.frequentist.nims_and_mdes import (
     add_nim_input_columns_from_tuple_or_dict,
     add_nims_and_mdes,
 )
-
-confidence_computers = {
-    CHI2: chi_squared_computer,
-    TTEST: t_test_computer,
-    ZTEST: z_test_computers,
-    BOOTSTRAP: bootstrap_computer,
-    ZTESTLINREG: z_test_linreg_computer,
-}
+from spotify_confidence.analysis.frequentist.multiple_comparison import (
+    get_num_comparisons,
+    add_adjusted_p_and_is_significant,
+    add_ci,
+    set_alpha_and_adjust_preference,
+    get_preference,
+    add_adjusted_power,
+)
 
 
 class GenericComputer(ConfidenceComputerABC):
@@ -540,9 +509,14 @@ class GenericComputer(ConfidenceComputerABC):
                 drop_and_rename_columns,
                 [NULL_HYPOTHESIS, ALTERNATIVE_HYPOTHESIS, f"current_total_{self._denominator}"],
             )
-            .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
+            .assign(**{PREFERENCE_TEST: lambda df: get_preference(df, self._correction_method)})
             .assign(**{POWER: self._power})
-            .pipe(self._add_adjusted_power)
+            .pipe(
+                add_adjusted_power,
+                correction_method=self._correction_method,
+                metric_column=self._metric_column,
+                single_metric=self._single_metric,
+            )
         )
 
         groups_except_ordinal = [
@@ -551,11 +525,15 @@ class GenericComputer(ConfidenceComputerABC):
             if column is not None
             and (column != self._ordinal_group_column or final_expected_sample_size_column is None)
         ]
-        n_comparisons = self._get_num_comparisons(
+        n_comparisons = get_num_comparisons(
             comparison_df,
             self._correction_method,
             number_of_level_comparisons=comparison_df.groupby(["level_1", "level_2"], sort=False).ngroups,
             groupby=groups_except_ordinal,
+            metric_column=self._metric_column,
+            treatment_column=self._treatment_column,
+            single_metric=self._single_metric,
+            segments=self._segments,
         )
 
         arg_dict = {
@@ -636,16 +614,25 @@ class GenericComputer(ConfidenceComputerABC):
                 preferred_direction_column=preferred_direction_column,
                 method_column=self._method_column,
             )
-            .assign(**{PREFERENCE_TEST: lambda df: TWO_SIDED if self._correction_method == SPOT_1 else df[PREFERENCE]})
+            .assign(**{PREFERENCE_TEST: lambda df: get_preference(df, self._correction_method)})
             .assign(**{POWER: self._power})
-            .pipe(self._add_adjusted_power)
+            .pipe(
+                add_adjusted_power,
+                correction_method=self._correction_method,
+                metric_column=self._metric_column,
+                single_metric=self._single_metric,
+            )
         )
         group_columns = [column for column in sample_size_df.index.names if column is not None]
-        n_comparisons = self._get_num_comparisons(
+        n_comparisons = get_num_comparisons(
             sample_size_df,
             self._correction_method,
             number_of_level_comparisons=len(treatment_weights) - 1,
             groupby=group_columns,
+            metric_column=self._metric_column,
+            treatment_column=self._treatment_column,
+            single_metric=self._single_metric,
+            segments=self._segments,
         )
         arg_dict = {
             MDE: mde_column,
@@ -685,30 +672,6 @@ class GenericComputer(ConfidenceComputerABC):
         }
         return _find_optimal_group_weights_across_rows(sample_size_df, number_of_groups, group_columns, arg_dict)
 
-    def _add_adjusted_power(self, df: DataFrame) -> DataFrame:
-        if self._correction_method in CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO:
-            if self._metric_column is None:
-                return df.assign(**{ADJUSTED_POWER: None})
-            else:
-                number_total_metrics = (
-                    1 if self._single_metric else df.groupby(self._metric_column, sort=False).ngroups
-                )
-                if self._single_metric:
-                    if df[df[NIM].isnull()].shape[0] > 0:
-                        number_success_metrics = 1
-                    else:
-                        number_success_metrics = 0
-                else:
-                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column, sort=False).ngroups
-
-                number_guardrail_metrics = number_total_metrics - number_success_metrics
-                power_correction = (
-                    number_guardrail_metrics if number_success_metrics == 0 else number_guardrail_metrics + 1
-                )
-                return df.assign(**{ADJUSTED_POWER: 1 - (1 - df[POWER]) / power_correction})
-        else:
-            return df.assign(**{ADJUSTED_POWER: df[POWER]})
-
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         groupby = listify(groupby)
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
@@ -734,73 +697,6 @@ class GenericComputer(ConfidenceComputerABC):
                 )
             )
         )[["level_1", "level_2", "achieved_power"]]
-
-    def _get_num_comparisons(
-        self, df: DataFrame, correction_method: str, number_of_level_comparisons: int, groupby: Iterable
-    ) -> int:
-        if correction_method == BONFERRONI:
-            return max(
-                1,
-                number_of_level_comparisons * df.assign(_dummy_=1).groupby(groupby + ["_dummy_"], sort=False).ngroups,
-            )
-        elif correction_method == BONFERRONI_ONLY_COUNT_TWOSIDED:
-            return max(
-                number_of_level_comparisons
-                * df.query(f'{PREFERENCE_TEST} == "{TWO_SIDED}"')
-                .assign(_dummy_=1)
-                .groupby(groupby + ["_dummy_"], sort=False)
-                .ngroups,
-                1,
-            )
-        elif correction_method in [
-            HOLM,
-            HOMMEL,
-            SIMES_HOCHBERG,
-            SIDAK,
-            HOLM_SIDAK,
-            FDR_BH,
-            FDR_BY,
-            FDR_TSBH,
-            FDR_TSBKY,
-        ]:
-            return 1
-        elif correction_method in [
-            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-            SPOT_1,
-            SPOT_1_HOLM,
-            SPOT_1_HOMMEL,
-            SPOT_1_SIMES_HOCHBERG,
-            SPOT_1_SIDAK,
-            SPOT_1_HOLM_SIDAK,
-            SPOT_1_FDR_BH,
-            SPOT_1_FDR_BY,
-            SPOT_1_FDR_TSBH,
-            SPOT_1_FDR_TSBKY,
-        ]:
-            if self._metric_column is None or self._treatment_column is None:
-                return max(
-                    1,
-                    number_of_level_comparisons
-                    * df[df[NIM].isnull()].assign(_dummy_=1).groupby(groupby + ["_dummy_"], sort=False).ngroups,
-                )
-            else:
-                if self._single_metric:
-                    if df[df[NIM].isnull()].shape[0] > 0:
-                        number_success_metrics = 1
-                    else:
-                        number_success_metrics = 0
-                else:
-                    number_success_metrics = df[df[NIM].isnull()].groupby(self._metric_column, sort=False).ngroups
-
-                number_segments = (
-                    1
-                    if len(self._segments) == 0 or not all(item in df.index.names for item in self._segments)
-                    else df.groupby(self._segments, sort=False).ngroups
-                )
-
-                return max(1, number_of_level_comparisons * max(1, number_success_metrics) * number_segments)
-        else:
-            raise ValueError(f"Unsupported correction method: {correction_method}.")
 
 
 def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
@@ -831,142 +727,12 @@ def _add_variance_reduction_rate(df: DataFrame, arg_dict: Dict) -> DataFrame:
 
 
 def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    def _add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict) -> DataFrame:
-        n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
-        if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
-            if arg_dict[CORRECTION_METHOD] not in [
-                BONFERRONI,
-                BONFERRONI_ONLY_COUNT_TWOSIDED,
-                BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-                SPOT_1,
-            ]:
-                raise ValueError(
-                    f"{arg_dict[CORRECTION_METHOD]} not supported for sequential tests. Use one of"
-                    f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
-                    f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
-                )
-            adjusted_alpha = _compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict)
-            df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-            df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
-            df[P_VALUE] = None
-            df[ADJUSTED_P] = None
-        elif arg_dict[CORRECTION_METHOD] in [
-            HOLM,
-            HOMMEL,
-            SIMES_HOCHBERG,
-            SIDAK,
-            HOLM_SIDAK,
-            FDR_BH,
-            FDR_BY,
-            FDR_TSBH,
-            FDR_TSBKY,
-            SPOT_1_HOLM,
-            SPOT_1_HOMMEL,
-            SPOT_1_SIMES_HOCHBERG,
-            SPOT_1_SIDAK,
-            SPOT_1_HOLM_SIDAK,
-            SPOT_1_FDR_BH,
-            SPOT_1_FDR_BY,
-            SPOT_1_FDR_TSBH,
-            SPOT_1_FDR_TSBKY,
-        ]:
-            if arg_dict[CORRECTION_METHOD].startswith("spot-"):
-                correction_method = arg_dict[CORRECTION_METHOD][7:]
-            else:
-                correction_method = arg_dict[CORRECTION_METHOD]
-            df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
-            is_significant, adjusted_p, _, _ = multipletests(
-                pvals=df[P_VALUE], alpha=1 - arg_dict[INTERVAL_SIZE], method=correction_method
-            )
-            df[ADJUSTED_P] = adjusted_p
-            df[IS_SIGNIFICANT] = is_significant
-        elif arg_dict[CORRECTION_METHOD] in [
-            BONFERRONI,
-            BONFERRONI_ONLY_COUNT_TWOSIDED,
-            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-            SPOT_1,
-        ]:
-            df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
-            df[ADJUSTED_P] = df[P_VALUE].map(lambda p: min(p * n_comparisons, 1))
-            df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
-        else:
-            raise ValueError("Can't figure out which correction method to use :(")
-
-        return df
-
-    def _compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict) -> Series:
-        if df[method_column].isin([ZTEST, ZTESTLINREG]).all():
-            return confidence_computers[ZTEST].compute_sequential_adjusted_alpha(df, arg_dict)
-        else:
-            raise NotImplementedError("Sequential testing is only supported for z-test and z-testlinreg")
-
-    def _add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
-        lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
-
-        if arg_dict[CORRECTION_METHOD] in [
-            HOLM,
-            HOMMEL,
-            SIMES_HOCHBERG,
-            SPOT_1_HOLM,
-            SPOT_1_HOMMEL,
-            SPOT_1_SIMES_HOCHBERG,
-        ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
-            if all(df[arg_dict[METHOD]] == "z-test"):
-                adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
-                    df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
-                )
-            else:
-                raise NotImplementedError(f"{arg_dict[CORRECTION_METHOD]} is only supported for ZTests")
-        elif arg_dict[CORRECTION_METHOD] in [
-            BONFERRONI,
-            BONFERRONI_ONLY_COUNT_TWOSIDED,
-            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-            SPOT_1,
-            SPOT_1_HOLM,
-            SPOT_1_HOMMEL,
-            SPOT_1_SIMES_HOCHBERG,
-            SPOT_1_SIDAK,
-            SPOT_1_HOLM_SIDAK,
-            SPOT_1_FDR_BH,
-            SPOT_1_FDR_BY,
-            SPOT_1_FDR_TSBH,
-            SPOT_1_FDR_TSBKY,
-        ]:
-            adjusted_lower, adjusted_upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(
-                df, ADJUSTED_ALPHA, arg_dict
-            )
-        else:
-            warn(f"Confidence intervals not supported for {arg_dict[CORRECTION_METHOD]}")
-            adjusted_lower = None
-            adjusted_upper = None
-
-        return (
-            df.assign(**{CI_LOWER: lower})
-            .assign(**{CI_UPPER: upper})
-            .assign(**{ADJUSTED_LOWER: adjusted_lower})
-            .assign(**{ADJUSTED_UPPER: adjusted_upper})
-        )
-
     return (
         df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
         .assign(**{P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict)})
-        .pipe(_add_adjusted_p_and_is_significant, arg_dict=arg_dict)
-        .pipe(_add_ci, arg_dict=arg_dict)
+        .pipe(add_adjusted_p_and_is_significant, arg_dict=arg_dict)
+        .pipe(add_ci, arg_dict=arg_dict)
     )
-
-
-def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    alpha_0 = 1 - arg_dict[INTERVAL_SIZE]
-    return df.assign(
-        **{
-            ALPHA: df.apply(
-                lambda row: 2 * alpha_0
-                if arg_dict[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
-                else alpha_0,
-                axis=1,
-            )
-        }
-    ).assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
 
 
 def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
