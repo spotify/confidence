@@ -16,7 +16,7 @@ from typing import Union, Iterable, List, Tuple, Dict
 
 import numpy as np
 from numpy import isnan
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from scipy import stats as st
 
 from spotify_confidence.analysis.abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
@@ -32,7 +32,6 @@ from spotify_confidence.analysis.confidence_utils import (
     validate_data,
     remove_group_columns,
     groupbyApplyParallel,
-    is_non_inferiority,
     reset_named_indices,
 )
 from spotify_confidence.analysis.constants import (
@@ -50,8 +49,6 @@ from spotify_confidence.analysis.constants import (
     ABSOLUTE,
     VARIANCE,
     NUMBER_OF_COMPARISONS,
-    TREATMENT_WEIGHTS,
-    IS_BINARY,
     FEATURE,
     FEATURE_SUMSQ,
     FEATURE_CROSS,
@@ -72,9 +69,6 @@ from spotify_confidence.analysis.constants import (
     IS_SIGNIFICANT,
     REQUIRED_SAMPLE_SIZE,
     REQUIRED_SAMPLE_SIZE_METRIC,
-    OPTIMAL_KAPPA,
-    OPTIMAL_WEIGHTS,
-    CI_WIDTH,
     NULL_HYPOTHESIS,
     ALTERNATIVE_HYPOTHESIS,
     NIM,
@@ -96,10 +90,6 @@ from spotify_confidence.analysis.constants import (
     VARIANCE_REDUCTION,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import confidence_computers
-from spotify_confidence.analysis.frequentist.nims_and_mdes import (
-    add_nim_input_columns_from_tuple_or_dict,
-    add_nims_and_mdes,
-)
 from spotify_confidence.analysis.frequentist.multiple_comparison import (
     get_num_comparisons,
     add_adjusted_p_and_is_significant,
@@ -108,9 +98,13 @@ from spotify_confidence.analysis.frequentist.multiple_comparison import (
     get_preference,
     add_adjusted_power,
 )
+from spotify_confidence.analysis.frequentist.nims_and_mdes import (
+    add_nim_input_columns_from_tuple_or_dict,
+    add_nims_and_mdes,
+)
 
 
-class GenericComputer(ConfidenceComputerABC):
+class ConfidenceComputer(ConfidenceComputerABC):
     def __init__(
         self,
         data_frame: DataFrame,
@@ -126,27 +120,12 @@ class GenericComputer(ConfidenceComputerABC):
         metric_column: Union[str, None],
         treatment_column: Union[str, None],
         power: float,
-        point_estimate_column: str,
-        var_column: str,
-        is_binary_column: str,
         feature_column: Union[str, None],
         feature_sum_squares_column: Union[str, None],
         feature_cross_sum_column: Union[str, None],
     ):
 
         self._df = data_frame.reset_index(drop=True)
-        self._point_estimate_column = point_estimate_column
-        self._var_column = var_column
-        self._is_binary = is_binary_column
-        if self._point_estimate_column is not None and self._var_column is not None and self._is_binary is not None:
-            mean = self._df.query(f"{self._is_binary} == True")[self._point_estimate_column]
-            var = self._df.query(f"{self._is_binary} == True")[self._var_column]
-            if not np.allclose(var, (mean * (1 - mean)), equal_nan=True):
-                raise ValueError(
-                    f"{var_column} doesn't equal {point_estimate_column}*(1-{point_estimate_column}) "
-                    f"for all binary rows. Please check your data."
-                )
-
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
         if self._numerator is not None and (self._numerator_sumsq is None or self._numerator_sumsq == self._numerator):
@@ -239,16 +218,14 @@ class GenericComputer(ConfidenceComputerABC):
                 .apply(
                     lambda df: df.assign(
                         **{
-                            POINT_ESTIMATE: lambda df: df[self._point_estimate_column]
-                            if self._point_estimate_column is not None
-                            else confidence_computers[df[self._method_column].values[0]].point_estimate(df, arg_dict)
+                            POINT_ESTIMATE: lambda df: confidence_computers[
+                                df[self._method_column].values[0]
+                            ].point_estimate(df, arg_dict)
                         }
                     )
                     .assign(
                         **{
-                            ORIGINAL_POINT_ESTIMATE: lambda df: df[self._point_estimate_column]
-                            if self._point_estimate_column is not None
-                            else (
+                            ORIGINAL_POINT_ESTIMATE: lambda df: (
                                 confidence_computers[ZTEST].point_estimate(df, arg_dict)
                                 if df[self._method_column].values[0] == ZTESTLINREG
                                 else confidence_computers[df[self._method_column].values[0]].point_estimate(
@@ -259,16 +236,14 @@ class GenericComputer(ConfidenceComputerABC):
                     )
                     .assign(
                         **{
-                            VARIANCE: lambda df: df[self._var_column]
-                            if self._var_column is not None
-                            else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                            VARIANCE: lambda df: confidence_computers[df[self._method_column].values[0]].variance(
+                                df, arg_dict
+                            )
                         }
                     )
                     .assign(
                         **{
-                            ORIGINAL_VARIANCE: lambda df: df[self._var_column]
-                            if self._var_column is not None
-                            else (
+                            ORIGINAL_VARIANCE: lambda df: (
                                 confidence_computers[ZTEST].variance(df, arg_dict)
                                 if df[self._method_column].values[0] == ZTESTLINREG
                                 else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
@@ -276,9 +251,7 @@ class GenericComputer(ConfidenceComputerABC):
                         }
                     )
                     .pipe(
-                        lambda df: df
-                        if self._point_estimate_column is not None
-                        else confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
+                        lambda df: confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
                             df, arg_dict
                         )
                     )
@@ -556,122 +529,6 @@ class GenericComputer(ConfidenceComputerABC):
         )
         return comparison_df
 
-    def compute_sample_size(
-        self,
-        treatment_weights: Iterable,
-        mde_column: str,
-        nim_column: str,
-        preferred_direction_column: str,
-        final_expected_sample_size_column: str,
-    ) -> DataFrame:
-        arg_dict, group_columns, sample_size_df = self._initialise_sample_size_and_power_computation(
-            final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
-        )
-        sample_size_df = groupbyApplyParallel(
-            sample_size_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
-                group_columns + [self._method_column],
-                as_index=False,
-                sort=False,
-            ),
-            lambda df: _compute_sample_sizes_and_ci_widths(df, arg_dict=arg_dict),
-        )
-
-        return sample_size_df.reset_index()
-
-    def compute_powered_effect(
-        self,
-        treatment_weights: Iterable,
-        mde_column: str,
-        nim_column: str,
-        preferred_direction_column: str,
-        sample_size: float,
-    ) -> DataFrame:
-        arg_dict, group_columns, powered_effect_df = self._initialise_sample_size_and_power_computation(
-            sample_size, mde_column, nim_column, preferred_direction_column, treatment_weights
-        )
-        powered_effect_df = groupbyApplyParallel(
-            powered_effect_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
-                group_columns + [self._method_column],
-                as_index=False,
-                sort=False,
-            ),
-            lambda df: _compute_powered_effects(df, arg_dict=arg_dict),
-        )
-
-        return powered_effect_df.reset_index()
-
-    def _initialise_sample_size_and_power_computation(
-        self, final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
-    ):
-        sample_size_df = (
-            self._sufficient_statistics.pipe(
-                lambda df: df if self._all_group_columns == [] else df.set_index(self._all_group_columns)
-            )
-            .pipe(
-                add_nims_and_mdes,
-                mde_column=mde_column,
-                nim_column=nim_column,
-                preferred_direction_column=preferred_direction_column,
-                method_column=self._method_column,
-            )
-            .assign(**{PREFERENCE_TEST: lambda df: get_preference(df, self._correction_method)})
-            .assign(**{POWER: self._power})
-            .pipe(
-                add_adjusted_power,
-                correction_method=self._correction_method,
-                metric_column=self._metric_column,
-                single_metric=self._single_metric,
-            )
-        )
-        group_columns = [column for column in sample_size_df.index.names if column is not None]
-        n_comparisons = get_num_comparisons(
-            sample_size_df,
-            self._correction_method,
-            number_of_level_comparisons=len(treatment_weights) - 1,
-            groupby=group_columns,
-            metric_column=self._metric_column,
-            treatment_column=self._treatment_column,
-            single_metric=self._single_metric,
-            segments=self._segments,
-        )
-        arg_dict = {
-            MDE: mde_column,
-            METHOD: self._method_column,
-            NUMBER_OF_COMPARISONS: n_comparisons,
-            TREATMENT_WEIGHTS: treatment_weights,
-            INTERVAL_SIZE: self._interval_size,
-            CORRECTION_METHOD: self._correction_method,
-            IS_BINARY: self._is_binary,
-            FINAL_EXPECTED_SAMPLE_SIZE: final_expected_sample_size_column,
-        }
-        return arg_dict, group_columns, sample_size_df
-
-    def compute_optimal_weights_and_sample_size(
-        self, sample_size_df: DataFrame, number_of_groups: int
-    ) -> Tuple[Iterable, int]:
-        sample_size_df = (
-            sample_size_df.reset_index(drop=True)
-            .assign(**{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)})
-            .assign(
-                **{
-                    OPTIMAL_WEIGHTS: lambda df: df.apply(
-                        lambda row: _optimal_weights(row[OPTIMAL_KAPPA], number_of_groups), axis=1
-                    )
-                }
-            )
-        )
-
-        group_columns = (
-            [column for column in sample_size_df.index.names if column is not None]
-            + [self._method_column]
-            + [self._metric_column]
-        )
-        arg_dict = {
-            METHOD: self._method_column,
-            IS_BINARY: self._is_binary,
-        }
-        return _find_optimal_group_weights_across_rows(sample_size_df, number_of_groups, group_columns, arg_dict)
-
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         groupby = listify(groupby)
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
@@ -825,212 +682,3 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
             df[REQUIRED_SAMPLE_SIZE_METRIC] = None
 
         return df
-
-
-def _compute_sample_sizes_and_ci_widths(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return df.pipe(_sample_size_from_summary_df, arg_dict=arg_dict).pipe(_ci_width, arg_dict=arg_dict)
-
-
-def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] != ZTEST in df:
-        raise ValueError("Sample size calculation only supported for ZTest.")
-    elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
-        df[REQUIRED_SAMPLE_SIZE_METRIC] = None
-    else:
-        all_weights = arg_dict[TREATMENT_WEIGHTS]
-        control_weight, treatment_weights = all_weights[0], all_weights[1:]
-
-        binary = df[arg_dict[IS_BINARY]].values[0]
-        z_alpha = st.norm.ppf(
-            1
-            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
-        )
-        z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
-        non_inferiority = is_non_inferiority(df[NIM].values[0])
-
-        max_sample_size = 0
-        for treatment_weight in treatment_weights:
-            kappa = control_weight / treatment_weight
-            proportion_of_total = (control_weight + treatment_weight) / sum(all_weights)
-
-            if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
-                this_sample_size = confidence_computers[df[arg_dict[METHOD]].values[0]].required_sample_size(
-                    proportion_of_total=proportion_of_total,
-                    z_alpha=z_alpha,
-                    z_power=z_power,
-                    binary=binary,
-                    non_inferiority=non_inferiority,
-                    hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                    control_avg=df[POINT_ESTIMATE],
-                    control_var=df[VARIANCE],
-                    kappa=kappa,
-                )
-                max_sample_size = max(this_sample_size.max(), max_sample_size)
-
-        df[REQUIRED_SAMPLE_SIZE_METRIC] = None if max_sample_size == 0 else max_sample_size
-
-    return df
-
-
-def _compute_powered_effects(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return df.pipe(_powered_effect_from_summary_df, arg_dict=arg_dict)
-
-
-def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] != ZTEST in df:
-        raise ValueError("Powered effect calculation only supported for ZTest.")
-    elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
-        df[REQUIRED_SAMPLE_SIZE_METRIC] = None
-    else:
-        all_weights = arg_dict[TREATMENT_WEIGHTS]
-        control_weight, treatment_weights = all_weights[0], all_weights[1:]
-
-        current_number_of_units = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
-
-        binary = df[arg_dict[IS_BINARY]].values[0]
-        z_alpha = st.norm.ppf(
-            1
-            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
-        )
-        z_power = st.norm.ppf(df[ADJUSTED_POWER].values[0])
-        non_inferiority = is_non_inferiority(df[NIM].values[0])
-
-        max_powered_effect = 0
-        for treatment_weight in treatment_weights:
-            kappa = control_weight / treatment_weight
-            proportion_of_total = (control_weight + treatment_weight) / sum(all_weights)
-
-            this_powered_effect = df[POWERED_EFFECT] = confidence_computers[
-                df[arg_dict[METHOD]].values[0]
-            ].powered_effect(
-                df=df.assign(kappa=kappa)
-                .assign(current_number_of_units=current_number_of_units)
-                .assign(proportion_of_total=proportion_of_total),
-                z_alpha=z_alpha,
-                z_power=z_power,
-                binary=binary,
-                non_inferiority=non_inferiority,
-                avg_column=POINT_ESTIMATE,
-                var_column=VARIANCE,
-            )
-
-            max_powered_effect = max(this_powered_effect.max(), max_powered_effect)
-
-        df[POWERED_EFFECT] = None if max_powered_effect == 0 else max_powered_effect
-
-    return df
-
-
-def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    expected_sample_size = (
-        None if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is None else df[arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]].values[0]
-    )
-    if expected_sample_size is None or np.isnan(expected_sample_size):
-        return df.assign(**{CI_WIDTH: None})
-
-    all_weights = arg_dict[TREATMENT_WEIGHTS]
-    control_weight, treatment_weights = all_weights[0], all_weights[1:]
-    sum_of_weights = sum(all_weights)
-
-    control_count = int((control_weight / sum_of_weights) * expected_sample_size)
-    if control_count == 0:
-        return df.assign(**{CI_WIDTH: float("inf")})
-
-    else:
-        binary = df[arg_dict[IS_BINARY]].values[0]
-        z_alpha = st.norm.ppf(
-            1
-            - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
-        )
-
-        non_inferiority = is_non_inferiority(df[NIM].values[0])
-        max_ci_width = 0
-        for treatment_weight in treatment_weights:
-            treatment_count = int((treatment_weight / sum_of_weights) * expected_sample_size)
-            if treatment_count == 0:
-                return df.assign(**{CI_WIDTH: float("inf")})
-            else:
-                comparison_ci_width = confidence_computers[df[arg_dict[METHOD]].values[0]].ci_width(
-                    z_alpha=z_alpha,
-                    binary=binary,
-                    non_inferiority=non_inferiority,
-                    hypothetical_effect=df[ALTERNATIVE_HYPOTHESIS] - df[NULL_HYPOTHESIS],
-                    control_avg=df[POINT_ESTIMATE],
-                    control_var=df[VARIANCE],
-                    control_count=control_count,
-                    treatment_count=treatment_count,
-                )
-
-            max_ci_width = max(comparison_ci_width.max(), max_ci_width)
-
-        df[CI_WIDTH] = None if max_ci_width == 0 else max_ci_width
-
-    return df
-
-
-def _optimal_kappa(row: Series, is_binary_column) -> float:
-    def _binary_variance(p: float) -> float:
-        return p * (1 - p)
-
-    if row[is_binary_column]:
-        if is_non_inferiority(row[NIM]):
-            return 1.0
-        else:
-            if row[POINT_ESTIMATE] == 0.0:
-                # variance will be 0 as well in this case. This if-branch is important to avoid divide by zero problems
-                return 1.0
-            else:
-                hypothetical_effect = row[ALTERNATIVE_HYPOTHESIS] - row[NULL_HYPOTHESIS]
-                return np.sqrt(
-                    _binary_variance(row[POINT_ESTIMATE]) / _binary_variance(row[POINT_ESTIMATE] + hypothetical_effect)
-                )
-    else:
-        return 1.0
-
-
-def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
-    treatment_weight = 1 / (kappa + number_of_groups - 1)
-    control_weight = kappa * treatment_weight
-    return [control_weight] + [treatment_weight for _ in range(number_of_groups - 1)]
-
-
-def _find_optimal_group_weights_across_rows(
-    df: DataFrame, group_count: int, group_columns: Iterable, arg_dict: Dict
-) -> (List[float], int):
-    min_kappa = min(df[OPTIMAL_KAPPA])
-    max_kappa = max(df[OPTIMAL_KAPPA])
-
-    if min_kappa == max_kappa:
-        optimal_weights = df[OPTIMAL_WEIGHTS][0]
-        optimal_sample_size = _calculate_optimal_sample_size_given_weights(
-            df, optimal_weights, group_columns, arg_dict
-        )
-        return optimal_weights, optimal_sample_size
-
-    in_between_kappas = np.linspace(min_kappa, max_kappa, 100)
-    min_optimal_sample_size = float("inf")
-    optimal_weights = []
-    for kappa in in_between_kappas:
-        weights = _optimal_weights(kappa, group_count)
-        optimal_sample_size = _calculate_optimal_sample_size_given_weights(df, weights, group_columns, arg_dict)
-        if optimal_sample_size is not None and optimal_sample_size < min_optimal_sample_size:
-            min_optimal_sample_size = optimal_sample_size
-            optimal_weights = weights
-    min_optimal_sample_size = np.nan if min_optimal_sample_size == 0 else min_optimal_sample_size
-    return optimal_weights, min_optimal_sample_size
-
-
-def _calculate_optimal_sample_size_given_weights(
-    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, arg_dict: Dict
-) -> int:
-    arg_dict[TREATMENT_WEIGHTS] = optimal_weights
-    sample_size_df = groupbyApplyParallel(
-        df.groupby(group_columns, as_index=False, sort=False),
-        lambda df: _sample_size_from_summary_df(df, arg_dict=arg_dict),
-    )
-
-    if sample_size_df[REQUIRED_SAMPLE_SIZE_METRIC].isna().all():
-        return None
-    optimal_sample_size = sample_size_df[REQUIRED_SAMPLE_SIZE_METRIC].max()
-
-    return np.ceil(optimal_sample_size) if np.isfinite(optimal_sample_size) else optimal_sample_size
