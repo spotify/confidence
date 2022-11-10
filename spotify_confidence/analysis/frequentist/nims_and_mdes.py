@@ -39,7 +39,10 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
 
 
 def add_nims_and_mdes(
-    df: DataFrame, mde_column: str, nim_column: str, preferred_direction_column: str, method_column: str
+    df: DataFrame,
+    mde_column: str,
+    nim_column: str,
+    preferred_direction_column: str,
 ) -> DataFrame:
     def _set_nims_and_mdes(grp: DataFrame) -> DataFrame:
         nim = grp[nim_column].astype(float)

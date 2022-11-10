@@ -32,7 +32,6 @@ from spotify_confidence.analysis.constants import (
     POINT_ESTIMATE,
     FINAL_EXPECTED_SAMPLE_SIZE,
     MDE,
-    METHOD,
     CORRECTION_METHOD,
     VARIANCE,
     NUMBER_OF_COMPARISONS,
@@ -58,11 +57,7 @@ from spotify_confidence.analysis.constants import (
     PREFERENCE_TEST,
     TWO_SIDED,
     CORRECTION_METHODS,
-    BOOTSTRAP,
-    CHI2,
-    TTEST,
     ZTEST,
-    ZTESTLINREG,
     ORIGINAL_POINT_ESTIMATE,
     ORIGINAL_VARIANCE,
 )
@@ -85,8 +80,7 @@ class SampleSizeComputer:
         categorical_group_columns: Union[str, Iterable],
         interval_size: float,
         correction_method: str,
-        method_column: str,
-        metric_column: Union[str, None],
+        metric_column: str,
         power: float,
         point_estimate_column: str,
         var_column: str,
@@ -118,7 +112,6 @@ class SampleSizeComputer:
         if correction_method.lower() not in CORRECTION_METHODS:
             raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
         self._correction_method = correction_method
-        self._method_column = method_column
 
         self._single_metric = False
         if self._metric_column is not None and data_frame.groupby(self._metric_column, sort=False).ngroups == 1:
@@ -126,22 +119,7 @@ class SampleSizeComputer:
 
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, None)
 
-        columns_that_must_exist = []
-        if (
-            CHI2 in self._df[self._method_column]
-            or TTEST in self._df[self._method_column]
-            or ZTEST in self._df[self._method_column]
-        ):
-            if not self._point_estimate_column or not self._var_column:
-                columns_that_must_exist += [self._numerator, self._denominator]
-                columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
-            else:
-                columns_that_must_exist += [self._point_estimate_column, self._var_column]
-        if BOOTSTRAP in self._df[self._method_column]:
-            columns_that_must_exist += [self._bootstrap_samples_column]
-        if ZTESTLINREG in self._df[self._method_column]:
-            columns_that_must_exist += [self._feature, self._feature_ssq, self._feature_cross]
-
+        columns_that_must_exist = [self._point_estimate_column, self._var_column]
         validate_data(self._df, columns_that_must_exist, self._all_group_columns, None)
 
         self._sufficient = None
@@ -161,7 +139,7 @@ class SampleSizeComputer:
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
-            groupby = [col for col in [self._method_column, self._metric_column] if col is not None]
+            groupby = [self._metric_column]
             self._sufficient = (
                 self._df.groupby(groupby, sort=False, group_keys=True)
                 .apply(
@@ -187,7 +165,7 @@ class SampleSizeComputer:
         )
         sample_size_df = groupbyApplyParallel(
             sample_size_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
-                group_columns + [self._method_column],
+                group_columns,
                 as_index=False,
                 sort=False,
             ),
@@ -209,7 +187,7 @@ class SampleSizeComputer:
         )
         powered_effect_df = groupbyApplyParallel(
             powered_effect_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
-                group_columns + [self._method_column],
+                group_columns,
                 as_index=False,
                 sort=False,
             ),
@@ -230,7 +208,6 @@ class SampleSizeComputer:
                 mde_column=mde_column,
                 nim_column=nim_column,
                 preferred_direction_column=preferred_direction_column,
-                method_column=self._method_column,
             )
             .assign(**{PREFERENCE_TEST: lambda df: get_preference(df, self._correction_method)})
             .assign(**{POWER: self._power})
@@ -254,7 +231,6 @@ class SampleSizeComputer:
         )
         arg_dict = {
             MDE: mde_column,
-            METHOD: self._method_column,
             NUMBER_OF_COMPARISONS: n_comparisons,
             TREATMENT_WEIGHTS: treatment_weights,
             INTERVAL_SIZE: self._interval_size,
@@ -279,13 +255,8 @@ class SampleSizeComputer:
             )
         )
 
-        group_columns = (
-            [column for column in sample_size_df.index.names if column is not None]
-            + [self._method_column]
-            + [self._metric_column]
-        )
+        group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._metric_column]
         arg_dict = {
-            METHOD: self._method_column,
             IS_BINARY: self._is_binary,
         }
         return _find_optimal_group_weights_across_rows(sample_size_df, number_of_groups, group_columns, arg_dict)
@@ -312,9 +283,7 @@ def _compute_sample_sizes_and_ci_widths(df: DataFrame, arg_dict: Dict) -> DataFr
 
 
 def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] != ZTEST in df:
-        raise ValueError("Sample size calculation only supported for ZTest.")
-    elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
+    if (df[ADJUSTED_POWER].isna()).any():
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
     else:
         all_weights = arg_dict[TREATMENT_WEIGHTS]
@@ -334,7 +303,7 @@ def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
             proportion_of_total = (control_weight + treatment_weight) / sum(all_weights)
 
             if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
-                this_sample_size = confidence_computers[df[arg_dict[METHOD]].values[0]].required_sample_size(
+                this_sample_size = confidence_computers[ZTEST].required_sample_size(
                     proportion_of_total=proportion_of_total,
                     z_alpha=z_alpha,
                     z_power=z_power,
@@ -357,9 +326,7 @@ def _compute_powered_effects(df: DataFrame, arg_dict: Dict) -> DataFrame:
 
 
 def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] != ZTEST in df:
-        raise ValueError("Powered effect calculation only supported for ZTest.")
-    elif df[arg_dict[METHOD]].values[0] != ZTEST or (df[ADJUSTED_POWER].isna()).any():
+    if (df[ADJUSTED_POWER].isna()).any():
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
     else:
         all_weights = arg_dict[TREATMENT_WEIGHTS]
@@ -380,9 +347,7 @@ def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
             kappa = control_weight / treatment_weight
             proportion_of_total = (control_weight + treatment_weight) / sum(all_weights)
 
-            this_powered_effect = df[POWERED_EFFECT] = confidence_computers[
-                df[arg_dict[METHOD]].values[0]
-            ].powered_effect(
+            this_powered_effect = df[POWERED_EFFECT] = confidence_computers[ZTEST].powered_effect(
                 df=df.assign(kappa=kappa)
                 .assign(current_number_of_units=current_number_of_units)
                 .assign(proportion_of_total=proportion_of_total),
@@ -430,7 +395,7 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
             if treatment_count == 0:
                 return df.assign(**{CI_WIDTH: float("inf")})
             else:
-                comparison_ci_width = confidence_computers[df[arg_dict[METHOD]].values[0]].ci_width(
+                comparison_ci_width = confidence_computers[ZTEST].ci_width(
                     z_alpha=z_alpha,
                     binary=binary,
                     non_inferiority=non_inferiority,

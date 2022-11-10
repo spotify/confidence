@@ -173,11 +173,8 @@ class ConfidenceComputer(ConfidenceComputerABC):
             or TTEST in self._df[self._method_column]
             or ZTEST in self._df[self._method_column]
         ):
-            if not self._point_estimate_column or not self._var_column:
-                columns_that_must_exist += [self._numerator, self._denominator]
-                columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
-            else:
-                columns_that_must_exist += [self._point_estimate_column, self._var_column]
+            columns_that_must_exist += [self._numerator, self._denominator]
+            columns_that_must_exist += [] if self._numerator_sumsq is None else [self._numerator_sumsq]
         if BOOTSTRAP in self._df[self._method_column]:
             columns_that_must_exist += [self._bootstrap_samples_column]
         if ZTESTLINREG in self._df[self._method_column]:
@@ -465,7 +462,6 @@ class ConfidenceComputer(ConfidenceComputerABC):
                 mde_column=mde_column,
                 nim_column=NIM_COLUMN_DEFAULT,
                 preferred_direction_column=PREFERRED_DIRECTION_COLUMN_DEFAULT,
-                method_column=self._method_column,
             )
             .pipe(join)
             .query(

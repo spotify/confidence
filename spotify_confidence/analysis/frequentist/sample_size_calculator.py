@@ -27,7 +27,6 @@ class SampleSizeCalculator:
             categorical_group_columns=listify(categorical_group_columns),
             interval_size=interval_size,
             correction_method=correction_method.lower(),
-            method_column=METHOD_COLUMN_NAME,
             metric_column=metric_column,
             power=power,
             point_estimate_column=point_estimate_column,
@@ -48,7 +47,7 @@ class SampleSizeCalculator:
             mde_column (str): Name of column in source dataframe containing the minimum detectable effect sizes
             nim_column (str): Name of column in source dataframe containing the non-inferiority margins.
             preferred_direction_column (str): Name of column in source dataframe containing the preferred direction
-            of the metric, which can be "increase", "decrease" or None, the latter meaning a two sided test will be
+            of the metric, which can be "increase", "decrease" or None, the latter meaning a two-sided test will be
             performed.
             final_expected_sample_size_column (str): Name of column in source dataframe containing an expected
             sample size. If this is given, a confidence interval width around the avg will be returned in the
@@ -91,7 +90,7 @@ class SampleSizeCalculator:
             mde_column (str): Name of column in source dataframe containing the minimum detectable effect sizes
             nim_column (str): Name of column in source dataframe containing the non-inferiority margins.
             preferred_direction_column (str): Name of column in source dataframe containing the preferred direction
-            of the metric, which can be "increase", "decrease" or None, the latter meaning a two sided test will be
+            of the metric, which can be "increase", "decrease" or None, the latter meaning a two-sided test will be
             performed.
             sample_size (int): Total sample size across all groups to base the powered effect calculation on
         Returns:
