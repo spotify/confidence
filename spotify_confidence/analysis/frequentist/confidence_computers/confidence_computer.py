@@ -520,7 +520,9 @@ class ConfidenceComputer(ConfidenceComputerABC):
             NUMBER_OF_COMPARISONS: n_comparisons,
         }
         comparison_df = groupbyApplyParallel(
-            comparison_df.groupby(groups_except_ordinal + [self._method_column], as_index=False, sort=False),
+            comparison_df.groupby(
+                groups_except_ordinal + [self._method_column, "level_1", "level_2"], as_index=False, sort=False
+            ),
             lambda df: _compute_comparisons(df, arg_dict=arg_dict),
         )
         return comparison_df
