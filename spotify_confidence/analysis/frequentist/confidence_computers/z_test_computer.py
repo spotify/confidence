@@ -121,7 +121,8 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
     ordinal_group_column = arg_dict[ORDINAL_GROUP_COLUMN]
     n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
 
-    _check_valid_sequential_df(df, ordinal_group_column)
+    if not df.reset_index()[ordinal_group_column].is_unique:
+        raise ValueError("Ordinal values cannot be duplicated")
 
     def adjusted_alphas_for_group(grp: DataFrame) -> Series:
         return (
@@ -144,19 +145,17 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
         )[["zb", ADJUSTED_ALPHA]]
 
     comparison_total_column = "comparison_total_" + denominator
-    df[comparison_total_column] = df[denominator + SFX1] + df[denominator + SFX2]
-    df["max_sample_size"] = df[[comparison_total_column, final_expected_sample_size_column]].max(axis=1)
-    df["sample_size_proportions"] = df[comparison_total_column] / df["max_sample_size"]
-
     return Series(
-        data=df.pipe(adjusted_alphas_for_group)[ADJUSTED_ALPHA],
+        data=(
+            df.assign(**{comparison_total_column: df[denominator + SFX1] + df[denominator + SFX2]})
+            .assign(
+                max_sample_size=lambda df: df[[comparison_total_column, final_expected_sample_size_column]].max(axis=1)
+            )
+            .assign(sample_size_proportions=lambda df: df[comparison_total_column] / df["max_sample_size"])
+            .pipe(adjusted_alphas_for_group)[ADJUSTED_ALPHA]
+        ),
         name=ADJUSTED_ALPHA,
     )
-
-
-def _check_valid_sequential_df(df, ordinal_group_column):
-    if not df.reset_index()[ordinal_group_column].is_unique:
-        raise ValueError("Ordinal values cannot be duplicated")
 
 
 def ci_for_multiple_comparison_methods(
