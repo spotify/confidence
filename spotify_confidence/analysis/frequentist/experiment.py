@@ -16,7 +16,7 @@ from typing import Union, Iterable, Tuple, Dict, List
 
 from pandas import DataFrame
 
-from spotify_confidence.analysis.frequentist.confidence_computers.generic_computer import GenericComputer
+from spotify_confidence.analysis.frequentist.confidence_computers.confidence_computer import ConfidenceComputer
 from .chartify_grapher import ChartifyGrapher
 from ..abstract_base_classes.confidence_abc import ConfidenceABC
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
@@ -75,7 +75,7 @@ class Experiment(ConfidenceABC):
         if confidence_computer is not None:
             self._confidence_computer = confidence_computer
         else:
-            self._confidence_computer = GenericComputer(
+            self._confidence_computer = ConfidenceComputer(
                 data_frame=data_frame,
                 numerator_column=numerator_column,
                 numerator_sum_squares_column=numerator_sum_squares_column,
@@ -89,9 +89,6 @@ class Experiment(ConfidenceABC):
                 metric_column=metric_column,
                 treatment_column=treatment_column,
                 power=power,
-                point_estimate_column=None,
-                var_column=None,
-                is_binary_column=None,
                 feature_column=feature_column,
                 feature_sum_squares_column=feature_sum_squares_column,
                 feature_cross_sum_column=feature_cross_sum_column,
