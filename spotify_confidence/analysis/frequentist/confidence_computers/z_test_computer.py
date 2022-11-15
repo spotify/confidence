@@ -121,6 +121,8 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
     ordinal_group_column = arg_dict[ORDINAL_GROUP_COLUMN]
     n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
 
+    _check_valid_sequential_df(df, ordinal_group_column)
+
     def adjusted_alphas_for_group(grp: DataFrame) -> Series:
         return (
             sequential_bounds(
@@ -141,33 +143,20 @@ def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
             )
         )[["zb", ADJUSTED_ALPHA]]
 
-    groups_except_ordinal = [column for column in df.index.names if column != ordinal_group_column]
-    max_sample_size_by_group = (
-        (
-            df[["current_total_" + denominator, final_expected_sample_size_column]]
-            .groupby(groups_except_ordinal, sort=False)
-            .max()
-            .max(axis=1)
-        )
-        if len(groups_except_ordinal) > 0
-        else (df[["current_total_" + denominator, final_expected_sample_size_column]].max().max())
-    )
-    sample_size_proportions = Series(
-        data=df.groupby(df.index.names, sort=False)["current_total_" + denominator].first() / max_sample_size_by_group,
-        name="sample_size_proportions",
-    )
+    comparison_total_column = "comparison_total_" + denominator
+    df[comparison_total_column] = df[denominator + SFX1] + df[denominator + SFX2]
+    df["max_sample_size"] = df[[comparison_total_column, final_expected_sample_size_column]].max(axis=1)
+    df["sample_size_proportions"] = df[comparison_total_column] / df["max_sample_size"]
 
     return Series(
-        data=df.groupby(df.index.names, sort=False, group_keys=True)[[ALPHA, PREFERENCE_TEST]]
-        .first()
-        .merge(sample_size_proportions, left_index=True, right_index=True)
-        .assign(_sequential_dummy_index_=1)
-        .groupby(groups_except_ordinal + ["_sequential_dummy_index_"], sort=False)[
-            ["sample_size_proportions", PREFERENCE_TEST, ALPHA]
-        ]
-        .apply(adjusted_alphas_for_group)[ADJUSTED_ALPHA],
+        data=df.pipe(adjusted_alphas_for_group)[ADJUSTED_ALPHA],
         name=ADJUSTED_ALPHA,
     )
+
+
+def _check_valid_sequential_df(df, ordinal_group_column):
+    if not df.reset_index()[ordinal_group_column].is_unique:
+        raise ValueError("Ordinal values cannot be duplicated")
 
 
 def ci_for_multiple_comparison_methods(
