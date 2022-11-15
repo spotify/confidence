@@ -2990,7 +2990,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
         self.data[DATE] = pd.to_datetime(self.data[DATE])
         self.data = (
             self.data.groupby([DATE, GROUP, "country", "platform", "metric"])
-            .sum()
+            .sum(numeric_only=True)
             .groupby([GROUP, "country", "platform", "metric"])
             .cumsum()
             .reset_index()
@@ -3448,6 +3448,51 @@ class TestSequentialTwoSided(object):
         np.testing.assert_almost_equal(difference_df[ADJUSTED_UPPER].values[0], 0.121, 3)
         np.testing.assert_almost_equal(difference_df[ADJUSTED_LOWER].values[0], -0.151, 3)
         np.testing.assert_almost_equal(difference_df[DIFFERENCE].values[0], -0.0149, 3)
+
+
+class TestSequentialOneSidedThreeGroups(object):
+    def setup(self):
+        DATE = "date"
+        COUNT = "count"
+        SUM = "sum"
+        SUM_OF_SQUARES = "sum_of_squares"
+        GROUP = "group"
+
+        self.data = pd.DataFrame(
+            [
+                {DATE: 1, GROUP: "1", COUNT: 500, SUM: 1000, SUM_OF_SQUARES: 3000},
+                {DATE: 1, GROUP: "2", COUNT: 1000, SUM: 1000, SUM_OF_SQUARES: 6000},
+                {DATE: 1, GROUP: "3", COUNT: 1500, SUM: 1000, SUM_OF_SQUARES: 12000},
+                {DATE: 2, GROUP: "1", COUNT: 1000, SUM: 2000, SUM_OF_SQUARES: 6000},
+                {DATE: 2, GROUP: "2", COUNT: 2000, SUM: 2000, SUM_OF_SQUARES: 12000},
+                {DATE: 2, GROUP: "3", COUNT: 3000, SUM: 2000, SUM_OF_SQUARES: 24000},
+            ]
+        ).assign(final_expected_sample_size=1e4)
+
+        self.test = spotify_confidence.ZTest(
+            self.data,
+            numerator_column=SUM,
+            numerator_sum_squares_column=SUM_OF_SQUARES,
+            denominator_column=COUNT,
+            categorical_group_columns=[DATE],
+            ordinal_group_column=DATE,
+            treatment_column=GROUP,
+            interval_size=0.95,
+        )
+
+    def test_multiple_difference_groupby(self):
+        difference_df = self.test.multiple_difference(
+            level="1",
+            groupby="date",
+            level_as_reference=True,
+            final_expected_sample_size_column="final_expected_sample_size",
+        )
+
+        test_df = difference_df.reset_index().sort_values(["level_2", "date"])
+        np.testing.assert_almost_equal(test_df[ADJUSTED_LOWER].values, [-1.327445, -1.209182, -1.646339, -1.531049], 3)
+        np.testing.assert_almost_equal(
+            test_df[ADJUSTED_UPPER].values, [-0.6725549, -0.7908185, -1.0203281, -1.1356181], 3
+        )
 
 
 class TestNimsWithNaN(object):

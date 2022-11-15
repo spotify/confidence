@@ -117,8 +117,8 @@ def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFr
         if column is None or column + SFX1 not in df.columns or column + SFX2 not in df.columns:
             continue
 
-        if (df[column + SFX1].isna() == df[column + SFX1].isna()).all() and (
-            df[column + SFX1][df[column + SFX1].notna()] == df[column + SFX1][df[column + SFX1].notna()]
+        if (df[column + SFX1].isna() == df[column + SFX2].isna()).all() and (
+            df[column + SFX1][df[column + SFX1].notna()] == df[column + SFX2][df[column + SFX2].notna()]
         ).all():
             df = df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])
         else:

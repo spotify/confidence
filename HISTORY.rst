@@ -2,6 +2,13 @@
 History
 =======
 
+2.7.5 (2022-11-15)
+------------------
+* Major refactoring, splitting the code into more files for improved readability
+* Fixed bugs related to group sequential testing that resulted in to narrow confidence bands for tests with multiple treatment groups
+* Bump Chartify version
+* Minor changes to get rid of warnings
+
 2.7.4 (2022-08-31)
 ------------------
 * Fixed bug in sample size calculator check for binary metrics when there are nans
