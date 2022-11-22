@@ -2,6 +2,10 @@
 History
 =======
 
+2.7.6 (2022-11-22)
+------------------
+* Fixed bug in compute_sequential_adjusted_alpha where we since 2.7.6 were taking the max sample size rowwise
+
 2.7.5 (2022-11-15)
 ------------------
 * Major refactoring, splitting the code into more files for improved readability
