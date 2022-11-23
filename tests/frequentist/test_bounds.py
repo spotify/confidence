@@ -1,7 +1,13 @@
+import pandas as pd
 import pytest
 import time
 import numpy as np
-from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import sequential_bounds
+from pandas import Timestamp
+
+from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import (
+    sequential_bounds,
+    compute_sequential_adjusted_alpha,
+)
 
 
 @pytest.mark.skip(reason="Skipping because this test is very slow")
@@ -815,3 +821,57 @@ def test_many_days_fast_and_no_crash():
     assert np.allclose(my_bounds, expected)
     # if the calculation with max_nints takes longer than 30 seconds, something is most likely broken
     assert (time.time() - start_time) < 30
+
+
+def test_seq_bounds_run_over():
+    arg_dict = {
+        "ordinal_group_column": "level_1",
+        "denominator": "count",
+        "final_expected_sample_size": "total_expected_users",
+        "number_of_comparisons": 1,
+    }
+
+    df = (
+        pd.DataFrame.from_dict(
+            {
+                "count_1": {
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-01 00:00:00")): 100,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-02 00:00:00")): 190,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-03 00:00:00")): 270,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-04 00:00:00")): 340,
+                },
+                "count_2": {
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-01 00:00:00")): 150,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-02 00:00:00")): 260,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-03 00:00:00")): 360,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-04 00:00:00")): 470,
+                },
+                "total_expected_users": {
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-01 00:00:00")): 300,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-02 00:00:00")): 300,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-03 00:00:00")): 300,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-04 00:00:00")): 300,
+                },
+                "preference_used_in_test": {
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-01 00:00:00")): "two-sided",
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-02 00:00:00")): "two-sided",
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-03 00:00:00")): "two-sided",
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-04 00:00:00")): "two-sided",
+                },
+                "alpha": {
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-01 00:00:00")): 0.010000000000000009,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-02 00:00:00")): 0.010000000000000009,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-03 00:00:00")): 0.010000000000000009,
+                    ("*/example-metrics/*/share_bananas_1d", Timestamp("2020-04-04 00:00:00")): 0.010000000000000009,
+                },
+            }
+        )
+        .reset_index()
+        .set_index("level_0")
+    )
+
+    adjusted_alpha = compute_sequential_adjusted_alpha(df, arg_dict)
+
+    assert np.allclose(
+        adjusted_alpha, pd.Series([0.00095, 0.00241, 0.00410, 0.00636], name="adjusted_alpha"), atol=1.0e-4
+    )
