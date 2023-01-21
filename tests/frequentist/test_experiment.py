@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-from contextlib import nullcontext as does_not_raise
 
 import spotify_confidence
 from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST, ADJUSTED_LOWER, ADJUSTED_UPPER
@@ -181,18 +180,18 @@ class TestBootstrap(object):
         assert np.all(diff_nim_true[ADJUSTED_UPPER] < diff_nim_none[ADJUSTED_UPPER])
 
     @pytest.mark.parametrize(
-        "nims,expectation",
+        "nims",
         [
-            (False, does_not_raise()),
-            (None, does_not_raise()),
-            (True, does_not_raise()),
+            False,
+            None,
+            True,
         ],
         ids=lambda x: f"non_inferiority_margins: {x}",
     )
-    def test_multiple_differences_plot_adjusted_cis(self, nims, expectation):
+    def test_multiple_differences_plot_some_nims_doesnt_raise_exception(self, nims):
         pd.options.display.max_columns = None
         test = self.get_experiment_with_some_nims()
-        with expectation:
+        try:
             ch = test.multiple_difference_plot(
                 level="Control",
                 level_as_reference=True,
@@ -203,6 +202,8 @@ class TestBootstrap(object):
                 non_inferiority_margins=nims,
             )
             assert len(ch.charts) > 0
+        except Exception as e:
+            assert False, f"Using non_inferiority_margins={nims} raised an exception: {e}."
 
     def get_experiment_with_some_nims(self):
         columns = [
