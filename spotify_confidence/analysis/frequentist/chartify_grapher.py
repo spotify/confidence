@@ -268,7 +268,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         ch.figure.circle(
             source=df, x="categorical_x", y=DIFFERENCE, size=20, name="center", line_alpha=0, fill_alpha=0
         )
-        if NULL_HYPOTHESIS in df.columns:
+        if NULL_HYPOTHESIS in df.columns and df[NIM].notna().any():
             ch.style.color_palette.reset_palette_order()
             dash_source = (
                 df[~df[NIM].isna()]
