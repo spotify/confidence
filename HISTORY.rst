@@ -5,7 +5,7 @@ History
 2.7.7 (2023-01-21)
 ------------------
 * Fixed bug that led to unexpected behaviour when using non_inferiority_margins=False. Not passing False produces the same result as passing None
-* Fixed bug in chartify grpaher that caused a crash when attempting to plot a mix of metrics where only some had non-inferiority margins
+* Fixed bug in chartify grapher that caused a crash when attempting to plot a mix of metrics where only some had non-inferiority margins
 
 2.7.6 (2022-11-22)
 ------------------
