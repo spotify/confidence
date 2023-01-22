@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST
+from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST, ADJUSTED_LOWER, ADJUSTED_UPPER
 
 
 class TestBootstrap(object):
@@ -146,3 +147,94 @@ class TestBootstrap(object):
         )
 
         assert len(diff) == 4
+
+    def test_multiple_differences_nims_false_none_true(self):
+        pd.options.display.max_columns = None
+        test = self.get_experiment_with_some_nims()
+
+        diff_nim_false = test.multiple_difference(
+            level="Control",
+            level_as_reference=True,
+            groupby="metric",
+            non_inferiority_margins=False,
+        )
+
+        diff_nim_none = test.multiple_difference(
+            level="Control",
+            level_as_reference=True,
+            groupby="metric",
+            non_inferiority_margins=None,
+        )
+
+        assert np.allclose(diff_nim_false[ADJUSTED_LOWER], diff_nim_none[ADJUSTED_LOWER])
+        assert np.allclose(diff_nim_false[ADJUSTED_UPPER], diff_nim_none[ADJUSTED_UPPER])
+
+        diff_nim_true = test.multiple_difference(
+            level="Control",
+            level_as_reference=True,
+            groupby="metric",
+            non_inferiority_margins=True,
+        )
+
+        assert np.all(diff_nim_true[ADJUSTED_LOWER] > diff_nim_none[ADJUSTED_LOWER])
+        assert np.all(diff_nim_true[ADJUSTED_UPPER] < diff_nim_none[ADJUSTED_UPPER])
+
+    @pytest.mark.parametrize(
+        "nims",
+        [
+            False,
+            None,
+            True,
+        ],
+        ids=lambda x: f"non_inferiority_margins: {x}",
+    )
+    def test_multiple_differences_plot_some_nims_doesnt_raise_exception(self, nims):
+        pd.options.display.max_columns = None
+        test = self.get_experiment_with_some_nims()
+        try:
+            ch = test.multiple_difference_plot(
+                level="Control",
+                level_as_reference=True,
+                groupby="metric",
+                absolute=True,
+                use_adjusted_intervals=True,
+                split_plot_by_groups=True,
+                non_inferiority_margins=nims,
+            )
+            assert len(ch.charts) > 0
+        except Exception as e:
+            assert False, f"Using non_inferiority_margins={nims} raised an exception: {e}."
+
+    def get_experiment_with_some_nims(self):
+        columns = [
+            "group_name",
+            "num_user",
+            "sum",
+            "sum_squares",
+            "method",
+            "metric",
+            "preferred_direction",
+            "non_inferiority_margin",
+        ]
+        data = [
+            ["Control", 6267728, 3240932, 3240932, "z-test", "m1", "increase", 0.15],
+            ["Test", 6260737, 3239706, 3239706, "z-test", "m1", "increase", 0.15],
+            ["Test", 6260737, 38600871, 12432573969, "z-test", "m2", "increase", None],
+            ["Control", 6267728, 35963863, 18433512959, "z-test", "m2", "increase", None],
+            ["Test", 6260737, 67382943, 8974188321, "z-test", "m3", "increase", None],
+            ["Control", 6267728, 67111374, 8728934960, "z-test", "m3", "increase", None],
+        ]
+        df = pd.DataFrame(columns=columns, data=data)
+        test = spotify_confidence.Experiment(
+            data_frame=df.assign(**{METHOD_COLUMN_NAME: ZTEST}),
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_squares",
+            denominator_column="num_user",
+            categorical_group_columns="metric",
+            interval_size=0.99,
+            correction_method="spot-1-bonferroni",
+            metric_column="metric",
+            treatment_column="group_name",
+            method_column="method",
+        )
+        return test

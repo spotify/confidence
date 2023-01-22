@@ -2,9 +2,11 @@ Spotify Confidence
 ========
 
 ![Status](https://img.shields.io/badge/Status-Beta-blue.svg)
-![Latest release](https://img.shields.io/badge/release-2.7.6-green.svg "Latest release: 2.7.6")
+![Latest release](https://img.shields.io/badge/release-2.7.7-green.svg "Latest release: 2.7.6")
 ![Python](https://img.shields.io/badge/Python-3.6-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.7-blue.svg "Python")
+![Python](https://img.shields.io/badge/Python-3.8-blue.svg "Python")
+![Python](https://img.shields.io/badge/Python-3.9-blue.svg "Python")
 
 Python library for AB test analysis.
 
@@ -18,7 +20,8 @@ Each function comes in two versions:
  - one that returns a [Chartify](https://github.com/spotify/chartify) chart.
 
 Spotify Confidence has support calculating p-values and confidence intervals using Z-statistics, Student's T-statistics 
-(or more exactly [Welch's T-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)), as well as Chi-squared statistics.
+(or more exactly [Welch's T-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)), as well as Chi-squared statistics. 
+It also supports a variance reduction technique based on using pre-exposure data to fit a linear model.  
 
 There is also a Bayesian alternative in the BetaBinomial class.
 

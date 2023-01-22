@@ -26,7 +26,7 @@ def add_nim_input_columns_from_tuple_or_dict(df, nims: NIM_TYPE, mde_column: str
         return df.assign(**{NIM_COLUMN_DEFAULT: lambda df: df.index.to_series().map(nim_values)}).assign(
             **{PREFERRED_DIRECTION_COLUMN_DEFAULT: lambda df: df.index.to_series().map(nim_preferences)}
         )
-    elif nims is None:
+    elif nims is None or not nims:
         return df.assign(**{NIM_COLUMN_DEFAULT: None}).assign(
             **{
                 PREFERRED_DIRECTION_COLUMN_DEFAULT: None
