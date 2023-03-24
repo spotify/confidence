@@ -16,8 +16,8 @@ from spotify_confidence.analysis.constants import (
 from spotify_confidence.analysis.frequentist.confidence_computers import z_test_computer
 
 
-def estimate_slope(df, arg_dict: Dict) -> DataFrame:
-    if arg_dict[FEATURE] not in df:
+def estimate_slope(df, **kwargs: Dict) -> DataFrame:
+    if kwargs[FEATURE] not in df:
         return df
 
     def col_sum(x):
@@ -26,20 +26,20 @@ def estimate_slope(df, arg_dict: Dict) -> DataFrame:
     def dimension(x):
         return x.shape[0] if isinstance(x, np.ndarray) and x.size > 1 else 1
 
-    k = df[arg_dict[FEATURE_SUMSQ]].apply(dimension).iloc[0]
+    k = df[kwargs[FEATURE_SUMSQ]].apply(dimension).iloc[0]
 
     XX0 = np.zeros((k + 1, k + 1))
-    XX0[1 : (k + 1), 1 : (k + 1)] = col_sum(df[arg_dict[FEATURE_SUMSQ]])
-    XX0[0, 0] = col_sum(df[arg_dict[DENOMINATOR]])
-    XX0[0, 1 : (k + 1)] = col_sum(df[arg_dict[FEATURE]])
-    XX0[1 : (k + 1), 0] = col_sum(df[arg_dict[FEATURE]])
+    XX0[1 : (k + 1), 1 : (k + 1)] = col_sum(df[kwargs[FEATURE_SUMSQ]])
+    XX0[0, 0] = col_sum(df[kwargs[DENOMINATOR]])
+    XX0[0, 1 : (k + 1)] = col_sum(df[kwargs[FEATURE]])
+    XX0[1 : (k + 1), 0] = col_sum(df[kwargs[FEATURE]])
 
     Xy0 = np.zeros((k + 1, 1))
     Xy0[
         0,
-    ] = col_sum(df[arg_dict[NUMERATOR]])
+    ] = col_sum(df[kwargs[NUMERATOR]])
     Xy0[1 : (k + 1),] = np.atleast_2d(
-        col_sum(df[arg_dict[FEATURE_CROSS]])
+        col_sum(df[kwargs[FEATURE_CROSS]])
     ).reshape(-1, 1)
 
     b = np.matmul(np.linalg.inv(XX0), Xy0)
@@ -47,40 +47,40 @@ def estimate_slope(df, arg_dict: Dict) -> DataFrame:
     if out.size == 1:
         out = out.item()
 
-    outseries = Series(index=df.index, dtype=df[arg_dict[FEATURE]].dtype)
+    outseries = Series(index=df.index, dtype=df[kwargs[FEATURE]].dtype)
     df[REGRESSION_PARAM] = outseries.apply(lambda x: out)
     return df
 
 
-def point_estimate(df: Series, arg_dict) -> float:
-    df = estimate_slope(df, arg_dict)
-    point_estimate = df[arg_dict[NUMERATOR]] / df[arg_dict[DENOMINATOR]]
+def point_estimate(df: Series, **kwargs) -> float:
+    df = estimate_slope(df, **kwargs)
+    point_estimate = df[kwargs[NUMERATOR]] / df[kwargs[DENOMINATOR]]
 
     if REGRESSION_PARAM in df:
 
-        feature_mean = df[arg_dict[FEATURE]].sum() / df[arg_dict[DENOMINATOR]].sum()
+        feature_mean = df[kwargs[FEATURE]].sum() / df[kwargs[DENOMINATOR]].sum()
 
-        def lin_reg_point_estimate_delta(row: Series, arg_dict: Dict, feature_mean: float) -> Series:
+        def lin_reg_point_estimate_delta(row: Series, feature_mean: float, **kwargs: Dict) -> Series:
             return dfmatmul(
-                row[REGRESSION_PARAM], row[arg_dict[FEATURE]] - feature_mean * row[arg_dict[DENOMINATOR]], outer=False
+                row[REGRESSION_PARAM], row[kwargs[FEATURE]] - feature_mean * row[kwargs[DENOMINATOR]], outer=False
             )
 
         return (
             point_estimate
-            - df.apply(lin_reg_point_estimate_delta, arg_dict=arg_dict, feature_mean=feature_mean, axis=1)
-            / df[arg_dict[DENOMINATOR]]
+            - df.apply(lin_reg_point_estimate_delta, feature_mean=feature_mean, axis=1, **kwargs)
+            / df[kwargs[DENOMINATOR]]
         )
 
     return point_estimate
 
 
-def lin_reg_variance_delta(row, arg_dict):
-    y = row[arg_dict[NUMERATOR]]
-    n = row[arg_dict[DENOMINATOR]]
+def lin_reg_variance_delta(row, **kwargs):
+    y = row[kwargs[NUMERATOR]]
+    n = row[kwargs[DENOMINATOR]]
 
-    XX = unlist(row[arg_dict[FEATURE_SUMSQ]])
-    X = unlist(row[arg_dict[FEATURE]])
-    Xy = unlist(row[arg_dict[FEATURE_CROSS]])
+    XX = unlist(row[kwargs[FEATURE_SUMSQ]])
+    X = unlist(row[kwargs[FEATURE]])
+    Xy = unlist(row[kwargs[FEATURE_CROSS]])
 
     sample_var = XX / n - dfmatmul(X / n, X / n)
     sample_cov = Xy / n - dfmatmul(X / n, y / n)
@@ -91,29 +91,29 @@ def lin_reg_variance_delta(row, arg_dict):
     return variance2 + variance3
 
 
-def variance(df: DataFrame, arg_dict) -> Series:
-    variance1 = z_test_computer.variance(df, arg_dict)
+def variance(df: DataFrame, **kwargs) -> Series:
+    variance1 = z_test_computer.variance(df, **kwargs)
 
-    if arg_dict[FEATURE] in df:
-        return variance1 + df.apply(lin_reg_variance_delta, arg_dict=arg_dict, axis=1)
+    if kwargs[FEATURE] in df:
+        return variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
     else:
         return variance1
 
 
-def add_point_estimate_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return z_test_computer.add_point_estimate_ci(df, arg_dict)
+def add_point_estimate_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    return z_test_computer.add_point_estimate_ci(df, **kwargs)
 
 
-def std_err(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return z_test_computer.std_err(df, arg_dict)
+def std_err(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    return z_test_computer.std_err(df, **kwargs)
 
 
-def p_value(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return z_test_computer.p_value(df, arg_dict)
+def p_value(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    return z_test_computer.p_value(df, **kwargs)
 
 
-def ci(df: DataFrame, alpha_column: str, arg_dict: Dict) -> DataFrame:
-    return z_test_computer.ci(df, alpha_column, arg_dict)
+def ci(df: DataFrame, alpha_column: str, **kwargs: Dict) -> DataFrame:
+    return z_test_computer.ci(df, alpha_column, **kwargs)
 
 
 def powered_effect(

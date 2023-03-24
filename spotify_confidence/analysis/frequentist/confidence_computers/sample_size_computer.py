@@ -160,16 +160,16 @@ class SampleSizeComputer:
         preferred_direction_column: str,
         final_expected_sample_size_column: str,
     ) -> DataFrame:
-        arg_dict, group_columns, sample_size_df = self._initialise_sample_size_and_power_computation(
+        kwargs, group_columns, sample_size_df = self._initialise_sample_size_and_power_computation(
             final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
         )
         sample_size_df = groupbyApplyParallel(
-            sample_size_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
+            sample_size_df.pipe(set_alpha_and_adjust_preference, **kwargs).groupby(
                 group_columns,
                 as_index=False,
                 sort=False,
             ),
-            lambda df: _compute_sample_sizes_and_ci_widths(df, arg_dict=arg_dict),
+            lambda df: _compute_sample_sizes_and_ci_widths(df, **kwargs),
         )
 
         return sample_size_df.reset_index()
@@ -182,16 +182,16 @@ class SampleSizeComputer:
         preferred_direction_column: str,
         sample_size: float,
     ) -> DataFrame:
-        arg_dict, group_columns, powered_effect_df = self._initialise_sample_size_and_power_computation(
+        kwargs, group_columns, powered_effect_df = self._initialise_sample_size_and_power_computation(
             sample_size, mde_column, nim_column, preferred_direction_column, treatment_weights
         )
         powered_effect_df = groupbyApplyParallel(
-            powered_effect_df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict).groupby(
+            powered_effect_df.pipe(set_alpha_and_adjust_preference, **kwargs).groupby(
                 group_columns,
                 as_index=False,
                 sort=False,
             ),
-            lambda df: _compute_powered_effects(df, arg_dict=arg_dict),
+            lambda df: _compute_powered_effects(df, **kwargs),
         )
 
         return powered_effect_df.reset_index()
@@ -229,7 +229,7 @@ class SampleSizeComputer:
             single_metric=self._single_metric,
             segments=self._segments,
         )
-        arg_dict = {
+        kwargs = {
             MDE: mde_column,
             NUMBER_OF_COMPARISONS: n_comparisons,
             TREATMENT_WEIGHTS: treatment_weights,
@@ -238,7 +238,7 @@ class SampleSizeComputer:
             IS_BINARY: self._is_binary,
             FINAL_EXPECTED_SAMPLE_SIZE: final_expected_sample_size_column,
         }
-        return arg_dict, group_columns, sample_size_df
+        return kwargs, group_columns, sample_size_df
 
     def compute_optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
@@ -256,10 +256,10 @@ class SampleSizeComputer:
         )
 
         group_columns = [column for column in sample_size_df.index.names if column is not None] + [self._metric_column]
-        arg_dict = {
+        kwargs = {
             IS_BINARY: self._is_binary,
         }
-        return _find_optimal_group_weights_across_rows(sample_size_df, number_of_groups, group_columns, arg_dict)
+        return _find_optimal_group_weights_across_rows(sample_size_df, number_of_groups, group_columns, **kwargs)
 
 
 def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
@@ -278,18 +278,18 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
         )
 
 
-def _compute_sample_sizes_and_ci_widths(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return df.pipe(_sample_size_from_summary_df, arg_dict=arg_dict).pipe(_ci_width, arg_dict=arg_dict)
+def _compute_sample_sizes_and_ci_widths(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    return df.pipe(_sample_size_from_summary_df, **kwargs).pipe(_ci_width, **kwargs)
 
 
-def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
+def _sample_size_from_summary_df(df: DataFrame, **kwargs: Dict) -> DataFrame:
     if (df[ADJUSTED_POWER].isna()).any():
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
     else:
-        all_weights = arg_dict[TREATMENT_WEIGHTS]
+        all_weights = kwargs[TREATMENT_WEIGHTS]
         control_weight, treatment_weights = all_weights[0], all_weights[1:]
 
-        binary = df[arg_dict[IS_BINARY]].values[0]
+        binary = df[kwargs[IS_BINARY]].values[0]
         z_alpha = st.norm.ppf(
             1
             - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
@@ -321,20 +321,20 @@ def _sample_size_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
     return df
 
 
-def _compute_powered_effects(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    return df.pipe(_powered_effect_from_summary_df, arg_dict=arg_dict)
+def _compute_powered_effects(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    return df.pipe(_powered_effect_from_summary_df, **kwargs)
 
 
-def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
+def _powered_effect_from_summary_df(df: DataFrame, **kwargs: Dict) -> DataFrame:
     if (df[ADJUSTED_POWER].isna()).any():
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
     else:
-        all_weights = arg_dict[TREATMENT_WEIGHTS]
+        all_weights = kwargs[TREATMENT_WEIGHTS]
         control_weight, treatment_weights = all_weights[0], all_weights[1:]
 
-        current_number_of_units = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
+        current_number_of_units = kwargs[FINAL_EXPECTED_SAMPLE_SIZE]
 
-        binary = df[arg_dict[IS_BINARY]].values[0]
+        binary = df[kwargs[IS_BINARY]].values[0]
         z_alpha = st.norm.ppf(
             1
             - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
@@ -366,14 +366,14 @@ def _powered_effect_from_summary_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
     return df
 
 
-def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
+def _ci_width(df: DataFrame, **kwargs: Dict) -> DataFrame:
     expected_sample_size = (
-        None if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is None else df[arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]].values[0]
+        None if kwargs[FINAL_EXPECTED_SAMPLE_SIZE] is None else df[kwargs[FINAL_EXPECTED_SAMPLE_SIZE]].values[0]
     )
     if expected_sample_size is None or np.isnan(expected_sample_size):
         return df.assign(**{CI_WIDTH: None})
 
-    all_weights = arg_dict[TREATMENT_WEIGHTS]
+    all_weights = kwargs[TREATMENT_WEIGHTS]
     control_weight, treatment_weights = all_weights[0], all_weights[1:]
     sum_of_weights = sum(all_weights)
 
@@ -382,7 +382,7 @@ def _ci_width(df: DataFrame, arg_dict: Dict) -> DataFrame:
         return df.assign(**{CI_WIDTH: float("inf")})
 
     else:
-        binary = df[arg_dict[IS_BINARY]].values[0]
+        binary = df[kwargs[IS_BINARY]].values[0]
         z_alpha = st.norm.ppf(
             1
             - df[ADJUSTED_ALPHA_POWER_SAMPLE_SIZE].values[0] / (2 if df[PREFERENCE_TEST].values[0] == TWO_SIDED else 1)
@@ -440,7 +440,7 @@ def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
 
 
 def _find_optimal_group_weights_across_rows(
-    df: DataFrame, group_count: int, group_columns: Iterable, arg_dict: Dict
+    df: DataFrame, group_count: int, group_columns: Iterable, **kwargs: Dict
 ) -> (List[float], int):
     min_kappa = min(df[OPTIMAL_KAPPA])
     max_kappa = max(df[OPTIMAL_KAPPA])
@@ -448,7 +448,7 @@ def _find_optimal_group_weights_across_rows(
     if min_kappa == max_kappa:
         optimal_weights = df[OPTIMAL_WEIGHTS][0]
         optimal_sample_size = _calculate_optimal_sample_size_given_weights(
-            df, optimal_weights, group_columns, arg_dict
+            df, optimal_weights, group_columns, **kwargs
         )
         return optimal_weights, optimal_sample_size
 
@@ -457,7 +457,7 @@ def _find_optimal_group_weights_across_rows(
     optimal_weights = []
     for kappa in in_between_kappas:
         weights = _optimal_weights(kappa, group_count)
-        optimal_sample_size = _calculate_optimal_sample_size_given_weights(df, weights, group_columns, arg_dict)
+        optimal_sample_size = _calculate_optimal_sample_size_given_weights(df, weights, group_columns, **kwargs)
         if optimal_sample_size is not None and optimal_sample_size < min_optimal_sample_size:
             min_optimal_sample_size = optimal_sample_size
             optimal_weights = weights
@@ -466,12 +466,12 @@ def _find_optimal_group_weights_across_rows(
 
 
 def _calculate_optimal_sample_size_given_weights(
-    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, arg_dict: Dict
+    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, **kwargs: Dict
 ) -> int:
-    arg_dict[TREATMENT_WEIGHTS] = optimal_weights
+    kwargs[TREATMENT_WEIGHTS] = optimal_weights
     sample_size_df = groupbyApplyParallel(
         df.groupby(group_columns, as_index=False, sort=False),
-        lambda df: _sample_size_from_summary_df(df, arg_dict=arg_dict),
+        lambda df: _sample_size_from_summary_df(df, **kwargs),
     )
 
     if sample_size_df[REQUIRED_SAMPLE_SIZE_METRIC].isna().all():
