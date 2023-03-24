@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED
+from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED, METHOD_COLUMN_NAME
 
 
 class TestUnivariateSingleMetric(object):
@@ -208,8 +208,8 @@ class TestUnivariateNoFeatures(object):
         )
 
     def test_summary(self):
-        summary_ztest = self.ztest.summary(verbose=True).drop(["_method"], axis=1)
-        summary_ztestlinreg = self.ztestlinreg.summary(verbose=True).drop(["_method"], axis=1)
+        summary_ztest = self.ztest.summary(verbose=True).drop([METHOD_COLUMN_NAME], axis=1)
+        summary_ztestlinreg = self.ztestlinreg.summary(verbose=True).drop([METHOD_COLUMN_NAME], axis=1)
         pd.testing.assert_frame_equal(summary_ztest, summary_ztestlinreg)
 
 
