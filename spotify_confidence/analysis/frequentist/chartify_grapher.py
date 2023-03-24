@@ -600,7 +600,9 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             + nim_tool_tip
         )
         lines_with_hover = [] if ordinal else ["center", "nim"]
-        hover = tools.HoverTool(tooltips=tooltips, names=lines_with_hover)
+        renderers = [r for r in chart.figure.renderers if r.name in lines_with_hover]
+        hover = tools.HoverTool(tooltips=tooltips, renderers=renderers)
+
         box_zoom = tools.BoxZoomTool()
 
         chart.figure.add_tools(

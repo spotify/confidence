@@ -4,6 +4,8 @@ import numpy as np
 from pandas import DataFrame, Series
 from scipy import optimize
 from scipy import stats as st
+from scipy.stats.stats import _unequal_var_ttest_denom
+
 from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
@@ -232,7 +234,8 @@ def ci_width(
     treatment_var = _get_hypothetical_treatment_var(
         binary, non_inferiority, control_avg, control_var, hypothetical_effect
     )
-    _, std_err = st.stats._unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
+    _, std_err = _unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
+
     return 2 * z_alpha * std_err
 
 

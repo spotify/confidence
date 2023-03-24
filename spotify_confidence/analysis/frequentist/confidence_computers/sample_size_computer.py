@@ -110,7 +110,7 @@ class SampleSizeComputer:
         self._power = power
 
         if correction_method.lower() not in CORRECTION_METHODS:
-            raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
+            raise ValueError(f"Use one of the correction methods in {CORRECTION_METHODS}")
         self._correction_method = correction_method
 
         self._single_metric = False

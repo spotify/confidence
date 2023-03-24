@@ -1,18 +1,18 @@
 -e .
-pip==21.2.1
+pip==23.0.1
 build
 twine
 bumpversion==0.5.3
 watchdog==0.8.3
-flake8==3.7.7
-tox==3.21.0
+flake8==4.0.1
+tox==4.4.7
 Sphinx==1.4.8
-pytest-runner==2.11.1
+pytest-runner==6.0.0
 jupyterlab==3.2.9
 pylint==1.7.4
 coverage==4.5.1
 pytest==7.0.1
 pytest-cov==2.5.1
 ipywidgets>=7.1.0
-black==22.3.0
-scipy>=1.4.1,<1.8.0
+black==23.1.0
+

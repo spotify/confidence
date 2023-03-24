@@ -156,7 +156,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         self._feature_cross = feature_cross_sum_column
 
         if correction_method.lower() not in CORRECTION_METHODS:
-            raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
+            raise ValueError(f"Use one of the correction methods in {CORRECTION_METHODS}")
         self._correction_method = correction_method
         self._method_column = method_column
 
@@ -385,12 +385,12 @@ class ConfidenceComputer(ConfidenceComputerABC):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_as_reference must be either True or False, but is {level_as_reference}.")
         groupby = listify(groupby)
-        unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
+        unique_levels = set([level[0] for level in levels] + [level[1] for level in levels])
         validate_levels(self._sufficient_statistics, level_columns, unique_levels)
         str2level = {level2str(lv): lv for lv in unique_levels}
         levels = [
-            (level2str(l[0]), level2str(l[1])) if level_as_reference else (level2str(l[1]), level2str(l[0]))
-            for l in levels
+            (level2str(lvl[0]), level2str(lvl[1])) if level_as_reference else (level2str(lvl[1]), level2str(lvl[0]))
+            for lvl in levels
         ]
 
         def assign_total_denominator(df, groupby):
