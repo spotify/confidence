@@ -54,7 +54,6 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         categorical_group_columns: str,
         ordinal_group_column: str,
     ):
-
         self._df = data_frame
         self._numerator = numerator_column
         self._denominator = denominator_column
@@ -63,7 +62,6 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
     def plot_summary(self, summary_df: DataFrame, groupby: Union[str, Iterable]) -> ChartGrid:
-
         ch = ChartGrid()
         if groupby is None:
             ch.charts.append(self._summary_plot(level_name=None, level_df=summary_df, groupby=groupby))
@@ -321,7 +319,6 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     def _summary_plot(self, level_name: Union[str, Tuple], level_df: DataFrame, groupby: Union[str, Iterable]):
         remaining_groups = get_remaning_groups(self._all_group_columns, groupby)
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
-
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
             ch = self._categorical_summary_plot(level_name, level_df, remaining_groups, groupby)

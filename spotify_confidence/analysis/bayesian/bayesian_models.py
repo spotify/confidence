@@ -120,7 +120,6 @@ class BetaBinomial(BaseTest):
         return posterior_samples
 
     def _categorical_summary_plot(self, level_name, level_df, remaining_groups, groupby):
-
         if not remaining_groups:
             remaining_groups = groupby
         grouped_df = level_df.groupby(remaining_groups)
@@ -181,7 +180,6 @@ class BetaBinomial(BaseTest):
         return ch
 
     def _difference_posteriors(self, data, level_1, level_2, absolute=True):
-
         posterior_1 = self._sample_posterior(data.get_group(level_1))
         posterior_2 = self._sample_posterior(data.get_group(level_2))
 
@@ -239,7 +237,6 @@ class BetaBinomial(BaseTest):
         )
 
     def _difference(self, level_name, level_df, remaining_groups, groupby, level_1, level_2, absolute):
-
         difference_df, _ = self._difference_and_difference_posterior(
             level_df, remaining_groups, level_2, level_1, absolute
         )
@@ -367,11 +364,9 @@ class BetaBinomial(BaseTest):
         return ch
 
     def _multiple_difference_joint_dataframe(self, *args, **kwargs):
-
         return self._multiple_difference_joint_base(*args, **kwargs)[0]
 
     def _multiple_difference_joint_base(self, level_name, level_df, remaining_groups, groupby, level, absolute):
-
         grouped_df = level_df.groupby(remaining_groups)
 
         grouped_df_keys = tuple(grouped_df.groups.keys())
@@ -472,7 +467,6 @@ class BetaBinomial(BaseTest):
         return results_df
 
     def _multiple_difference_joint_plot(self, level_name, level_df, remaining_groups, groupby, level, absolute):
-
         self._validate_levels(level_df, remaining_groups, level)
 
         difference_df, difference_posterior = self._multiple_difference_joint_base(
@@ -540,7 +534,6 @@ class BetaBinomial(BaseTest):
     def _multiple_difference(
         self, level_name, level_df, remaining_groups, groupby, level, absolute, level_as_reference
     ):
-
         grouped_df = level_df.groupby(remaining_groups)
 
         grouped_df_keys = tuple(grouped_df.groups.keys())
@@ -548,7 +541,6 @@ class BetaBinomial(BaseTest):
         other_keys = [value for i, value in enumerate(grouped_df_keys) if value != level]
 
         for key in other_keys:
-
             # Switch the subtraction order as specified.
             start_value, end_value = level, key
             if not level_as_reference:
@@ -613,7 +605,6 @@ class BetaBinomial(BaseTest):
     def _categorical_multiple_difference_chart(
         self, level_name, level_df, remaining_groups, groupby, level, absolute, level_as_reference
     ):
-
         grouped_df = level_df.groupby(remaining_groups)
 
         grouped_df_keys = tuple(grouped_df.groups.keys())

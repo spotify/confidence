@@ -214,7 +214,6 @@ def add_color_column(df: DataFrame, cols: Iterable) -> DataFrame:
 
 
 def power_calculation(mde: float, baseline_var: float, alpha: float, n1: int, n2: int) -> float:
-
     z_alpha = norm.ppf(1 - alpha / 2)
     a = abs(mde) / np.sqrt(baseline_var)
     b = np.sqrt(n1 * n2 / (n1 + n2))
@@ -232,7 +231,6 @@ def unlist(x):
 
 
 def dfmatmul(x, y, outer=True):
-
     x = np.atleast_2d(x)
     y = np.atleast_2d(y)
     if x.shape[0] < x.shape[1]:

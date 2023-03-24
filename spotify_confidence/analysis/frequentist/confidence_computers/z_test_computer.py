@@ -248,7 +248,6 @@ def powered_effect(
     avg_column: float,
     var_column: float,
 ) -> Series:
-
     if binary and not non_inferiority:
         effect = df.apply(
             lambda row: _search_MDE_binary_local_search(
@@ -290,7 +289,6 @@ def required_sample_size(
     proportion_of_total: Union[Series, float] = None,
     z_power: float = None,
 ) -> Union[Series, float]:
-
     if kappa is None:
         raise ValueError("kappa is None, must be postive float")
     if proportion_of_total is None:
@@ -358,7 +356,6 @@ def _search_MDE_binary_local_search(
     bounds_queue = [(min_val, max_val)]
 
     while curr_iter < max_iter and best_fun > goodness_threshold:
-
         # take next value from queue
         interval = bounds_queue.pop(0)
 
@@ -467,7 +464,6 @@ def _find_current_powered_effect(
     z_power: float = None,
     z_alpha: float = None,
 ) -> float:
-
     treatment_var = _get_hypothetical_treatment_var(
         binary_metric=binary,
         non_inferiority=non_inferiority,

@@ -124,7 +124,6 @@ class ConfidenceComputer(ConfidenceComputerABC):
         feature_sum_squares_column: Union[str, None],
         feature_cross_sum_column: Union[str, None],
     ):
-
         self._df = data_frame.reset_index(drop=True)
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
@@ -662,9 +661,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, *
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
-            df[REQUIRED_SAMPLE_SIZE_METRIC] = confidence_computers[
-                df[kwargs[METHOD]].values[0]
-            ].required_sample_size(
+            df[REQUIRED_SAMPLE_SIZE_METRIC] = confidence_computers[df[kwargs[METHOD]].values[0]].required_sample_size(
                 proportion_of_total=proportion_of_total,
                 z_alpha=z_alpha,
                 z_power=z_power,

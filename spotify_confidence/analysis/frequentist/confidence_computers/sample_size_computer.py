@@ -86,7 +86,6 @@ class SampleSizeComputer:
         var_column: str,
         is_binary_column: str,
     ):
-
         self._df = data_frame.reset_index(drop=True)
         self._point_estimate_column = point_estimate_column
         self._var_column = var_column

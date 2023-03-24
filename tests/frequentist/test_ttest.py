@@ -245,7 +245,6 @@ class TestCategorical(object):
 
 class TestOrdinal(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [

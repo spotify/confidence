@@ -35,12 +35,8 @@ def estimate_slope(df, **kwargs: Dict) -> DataFrame:
     XX0[1 : (k + 1), 0] = col_sum(df[kwargs[FEATURE]])
 
     Xy0 = np.zeros((k + 1, 1))
-    Xy0[
-        0,
-    ] = col_sum(df[kwargs[NUMERATOR]])
-    Xy0[1 : (k + 1),] = np.atleast_2d(
-        col_sum(df[kwargs[FEATURE_CROSS]])
-    ).reshape(-1, 1)
+    Xy0[0,] = col_sum(df[kwargs[NUMERATOR]])
+    Xy0[1 : (k + 1),] = np.atleast_2d(col_sum(df[kwargs[FEATURE_CROSS]])).reshape(-1, 1)
 
     b = np.matmul(np.linalg.inv(XX0), Xy0)
     out = b[1 : (k + 1)]
@@ -57,7 +53,6 @@ def point_estimate(df: Series, **kwargs) -> float:
     point_estimate = df[kwargs[NUMERATOR]] / df[kwargs[DENOMINATOR]]
 
     if REGRESSION_PARAM in df:
-
         feature_mean = df[kwargs[FEATURE]].sum() / df[kwargs[DENOMINATOR]].sum()
 
         def lin_reg_point_estimate_delta(row: Series, feature_mean: float, **kwargs: Dict) -> Series:

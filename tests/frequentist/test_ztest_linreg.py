@@ -164,7 +164,6 @@ class TestUnivariateMultiMetric(object):
 
 class TestUnivariateNoFeatures(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             [
                 {
@@ -499,7 +498,6 @@ class TestUnivariateMultiMetricRequiredSampleSize(object):
         assert len(summary_df) == len(self.data)
 
     def test_parameters_univariate_required_sample_size(self):
-
         diff = self.test.difference(
             level_1=("0", "metricB"), level_2=("1", "metricB"), verbose=True, non_inferiority_margins=True
         )

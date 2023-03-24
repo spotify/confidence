@@ -57,7 +57,6 @@ def randomization_warning_decorator(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-
         option_seed = options.get_option("randomization_seed")
         np_seed = INITIAL_RANDOMIZATION_SEED
         if option_seed != np_seed and option_seed is None:
@@ -93,7 +92,6 @@ class BaseTest(object, metaclass=ABCMeta):
         denominator_column,
         interval_size,
     ):
-
         self._data_frame = data_frame
         self._numerator_column = numerator_column
         self._denominator_column = denominator_column
@@ -205,9 +203,7 @@ class BaseTest(object, metaclass=ABCMeta):
         return chart_grid
 
     def _summary_plot(self, level_name, level_df, remaining_groups, groupby):
-
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
-
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
             ch = self._categorical_summary_plot(level_name, level_df, remaining_groups, groupby)
