@@ -25,6 +25,8 @@ from spotify_confidence.analysis.bayesian.bayesian_base import (
     axis_format_precision,
 )
 
+from spotify_confidence.analysis.confidence_utils import de_list_if_length_one
+
 
 class BetaBinomial(BaseTest):
     def __init__(
@@ -122,7 +124,8 @@ class BetaBinomial(BaseTest):
     def _categorical_summary_plot(self, level_name, level_df, remaining_groups, groupby):
         if not remaining_groups:
             remaining_groups = groupby
-        grouped_df = level_df.groupby(remaining_groups)
+
+        grouped_df = level_df.groupby(de_list_if_length_one(remaining_groups))
 
         distributions = pd.DataFrame()
         for group_name, group_df in grouped_df:

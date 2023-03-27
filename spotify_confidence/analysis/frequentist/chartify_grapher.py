@@ -28,6 +28,7 @@ from ..confidence_utils import (
     listify,
     level2str,
     to_finite,
+    de_list_if_length_one,
 )
 from ..constants import (
     POINT_ESTIMATE,
@@ -66,7 +67,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         if groupby is None:
             ch.charts.append(self._summary_plot(level_name=None, level_df=summary_df, groupby=groupby))
         else:
-            for level_name, level_df in summary_df.groupby(groupby):
+            for level_name, level_df in summary_df.groupby(de_list_if_length_one(groupby)):
                 ch.charts.append(self._summary_plot(level_name=level_name, level_df=level_df, groupby=groupby))
         return ch
 
@@ -141,12 +142,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         ch = ChartGrid()
         categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
 
+        groupby = de_list_if_length_one(groupby)
+
         if len(categorical_groups) == 0 or not split_plot_by_groups:
             ch.charts += self.plot_multiple_difference_group(
                 absolute, difference_df, groupby, level_as_reference, use_adjusted_intervals
             ).charts
         else:
-            for level_name, level_df in difference_df.groupby(categorical_groups):
+            for level_name, level_df in difference_df.groupby(de_list_if_length_one(categorical_groups)):
                 ch.charts += self.plot_multiple_difference_group(
                     absolute, level_df, groupby, level_as_reference, use_adjusted_intervals
                 ).charts

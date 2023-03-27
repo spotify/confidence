@@ -23,6 +23,7 @@ import pandas as pd
 
 from spotify_confidence.options import options
 from spotify_confidence.chartgrid import ChartGrid
+from spotify_confidence.analysis.confidence_utils import de_list_if_length_one
 
 # warnings.simplefilter("once")
 
@@ -455,10 +456,9 @@ class BaseTest(object, metaclass=ABCMeta):
         groupby = [] if groupby is None else groupby
         # Will group over the whole dataframe if groupby is None
         level_groups = groupby if groupby else np.ones(len(self._data_frame))
-
         remaining_groups = [group for group in self._all_group_columns if group not in groupby and group is not None]
 
-        for level_name, level_df in self._data_frame.groupby(level_groups):
+        for level_name, level_df in self._data_frame.groupby(de_list_if_length_one(level_groups)):
             yield input_function(level_name, level_df, remaining_groups, groupby, **kwargs)
 
     def _iterate_groupby_to_chartgrid(self, input_function, groupby, **kwargs):

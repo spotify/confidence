@@ -26,6 +26,7 @@ from spotify_confidence.analysis.confidence_utils import (
     groupbyApplyParallel,
     is_non_inferiority,
     reset_named_indices,
+    de_list_if_length_one,
 )
 from spotify_confidence.analysis.constants import (
     INTERVAL_SIZE,
@@ -164,7 +165,7 @@ class SampleSizeComputer:
         )
         sample_size_df = groupbyApplyParallel(
             sample_size_df.pipe(set_alpha_and_adjust_preference, **kwargs).groupby(
-                group_columns,
+                de_list_if_length_one(group_columns),
                 as_index=False,
                 sort=False,
             ),
@@ -186,7 +187,7 @@ class SampleSizeComputer:
         )
         powered_effect_df = groupbyApplyParallel(
             powered_effect_df.pipe(set_alpha_and_adjust_preference, **kwargs).groupby(
-                group_columns,
+                de_list_if_length_one(group_columns),
                 as_index=False,
                 sort=False,
             ),
@@ -469,7 +470,7 @@ def _calculate_optimal_sample_size_given_weights(
 ) -> int:
     kwargs[TREATMENT_WEIGHTS] = optimal_weights
     sample_size_df = groupbyApplyParallel(
-        df.groupby(group_columns, as_index=False, sort=False),
+        df.groupby(de_list_if_length_one(group_columns), as_index=False, sort=False),
         lambda df: _sample_size_from_summary_df(df, **kwargs),
     )
 
