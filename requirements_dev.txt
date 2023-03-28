@@ -16,3 +16,5 @@ pytest-cov==2.5.1
 ipywidgets>=7.1.0
 black==22.3.0
 scipy>=1.4.1,<1.8.0
+ipython>=8.10.0 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
