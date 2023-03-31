@@ -58,6 +58,7 @@ OPTIMAL_WEIGHTS = "optimal_weigghts"
 ORIGINAL_POINT_ESTIMATE = "original_point_estimate"
 ORIGINAL_VARIANCE = "original_variance"
 VARIANCE_REDUCTION = "variance_reduction_rate"
+EQUAL_VARIANCE_PVALUE = "equal_variance_pvalue"
 
 BONFERRONI = "bonferroni"
 HOLM = "holm"
