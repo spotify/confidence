@@ -54,7 +54,6 @@ class Experiment(ConfidenceABC):
         feature_sum_squares_column: str = None,
         feature_cross_sum_column: str = None,
     ):
-
         validate_categorical_columns(categorical_group_columns)
         self._df = data_frame
         self._numerator = numerator_column

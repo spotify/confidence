@@ -244,7 +244,6 @@ def landem(
                 df.at[i, "zb"] = 0.0
                 df.at[i, "yb"] = 0.0
             elif tol <= df.at[i, "pd"] < 1:
-
                 df.at[i, "yb"] = _bsearch(
                     last_fcab,
                     int(df.loc[i - 1]["nints"]),  # differs from R because we modified signature of bsearch

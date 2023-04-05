@@ -10,7 +10,6 @@ spotify_confidence.options.set_option("randomization_seed", 1)
 
 class TestCategorical(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": ["test", "control", "test2", "test", "control", "test2"],
@@ -150,7 +149,6 @@ class TestCategorical(object):
 
 class TestOrdinal:
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [

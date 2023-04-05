@@ -25,7 +25,6 @@ from spotify_confidence.analysis.constants import (
 
 class TestPoweredEffectContinuousSingleMetric(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -87,7 +86,6 @@ class TestPoweredEffectContinuousSingleMetric(object):
 
 class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": ["test", "control", "test2", "test", "control", "test2"],
@@ -150,7 +148,6 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
 
 class TestPoweredEffectContinuousMultipleMetricTypes(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": ["test", "control", "test2", "test", "control", "test2"],
@@ -214,7 +211,6 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
 
 class TestPoweredEffectContinuousMultipleMetricsSegments(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -345,7 +341,6 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
 
 class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -476,7 +471,6 @@ class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
 
 class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -1131,7 +1125,6 @@ class TestCategoricalContinuous(object):
 
 class TestOrdinal(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -1998,7 +1991,6 @@ class TestWithNims(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_compare_series_non_inferiority_improve_postitive(self, correction_method):
-
         summary = self.test.summary()
         control_avg = self.data.query("group == '1'").avg.values[0]
         assert np.allclose(control_avg, summary.query("group == '1'")[POINT_ESTIMATE])

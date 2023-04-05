@@ -824,7 +824,7 @@ def test_many_days_fast_and_no_crash():
 
 
 def test_seq_bounds_run_over():
-    arg_dict = {
+    kwargs = {
         "ordinal_group_column": "level_1",
         "denominator": "count",
         "final_expected_sample_size": "total_expected_users",
@@ -870,7 +870,7 @@ def test_seq_bounds_run_over():
         .set_index("level_0")
     )
 
-    adjusted_alpha = compute_sequential_adjusted_alpha(df, arg_dict)
+    adjusted_alpha = compute_sequential_adjusted_alpha(df, **kwargs)
 
     assert np.allclose(
         adjusted_alpha, pd.Series([0.00095, 0.00241, 0.00410, 0.00636], name="adjusted_alpha"), atol=1.0e-4

@@ -2,6 +2,10 @@
 History
 =======
 
+3.0.0 (2023-03-24)
+------------------
+* Dropped support for python 3.6
+
 2.7.7 (2023-01-21)
 ------------------
 * Fixed bug that led to unexpected behaviour when using non_inferiority_margins=False. Not passing False produces the same result as passing None

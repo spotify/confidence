@@ -76,7 +76,6 @@ class TestCategorical(object):
         diff = x2 - x1
         std_diff = diff.std()
 
-        arg_dict = {DENOMINATOR: "n"}
         diff_se = computer.std_err(
             pd.DataFrame(
                 {
@@ -87,7 +86,7 @@ class TestCategorical(object):
                     "method": ["chi-squared"],
                 }
             ),
-            arg_dict,
+            **{DENOMINATOR: "n"},
         )
 
         assert np.allclose(std_diff, diff_se, atol=1e-6)

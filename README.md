@@ -2,7 +2,7 @@ Spotify Confidence
 ========
 
 ![Status](https://img.shields.io/badge/Status-Beta-blue.svg)
-![Latest release](https://img.shields.io/badge/release-2.7.7-green.svg "Latest release: 2.7.6")
+![Latest release](https://img.shields.io/badge/release-3.0.0-green.svg "Latest release: 3.0.0")
 ![Python](https://img.shields.io/badge/Python-3.6-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.7-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.8-blue.svg "Python")
@@ -25,7 +25,7 @@ It also supports a variance reduction technique based on using pre-exposure data
 
 There is also a Bayesian alternative in the BetaBinomial class.
 
-Examples
+Basic Example
 --------
 ```
 import spotify_confidence as confidence
@@ -54,6 +54,13 @@ test.summary_plot().show()
 test.difference_plot(level_1='control', level_2='treatment1').show()
 test.multiple_difference_plot(level='control', level_as_reference=True).show()
 ```
+
+There's a lot more you can do:
+- Segment results by one or more dimensions
+- Use non-inferiority margins
+- Group sequential tests
+- Sample size and power calculations
+- etc
 
 See jupyter notebooks in `examples` folder for more complete examples.
 
