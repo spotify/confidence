@@ -22,6 +22,7 @@ from scipy.stats import beta
 from spotify_confidence.analysis.bayesian.bayesian_base import (
     BaseTest,
     randomization_warning_decorator,
+    format_str_precision,
     axis_format_precision,
 )
 
@@ -175,7 +176,9 @@ class BetaBinomial(BaseTest):
                 line_color=ch.style.color_palette.next_color(),
                 line_dash="dashed",
             )
-            ch.callout.text("{0:.1f}%".format(posterior_mean * 100), posterior_mean, density)
+            ch.callout.text(
+                f"{posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}", posterior_mean, density
+            )
 
         ch.axes.hide_yaxis()
         if color_column:
@@ -342,7 +345,12 @@ class BetaBinomial(BaseTest):
         )
         # ch.callout.text(
         #     '{0:.2f}%'.format(posterior_mean * 100), posterior_mean, 0)
-        ch.callout.text("Expected change: {0:.2f}%".format(posterior_mean * 100), posterior_mean, 0, angle=90)
+        ch.callout.text(
+            f"Expected change: {posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}",
+            posterior_mean,
+            0,
+            angle=90,
+        )
 
         # ch.callout.line(
         #     potential_loss,
@@ -499,7 +507,12 @@ class BetaBinomial(BaseTest):
         # Plot callout for the mean
         ch.callout.line(posterior_mean, orientation="height", line_color=ch.style.color_palette._colors[0])
 
-        ch.callout.text("Expected change: {0:.2f}%".format(posterior_mean * 100), posterior_mean, 0, angle=90)
+        ch.callout.text(
+            f"Expected change: {posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}",
+            posterior_mean,
+            0,
+            angle=90,
+        )
 
         ch.set_source_label("")
         ch.axes.set_yaxis_range(0)
@@ -667,7 +680,12 @@ class BetaBinomial(BaseTest):
                 line_dash="dashed",
             )
 
-            ch.callout.text("Expected change: {0:.2f}%".format(posterior_mean * 100), posterior_mean, 0, angle=90)
+            ch.callout.text(
+                f"Expected change: {posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}",
+                posterior_mean,
+                0,
+                angle=90,
+            )
 
         # ch.callout.line(
         #     potential_loss,
