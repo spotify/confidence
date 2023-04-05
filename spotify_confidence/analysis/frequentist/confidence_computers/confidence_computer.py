@@ -124,7 +124,6 @@ class ConfidenceComputer(ConfidenceComputerABC):
         feature_sum_squares_column: Union[str, None],
         feature_cross_sum_column: Union[str, None],
     ):
-
         self._df = data_frame.reset_index(drop=True)
         self._numerator = numerator_column
         self._numerator_sumsq = numerator_sum_squares_column
@@ -156,7 +155,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         self._feature_cross = feature_cross_sum_column
 
         if correction_method.lower() not in CORRECTION_METHODS:
-            raise ValueError(f"Use one of the correction methods " + f"in {CORRECTION_METHODS}")
+            raise ValueError(f"Use one of the correction methods in {CORRECTION_METHODS}")
         self._correction_method = correction_method
         self._method_column = method_column
 
@@ -199,7 +198,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
-            arg_dict = {
+            kwargs = {
                 NUMERATOR: self._numerator,
                 NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
                 DENOMINATOR: self._denominator,
@@ -217,16 +216,16 @@ class ConfidenceComputer(ConfidenceComputerABC):
                         **{
                             POINT_ESTIMATE: lambda df: confidence_computers[
                                 df[self._method_column].values[0]
-                            ].point_estimate(df, arg_dict)
+                            ].point_estimate(df, **kwargs)
                         }
                     )
                     .assign(
                         **{
                             ORIGINAL_POINT_ESTIMATE: lambda df: (
-                                confidence_computers[ZTEST].point_estimate(df, arg_dict)
+                                confidence_computers[ZTEST].point_estimate(df, **kwargs)
                                 if df[self._method_column].values[0] == ZTESTLINREG
                                 else confidence_computers[df[self._method_column].values[0]].point_estimate(
-                                    df, arg_dict
+                                    df, **kwargs
                                 )
                             )
                         }
@@ -234,22 +233,22 @@ class ConfidenceComputer(ConfidenceComputerABC):
                     .assign(
                         **{
                             VARIANCE: lambda df: confidence_computers[df[self._method_column].values[0]].variance(
-                                df, arg_dict
+                                df, **kwargs
                             )
                         }
                     )
                     .assign(
                         **{
                             ORIGINAL_VARIANCE: lambda df: (
-                                confidence_computers[ZTEST].variance(df, arg_dict)
+                                confidence_computers[ZTEST].variance(df, **kwargs)
                                 if df[self._method_column].values[0] == ZTESTLINREG
-                                else confidence_computers[df[self._method_column].values[0]].variance(df, arg_dict)
+                                else confidence_computers[df[self._method_column].values[0]].variance(df, **kwargs)
                             )
                         }
                     )
                     .pipe(
                         lambda df: confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
-                            df, arg_dict
+                            df, **kwargs
                         )
                     )
                 )
@@ -385,12 +384,12 @@ class ConfidenceComputer(ConfidenceComputerABC):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_as_reference must be either True or False, but is {level_as_reference}.")
         groupby = listify(groupby)
-        unique_levels = set([l[0] for l in levels] + [l[1] for l in levels])
+        unique_levels = set([level[0] for level in levels] + [level[1] for level in levels])
         validate_levels(self._sufficient_statistics, level_columns, unique_levels)
         str2level = {level2str(lv): lv for lv in unique_levels}
         levels = [
-            (level2str(l[0]), level2str(l[1])) if level_as_reference else (level2str(l[1]), level2str(l[0]))
-            for l in levels
+            (level2str(lvl[0]), level2str(lvl[1])) if level_as_reference else (level2str(lvl[1]), level2str(lvl[0]))
+            for lvl in levels
         ]
 
         def assign_total_denominator(df, groupby):
@@ -505,7 +504,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
             segments=self._segments,
         )
 
-        arg_dict = {
+        kwargs = {
             NUMERATOR: self._numerator,
             NUMERATOR_SUM_OF_SQUARES: self._numerator_sumsq,
             DENOMINATOR: self._denominator,
@@ -523,14 +522,14 @@ class ConfidenceComputer(ConfidenceComputerABC):
             comparison_df.groupby(
                 groups_except_ordinal + [self._method_column, "level_1", "level_2"], as_index=False, sort=False
             ),
-            lambda df: _compute_comparisons(df, arg_dict=arg_dict),
+            lambda df: _compute_comparisons(df, **kwargs),
         )
         return comparison_df
 
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         groupby = listify(groupby)
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
-        arg_dict = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
+        kwargs = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
         return (
             self._compute_differences(
                 level_columns,
@@ -546,7 +545,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
             .assign(
                 achieved_power=lambda df: df.apply(
                     lambda row: confidence_computers[row[self._method_column]].achieved_power(
-                        row, mde=mde, alpha=alpha, arg_dict=arg_dict
+                        row, mde=mde, alpha=alpha, **kwargs
                     ),
                     axis=1,
                 )
@@ -554,21 +553,21 @@ class ConfidenceComputer(ConfidenceComputerABC):
         )[["level_1", "level_2", "achieved_power"]]
 
 
-def _compute_comparisons(df: DataFrame, arg_dict: Dict) -> DataFrame:
+def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return (
         df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
-        .assign(**{STD_ERR: confidence_computers[df[arg_dict[METHOD]].values[0]].std_err(df, arg_dict)})
-        .pipe(_add_p_value_and_ci, arg_dict=arg_dict)
-        .pipe(_powered_effect_and_required_sample_size_from_difference_df, arg_dict=arg_dict)
-        .pipe(_adjust_if_absolute, absolute=arg_dict[ABSOLUTE])
+        .assign(**{STD_ERR: confidence_computers[df[kwargs[METHOD]].values[0]].std_err(df, **kwargs)})
+        .pipe(_add_p_value_and_ci, **kwargs)
+        .pipe(_powered_effect_and_required_sample_size_from_difference_df, **kwargs)
+        .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
-        .pipe(_add_variance_reduction_rate, arg_dict=arg_dict)
+        .pipe(_add_variance_reduction_rate, **kwargs)
     )
 
 
-def _add_variance_reduction_rate(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    denominator = arg_dict[DENOMINATOR]
-    method_column = arg_dict[METHOD]
+def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    denominator = kwargs[DENOMINATOR]
+    method_column = kwargs[METHOD]
     if (df[method_column] == ZTESTLINREG).any():
         variance_no_reduction = (
             df[ORIGINAL_VARIANCE + SFX1] / df[denominator + SFX1]
@@ -581,12 +580,12 @@ def _add_variance_reduction_rate(df: DataFrame, arg_dict: Dict) -> DataFrame:
     return df
 
 
-def _add_p_value_and_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
+def _add_p_value_and_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return (
-        df.pipe(set_alpha_and_adjust_preference, arg_dict=arg_dict)
-        .assign(**{P_VALUE: lambda df: df.pipe(_p_value, arg_dict=arg_dict)})
-        .pipe(add_adjusted_p_and_is_significant, arg_dict=arg_dict)
-        .pipe(add_ci, arg_dict=arg_dict)
+        df.pipe(set_alpha_and_adjust_preference, **kwargs)
+        .assign(**{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)})
+        .pipe(add_adjusted_p_and_is_significant, **kwargs)
+        .pipe(add_ci, **kwargs)
     )
 
 
@@ -606,25 +605,25 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
         )
 
 
-def _p_value(df: DataFrame, arg_dict: Dict) -> float:
-    if df[arg_dict[METHOD]].values[0] == CHI2 and (df[NIM].notna()).any():
+def _p_value(df: DataFrame, **kwargs: Dict) -> float:
+    if df[kwargs[METHOD]].values[0] == CHI2 and (df[NIM].notna()).any():
         raise ValueError("Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead.")
-    return confidence_computers[df[arg_dict[METHOD]].values[0]].p_value(df, arg_dict)
+    return confidence_computers[df[kwargs[METHOD]].values[0]].p_value(df, **kwargs)
 
 
-def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    if df[arg_dict[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] and arg_dict[MDE] in df:
+def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    if df[kwargs[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] and kwargs[MDE] in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
-    elif df[arg_dict[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] or (df[ADJUSTED_POWER].isna()).any():
+    elif df[kwargs[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] or (df[ADJUSTED_POWER].isna()).any():
         df[POWERED_EFFECT] = None
         df[REQUIRED_SAMPLE_SIZE] = None
         df[REQUIRED_SAMPLE_SIZE_METRIC] = None
         return df
     else:
-        n1, n2 = df[arg_dict[DENOMINATOR] + SFX1], df[arg_dict[DENOMINATOR] + SFX2]
+        n1, n2 = df[kwargs[DENOMINATOR] + SFX1], df[kwargs[DENOMINATOR] + SFX2]
         kappa = n1 / n2
-        binary = (df[arg_dict[NUMERATOR_SUM_OF_SQUARES] + SFX1] == df[arg_dict[NUMERATOR] + SFX1]).all()
-        proportion_of_total = (n1 + n2) / df[f"current_total_{arg_dict[DENOMINATOR]}"]
+        binary = (df[kwargs[NUMERATOR_SUM_OF_SQUARES] + SFX1] == df[kwargs[NUMERATOR] + SFX1]).all()
+        proportion_of_total = (n1 + n2) / df[f"current_total_{kwargs[DENOMINATOR]}"]
 
         z_alpha = st.norm.ppf(
             1
@@ -638,9 +637,9 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
         elif nim is None:
             non_inferiority = nim is not None
 
-        df[POWERED_EFFECT] = confidence_computers[df[arg_dict[METHOD]].values[0]].powered_effect(
+        df[POWERED_EFFECT] = confidence_computers[df[kwargs[METHOD]].values[0]].powered_effect(
             df=df.assign(kappa=kappa)
-            .assign(current_number_of_units=df[f"current_total_{arg_dict[DENOMINATOR]}"])
+            .assign(current_number_of_units=df[f"current_total_{kwargs[DENOMINATOR]}"])
             .assign(proportion_of_total=proportion_of_total),
             z_alpha=z_alpha,
             z_power=z_power,
@@ -651,7 +650,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
         )
 
         if ALTERNATIVE_HYPOTHESIS in df and NULL_HYPOTHESIS in df and (df[ALTERNATIVE_HYPOTHESIS].notna()).all():
-            df[REQUIRED_SAMPLE_SIZE] = confidence_computers[df[arg_dict[METHOD]].values[0]].required_sample_size(
+            df[REQUIRED_SAMPLE_SIZE] = confidence_computers[df[kwargs[METHOD]].values[0]].required_sample_size(
                 proportion_of_total=1,
                 z_alpha=z_alpha,
                 z_power=z_power,
@@ -662,9 +661,7 @@ def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, a
                 control_var=df[VARIANCE + SFX1],
                 kappa=kappa,
             )
-            df[REQUIRED_SAMPLE_SIZE_METRIC] = confidence_computers[
-                df[arg_dict[METHOD]].values[0]
-            ].required_sample_size(
+            df[REQUIRED_SAMPLE_SIZE_METRIC] = confidence_computers[df[kwargs[METHOD]].values[0]].required_sample_size(
                 proportion_of_total=proportion_of_total,
                 z_alpha=z_alpha,
                 z_power=z_power,

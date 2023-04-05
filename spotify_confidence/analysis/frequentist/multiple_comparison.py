@@ -130,26 +130,26 @@ def get_num_comparisons(
         raise ValueError(f"Unsupported correction method: {correction_method}.")
 
 
-def add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
-    if arg_dict[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
-        if arg_dict[CORRECTION_METHOD] not in [
+def add_adjusted_p_and_is_significant(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    n_comparisons = kwargs[NUMBER_OF_COMPARISONS]
+    if kwargs[FINAL_EXPECTED_SAMPLE_SIZE] is not None:
+        if kwargs[CORRECTION_METHOD] not in [
             BONFERRONI,
             BONFERRONI_ONLY_COUNT_TWOSIDED,
             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
             SPOT_1,
         ]:
             raise ValueError(
-                f"{arg_dict[CORRECTION_METHOD]} not supported for sequential tests. Use one of"
+                f"{kwargs[CORRECTION_METHOD]} not supported for sequential tests. Use one of"
                 f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
                 f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
             )
-        adjusted_alpha = compute_sequential_adjusted_alpha(df, arg_dict[METHOD], arg_dict)
+        adjusted_alpha = compute_sequential_adjusted_alpha(df, **kwargs)
         df = df.merge(adjusted_alpha, left_index=True, right_index=True)
         df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
         df[P_VALUE] = None
         df[ADJUSTED_P] = None
-    elif arg_dict[CORRECTION_METHOD] in [
+    elif kwargs[CORRECTION_METHOD] in [
         HOLM,
         HOMMEL,
         SIMES_HOCHBERG,
@@ -169,17 +169,17 @@ def add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict) -> DataFram
         SPOT_1_FDR_TSBH,
         SPOT_1_FDR_TSBKY,
     ]:
-        if arg_dict[CORRECTION_METHOD].startswith("spot-"):
-            correction_method = arg_dict[CORRECTION_METHOD][7:]
+        if kwargs[CORRECTION_METHOD].startswith("spot-"):
+            correction_method = kwargs[CORRECTION_METHOD][7:]
         else:
-            correction_method = arg_dict[CORRECTION_METHOD]
+            correction_method = kwargs[CORRECTION_METHOD]
         df[ADJUSTED_ALPHA] = df[ALPHA] / n_comparisons
         is_significant, adjusted_p, _, _ = multipletests(
-            pvals=df[P_VALUE], alpha=1 - arg_dict[INTERVAL_SIZE], method=correction_method
+            pvals=df[P_VALUE], alpha=1 - kwargs[INTERVAL_SIZE], method=correction_method
         )
         df[ADJUSTED_P] = adjusted_p
         df[IS_SIGNIFICANT] = is_significant
-    elif arg_dict[CORRECTION_METHOD] in [
+    elif kwargs[CORRECTION_METHOD] in [
         BONFERRONI,
         BONFERRONI_ONLY_COUNT_TWOSIDED,
         BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
@@ -194,17 +194,17 @@ def add_adjusted_p_and_is_significant(df: DataFrame, arg_dict: Dict) -> DataFram
     return df
 
 
-def compute_sequential_adjusted_alpha(df: DataFrame, method_column: str, arg_dict: Dict) -> Series:
-    if df[method_column].isin([ZTEST, ZTESTLINREG]).all():
-        return confidence_computers[ZTEST].compute_sequential_adjusted_alpha(df, arg_dict)
+def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict) -> Series:
+    if df[kwargs[METHOD]].isin([ZTEST, ZTESTLINREG]).all():
+        return confidence_computers[ZTEST].compute_sequential_adjusted_alpha(df, **kwargs)
     else:
         raise NotImplementedError("Sequential testing is only supported for z-test and z-testlinreg")
 
 
-def add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    lower, upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(df, ALPHA, arg_dict)
+def add_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    lower, upper = confidence_computers[df[kwargs[METHOD]].values[0]].ci(df, ALPHA, **kwargs)
 
-    if arg_dict[CORRECTION_METHOD] in [
+    if kwargs[CORRECTION_METHOD] in [
         HOLM,
         HOMMEL,
         SIMES_HOCHBERG,
@@ -212,13 +212,13 @@ def add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         SPOT_1_HOMMEL,
         SPOT_1_SIMES_HOCHBERG,
     ] and all(df[PREFERENCE_TEST] != TWO_SIDED):
-        if all(df[arg_dict[METHOD]] == "z-test"):
+        if all(df[kwargs[METHOD]] == "z-test"):
             adjusted_lower, adjusted_upper = confidence_computers["z-test"].ci_for_multiple_comparison_methods(
-                df, arg_dict[CORRECTION_METHOD], alpha=1 - arg_dict[INTERVAL_SIZE]
+                df, kwargs[CORRECTION_METHOD], alpha=1 - kwargs[INTERVAL_SIZE]
             )
         else:
-            raise NotImplementedError(f"{arg_dict[CORRECTION_METHOD]} is only supported for ZTests")
-    elif arg_dict[CORRECTION_METHOD] in [
+            raise NotImplementedError(f"{kwargs[CORRECTION_METHOD]} is only supported for ZTests")
+    elif kwargs[CORRECTION_METHOD] in [
         BONFERRONI,
         BONFERRONI_ONLY_COUNT_TWOSIDED,
         BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
@@ -233,11 +233,11 @@ def add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
         SPOT_1_FDR_TSBH,
         SPOT_1_FDR_TSBKY,
     ]:
-        adjusted_lower, adjusted_upper = confidence_computers[df[arg_dict[METHOD]].values[0]].ci(
-            df, ADJUSTED_ALPHA, arg_dict
+        adjusted_lower, adjusted_upper = confidence_computers[df[kwargs[METHOD]].values[0]].ci(
+            df, ADJUSTED_ALPHA, **kwargs
         )
     else:
-        warn(f"Confidence intervals not supported for {arg_dict[CORRECTION_METHOD]}")
+        warn(f"Confidence intervals not supported for {kwargs[CORRECTION_METHOD]}")
         adjusted_lower = None
         adjusted_upper = None
 
@@ -249,18 +249,18 @@ def add_ci(df: DataFrame, arg_dict: Dict) -> DataFrame:
     )
 
 
-def set_alpha_and_adjust_preference(df: DataFrame, arg_dict: Dict) -> DataFrame:
-    alpha_0 = 1 - arg_dict[INTERVAL_SIZE]
+def set_alpha_and_adjust_preference(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    alpha_0 = 1 - kwargs[INTERVAL_SIZE]
     return df.assign(
         **{
             ALPHA: df.apply(
                 lambda row: 2 * alpha_0
-                if arg_dict[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
+                if kwargs[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
                 else alpha_0,
                 axis=1,
             )
         }
-    ).assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / arg_dict[NUMBER_OF_COMPARISONS]})
+    ).assign(**{ADJUSTED_ALPHA_POWER_SAMPLE_SIZE: lambda df: df[ALPHA] / kwargs[NUMBER_OF_COMPARISONS]})
 
 
 def get_preference(df: DataFrame, correction_method: str):

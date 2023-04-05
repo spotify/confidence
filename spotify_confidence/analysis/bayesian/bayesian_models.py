@@ -22,8 +22,11 @@ from scipy.stats import beta
 from spotify_confidence.analysis.bayesian.bayesian_base import (
     BaseTest,
     randomization_warning_decorator,
+    format_str_precision,
     axis_format_precision,
 )
+
+from spotify_confidence.analysis.confidence_utils import de_list_if_length_one
 
 
 class BetaBinomial(BaseTest):
@@ -120,10 +123,10 @@ class BetaBinomial(BaseTest):
         return posterior_samples
 
     def _categorical_summary_plot(self, level_name, level_df, remaining_groups, groupby):
-
         if not remaining_groups:
             remaining_groups = groupby
-        grouped_df = level_df.groupby(remaining_groups)
+
+        grouped_df = level_df.groupby(de_list_if_length_one(remaining_groups))
 
         distributions = pd.DataFrame()
         for group_name, group_df in grouped_df:
@@ -173,7 +176,9 @@ class BetaBinomial(BaseTest):
                 line_color=ch.style.color_palette.next_color(),
                 line_dash="dashed",
             )
-            ch.callout.text("{0:.1f}%".format(posterior_mean * 100), posterior_mean, density)
+            ch.callout.text(
+                f"{posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}", posterior_mean, density
+            )
 
         ch.axes.hide_yaxis()
         if color_column:
@@ -181,7 +186,6 @@ class BetaBinomial(BaseTest):
         return ch
 
     def _difference_posteriors(self, data, level_1, level_2, absolute=True):
-
         posterior_1 = self._sample_posterior(data.get_group(level_1))
         posterior_2 = self._sample_posterior(data.get_group(level_2))
 
@@ -239,7 +243,6 @@ class BetaBinomial(BaseTest):
         )
 
     def _difference(self, level_name, level_df, remaining_groups, groupby, level_1, level_2, absolute):
-
         difference_df, _ = self._difference_and_difference_posterior(
             level_df, remaining_groups, level_2, level_1, absolute
         )
@@ -342,7 +345,12 @@ class BetaBinomial(BaseTest):
         )
         # ch.callout.text(
         #     '{0:.2f}%'.format(posterior_mean * 100), posterior_mean, 0)
-        ch.callout.text("Expected change: {0:.2f}%".format(posterior_mean * 100), posterior_mean, 0, angle=90)
+        ch.callout.text(
+            f"Expected change: {posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}",
+            posterior_mean,
+            0,
+            angle=90,
+        )
 
         # ch.callout.line(
         #     potential_loss,
@@ -367,11 +375,9 @@ class BetaBinomial(BaseTest):
         return ch
 
     def _multiple_difference_joint_dataframe(self, *args, **kwargs):
-
         return self._multiple_difference_joint_base(*args, **kwargs)[0]
 
     def _multiple_difference_joint_base(self, level_name, level_df, remaining_groups, groupby, level, absolute):
-
         grouped_df = level_df.groupby(remaining_groups)
 
         grouped_df_keys = tuple(grouped_df.groups.keys())
@@ -472,7 +478,6 @@ class BetaBinomial(BaseTest):
         return results_df
 
     def _multiple_difference_joint_plot(self, level_name, level_df, remaining_groups, groupby, level, absolute):
-
         self._validate_levels(level_df, remaining_groups, level)
 
         difference_df, difference_posterior = self._multiple_difference_joint_base(
@@ -502,7 +507,12 @@ class BetaBinomial(BaseTest):
         # Plot callout for the mean
         ch.callout.line(posterior_mean, orientation="height", line_color=ch.style.color_palette._colors[0])
 
-        ch.callout.text("Expected change: {0:.2f}%".format(posterior_mean * 100), posterior_mean, 0, angle=90)
+        ch.callout.text(
+            f"Expected change: {posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}",
+            posterior_mean,
+            0,
+            angle=90,
+        )
 
         ch.set_source_label("")
         ch.axes.set_yaxis_range(0)
@@ -540,7 +550,6 @@ class BetaBinomial(BaseTest):
     def _multiple_difference(
         self, level_name, level_df, remaining_groups, groupby, level, absolute, level_as_reference
     ):
-
         grouped_df = level_df.groupby(remaining_groups)
 
         grouped_df_keys = tuple(grouped_df.groups.keys())
@@ -548,7 +557,6 @@ class BetaBinomial(BaseTest):
         other_keys = [value for i, value in enumerate(grouped_df_keys) if value != level]
 
         for key in other_keys:
-
             # Switch the subtraction order as specified.
             start_value, end_value = level, key
             if not level_as_reference:
@@ -613,7 +621,6 @@ class BetaBinomial(BaseTest):
     def _categorical_multiple_difference_chart(
         self, level_name, level_df, remaining_groups, groupby, level, absolute, level_as_reference
     ):
-
         grouped_df = level_df.groupby(remaining_groups)
 
         grouped_df_keys = tuple(grouped_df.groups.keys())
@@ -673,7 +680,12 @@ class BetaBinomial(BaseTest):
                 line_dash="dashed",
             )
 
-            ch.callout.text("Expected change: {0:.2f}%".format(posterior_mean * 100), posterior_mean, 0, angle=90)
+            ch.callout.text(
+                f"Expected change: {posterior_mean:{format_str_precision(posterior_mean, absolute=False)}}",
+                posterior_mean,
+                0,
+                angle=90,
+            )
 
         # ch.callout.line(
         #     potential_loss,

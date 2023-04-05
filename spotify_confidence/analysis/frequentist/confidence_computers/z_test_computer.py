@@ -4,6 +4,8 @@ import numpy as np
 from pandas import DataFrame, Series
 from scipy import optimize
 from scipy import stats as st
+from scipy.stats.stats import _unequal_var_ttest_denom
+
 from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
@@ -47,18 +49,18 @@ def sequential_bounds(t: np.array, alpha: float, sides: int, state: DataFrame = 
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
-def point_estimate(df: DataFrame, arg_dict: Dict[str, str]) -> float:
-    numerator = arg_dict[NUMERATOR]
-    denominator = arg_dict[DENOMINATOR]
+def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+    numerator = kwargs[NUMERATOR]
+    denominator = kwargs[DENOMINATOR]
     if (df[denominator] == 0).any():
         raise ValueError("""Can't compute point estimate: denominator is 0""")
     return df[numerator] / df[denominator]
 
 
-def variance(df: DataFrame, arg_dict: Dict[str, str]) -> float:
-    numerator = arg_dict[NUMERATOR]
-    denominator = arg_dict[DENOMINATOR]
-    numerator_sumsq = arg_dict[NUMERATOR_SUM_OF_SQUARES]
+def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+    numerator = kwargs[NUMERATOR]
+    denominator = kwargs[DENOMINATOR]
+    numerator_sumsq = kwargs[NUMERATOR_SUM_OF_SQUARES]
     binary = df[numerator_sumsq] == df[numerator]
     if binary.all():
         # This equals row[POINT_ESTIMATE]*(1-row[POINT_ESTIMATE]) when the data is binary,
@@ -71,14 +73,14 @@ def variance(df: DataFrame, arg_dict: Dict[str, str]) -> float:
     return variance
 
 
-def std_err(df: Series, arg_dict: Dict[str, str]) -> float:
-    denominator = arg_dict[DENOMINATOR]
+def std_err(df: Series, **kwargs: Dict[str, str]) -> float:
+    denominator = kwargs[DENOMINATOR]
     return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
 
-def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
-    denominator = arg_dict[DENOMINATOR]
-    interval_size = arg_dict[INTERVAL_SIZE]
+def add_point_estimate_ci(df: Series, **kwargs: Dict[str, str]) -> Series:
+    denominator = kwargs[DENOMINATOR]
+    interval_size = kwargs[INTERVAL_SIZE]
     df[CI_LOWER], df[CI_UPPER] = _zconfint_generic(
         mean=df[POINT_ESTIMATE],
         std_mean=np.sqrt(df[VARIANCE] / df[denominator]),
@@ -88,7 +90,7 @@ def add_point_estimate_ci(df: Series, arg_dict: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
+def p_value(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
     _, p_value = _zstat_generic(
         value1=df[POINT_ESTIMATE + SFX2],
         value2=df[POINT_ESTIMATE + SFX1],
@@ -99,14 +101,14 @@ def p_value(df: DataFrame, arg_dict: Dict[str, str]) -> Series:
     return p_value
 
 
-def ci(df: DataFrame, alpha_column: str, arg_dict: Dict[str, str]) -> Tuple[Series, Series]:
+def ci(df: DataFrame, alpha_column: str, **kwargs: Dict[str, str]) -> Tuple[Series, Series]:
     return _zconfint_generic(
         mean=df[DIFFERENCE], std_mean=df[STD_ERR], alpha=df[alpha_column], alternative=df[PREFERENCE_TEST].values[0]
     )
 
 
-def achieved_power(df: DataFrame, mde: float, alpha: float, arg_dict: Dict[str, str]) -> DataFrame:
-    denominator = arg_dict[DENOMINATOR]
+def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Dict[str, str]) -> DataFrame:
+    denominator = kwargs[DENOMINATOR]
     v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
     n1, n2 = df[denominator + SFX1], df[denominator + SFX2]
 
@@ -115,11 +117,11 @@ def achieved_power(df: DataFrame, mde: float, alpha: float, arg_dict: Dict[str, 
     return power_calculation(mde, var_pooled, alpha, n1, n2)
 
 
-def compute_sequential_adjusted_alpha(df: DataFrame, arg_dict: Dict[str, str]):
-    denominator = arg_dict[DENOMINATOR]
-    final_expected_sample_size_column = arg_dict[FINAL_EXPECTED_SAMPLE_SIZE]
-    ordinal_group_column = arg_dict[ORDINAL_GROUP_COLUMN]
-    n_comparisons = arg_dict[NUMBER_OF_COMPARISONS]
+def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict[str, str]):
+    denominator = kwargs[DENOMINATOR]
+    final_expected_sample_size_column = kwargs[FINAL_EXPECTED_SAMPLE_SIZE]
+    ordinal_group_column = kwargs[ORDINAL_GROUP_COLUMN]
+    n_comparisons = kwargs[NUMBER_OF_COMPARISONS]
 
     if not df.reset_index()[ordinal_group_column].is_unique:
         raise ValueError("Ordinal values cannot be duplicated")
@@ -232,7 +234,8 @@ def ci_width(
     treatment_var = _get_hypothetical_treatment_var(
         binary, non_inferiority, control_avg, control_var, hypothetical_effect
     )
-    _, std_err = st.stats._unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
+    _, std_err = _unequal_var_ttest_denom(control_var, control_count, treatment_var, treatment_count)
+
     return 2 * z_alpha * std_err
 
 
@@ -245,7 +248,6 @@ def powered_effect(
     avg_column: float,
     var_column: float,
 ) -> Series:
-
     if binary and not non_inferiority:
         effect = df.apply(
             lambda row: _search_MDE_binary_local_search(
@@ -287,7 +289,6 @@ def required_sample_size(
     proportion_of_total: Union[Series, float] = None,
     z_power: float = None,
 ) -> Union[Series, float]:
-
     if kappa is None:
         raise ValueError("kappa is None, must be postive float")
     if proportion_of_total is None:
@@ -355,7 +356,6 @@ def _search_MDE_binary_local_search(
     bounds_queue = [(min_val, max_val)]
 
     while curr_iter < max_iter and best_fun > goodness_threshold:
-
         # take next value from queue
         interval = bounds_queue.pop(0)
 
@@ -464,7 +464,6 @@ def _find_current_powered_effect(
     z_power: float = None,
     z_alpha: float = None,
 ) -> float:
-
     treatment_var = _get_hypothetical_treatment_var(
         binary_metric=binary,
         non_inferiority=non_inferiority,

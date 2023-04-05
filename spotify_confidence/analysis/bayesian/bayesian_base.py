@@ -23,16 +23,25 @@ import pandas as pd
 
 from spotify_confidence.options import options
 from spotify_confidence.chartgrid import ChartGrid
+from spotify_confidence.analysis.confidence_utils import de_list_if_length_one
 
 # warnings.simplefilter("once")
 
 INITIAL_RANDOMIZATION_SEED = np.random.get_state()[1][0]
 
 
+def num_decimals(value: float, absolute: bool) -> int:
+    extra_zeros = 3 if absolute else 1
+    return -int(np.log10(abs(value))) + extra_zeros
+
+
+def format_str_precision(value: float, absolute: bool) -> str:
+    n = num_decimals(value, absolute)
+    return f".{n}{'' if absolute else '%'}"
+
+
 def axis_format_precision(max_value, min_value, absolute):
-    extra_zeros = 2 if absolute else 0
-    precision = -int(np.log10(abs(max_value - min_value))) + extra_zeros
-    zeros = "".join(["0"] * precision)
+    zeros = "".join(["0"] * num_decimals(max_value - min_value, absolute))
     return "0.{}{}".format(zeros, "" if absolute else "%")
 
 
@@ -57,7 +66,6 @@ def randomization_warning_decorator(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-
         option_seed = options.get_option("randomization_seed")
         np_seed = INITIAL_RANDOMIZATION_SEED
         if option_seed != np_seed and option_seed is None:
@@ -93,7 +101,6 @@ class BaseTest(object, metaclass=ABCMeta):
         denominator_column,
         interval_size,
     ):
-
         self._data_frame = data_frame
         self._numerator_column = numerator_column
         self._denominator_column = denominator_column
@@ -205,9 +212,7 @@ class BaseTest(object, metaclass=ABCMeta):
         return chart_grid
 
     def _summary_plot(self, level_name, level_df, remaining_groups, groupby):
-
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
-
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
             ch = self._categorical_summary_plot(level_name, level_df, remaining_groups, groupby)
@@ -459,10 +464,9 @@ class BaseTest(object, metaclass=ABCMeta):
         groupby = [] if groupby is None else groupby
         # Will group over the whole dataframe if groupby is None
         level_groups = groupby if groupby else np.ones(len(self._data_frame))
-
         remaining_groups = [group for group in self._all_group_columns if group not in groupby and group is not None]
 
-        for level_name, level_df in self._data_frame.groupby(level_groups):
+        for level_name, level_df in self._data_frame.groupby(de_list_if_length_one(level_groups)):
             yield input_function(level_name, level_df, remaining_groups, groupby, **kwargs)
 
     def _iterate_groupby_to_chartgrid(self, input_function, groupby, **kwargs):

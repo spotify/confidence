@@ -28,6 +28,7 @@ from ..confidence_utils import (
     listify,
     level2str,
     to_finite,
+    de_list_if_length_one,
 )
 from ..constants import (
     POINT_ESTIMATE,
@@ -41,6 +42,7 @@ from ..constants import (
     NULL_HYPOTHESIS,
     NIM,
     NIM_TYPE,
+    PREFERENCE,
 )
 from ...chartgrid import ChartGrid
 
@@ -54,7 +56,6 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         categorical_group_columns: str,
         ordinal_group_column: str,
     ):
-
         self._df = data_frame
         self._numerator = numerator_column
         self._denominator = denominator_column
@@ -63,12 +64,11 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
     def plot_summary(self, summary_df: DataFrame, groupby: Union[str, Iterable]) -> ChartGrid:
-
         ch = ChartGrid()
         if groupby is None:
             ch.charts.append(self._summary_plot(level_name=None, level_df=summary_df, groupby=groupby))
         else:
-            for level_name, level_df in summary_df.groupby(groupby):
+            for level_name, level_df in summary_df.groupby(de_list_if_length_one(groupby)):
                 ch.charts.append(self._summary_plot(level_name=level_name, level_df=level_df, groupby=groupby))
         return ch
 
@@ -143,12 +143,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         ch = ChartGrid()
         categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
 
+        groupby = de_list_if_length_one(groupby)
+
         if len(categorical_groups) == 0 or not split_plot_by_groups:
             ch.charts += self.plot_multiple_difference_group(
                 absolute, difference_df, groupby, level_as_reference, use_adjusted_intervals
             ).charts
         else:
-            for level_name, level_df in difference_df.groupby(categorical_groups):
+            for level_name, level_df in difference_df.groupby(de_list_if_length_one(categorical_groups)):
                 ch.charts += self.plot_multiple_difference_group(
                     absolute, level_df, groupby, level_as_reference, use_adjusted_intervals
                 ).charts
@@ -275,7 +277,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 .assign(
                     color_column=lambda df: df.apply(
                         lambda row: "red"
-                        if row[LOWER] < row[NULL_HYPOTHESIS] and row[NULL_HYPOTHESIS] < row[UPPER]
+                        if row[LOWER] < row[NULL_HYPOTHESIS]
+                        and row[PREFERENCE] == "increase"
+                        or row[NULL_HYPOTHESIS] < row[UPPER]
+                        and row[PREFERENCE] == "decrease"
                         else "green",
                         axis=1,
                     )
@@ -321,7 +326,6 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     def _summary_plot(self, level_name: Union[str, Tuple], level_df: DataFrame, groupby: Union[str, Iterable]):
         remaining_groups = get_remaning_groups(self._all_group_columns, groupby)
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
-
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
             ch = self._categorical_summary_plot(level_name, level_df, remaining_groups, groupby)
@@ -600,7 +604,9 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             + nim_tool_tip
         )
         lines_with_hover = [] if ordinal else ["center", "nim"]
-        hover = tools.HoverTool(tooltips=tooltips, names=lines_with_hover)
+        renderers = [r for r in chart.figure.renderers if r.name in lines_with_hover]
+        hover = tools.HoverTool(tooltips=tooltips, renderers=renderers)
+
         box_zoom = tools.BoxZoomTool()
 
         chart.figure.add_tools(

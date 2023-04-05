@@ -73,10 +73,10 @@ class TestCategorical(object):
         sum = np.sum(x)
         sum_squared = np.sum(x * x)
 
-        arg_dict = {NUMERATOR: "sum", NUMERATOR_SUM_OF_SQUARES: "sumsq", DENOMINATOR: "n"}
+        kwargs = {NUMERATOR: "sum", NUMERATOR_SUM_OF_SQUARES: "sumsq", DENOMINATOR: "n"}
         var_to_verify = pd.DataFrame(
             {"sum": [sum], "sumsq": [sum_squared], POINT_ESTIMATE: [x.mean()], "n": [n]}
-        ).apply(lambda row: computer.variance(row, arg_dict), axis=1)
+        ).apply(lambda row: computer.variance(row, **kwargs), axis=1)
 
         assert np.allclose(var_to_verify, var, rtol=2e-3)
 
@@ -93,7 +93,7 @@ class TestCategorical(object):
 
         std_diff = np.sqrt(sigma1**2 / n1 + sigma2**2 / n2)
 
-        arg_dict = {DENOMINATOR: "n"}
+        kwargs = {DENOMINATOR: "n"}
         diff_se = computer.std_err(
             pd.DataFrame(
                 {
@@ -104,7 +104,7 @@ class TestCategorical(object):
                     "method": ["t-test"],
                 }
             ),
-            arg_dict,
+            **kwargs,
         )
 
         assert np.allclose(std_diff, diff_se, atol=1e-5)
@@ -245,7 +245,6 @@ class TestCategorical(object):
 
 class TestOrdinal(object):
     def setup(self):
-
         self.data = pd.DataFrame(
             {
                 "variation_name": [
