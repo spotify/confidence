@@ -277,8 +277,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 .assign(
                     color_column=lambda df: df.apply(
                         lambda row: "red"
-                        if row[LOWER] < row[NULL_HYPOTHESIS] and row[PREFERENCE] == 'increase' or
-                           row[NULL_HYPOTHESIS] < row[UPPER] and row[PREFERENCE] == 'decrease'
+                        if row[LOWER] < row[NULL_HYPOTHESIS]
+                        and row[PREFERENCE] == "increase"
+                        or row[NULL_HYPOTHESIS] < row[UPPER]
+                        and row[PREFERENCE] == "decrease"
                         else "green",
                         axis=1,
                     )
