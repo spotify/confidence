@@ -42,6 +42,7 @@ from ..constants import (
     NULL_HYPOTHESIS,
     NIM,
     NIM_TYPE,
+    PREFERENCE,
 )
 from ...chartgrid import ChartGrid
 
@@ -276,7 +277,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 .assign(
                     color_column=lambda df: df.apply(
                         lambda row: "red"
-                        if row[LOWER] < row[NULL_HYPOTHESIS] and row[NULL_HYPOTHESIS] < row[UPPER]
+                        if row[LOWER] < row[NULL_HYPOTHESIS] and row[PREFERENCE] == 'increase' or
+                           row[NULL_HYPOTHESIS] < row[UPPER] and row[PREFERENCE] == 'decrease'
                         else "green",
                         axis=1,
                     )
