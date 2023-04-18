@@ -32,6 +32,7 @@ from ..confidence_utils import (
 )
 from ..constants import (
     POINT_ESTIMATE,
+    ORIGINAL_POINT_ESTIMATE,
     DIFFERENCE,
     CI_LOWER,
     CI_UPPER,
@@ -43,6 +44,7 @@ from ..constants import (
     NIM,
     NIM_TYPE,
     PREFERENCE,
+    SFX1,
 )
 from ...chartgrid import ChartGrid
 
@@ -556,6 +558,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 data[DIFFERENCE] = np.array(df[DIFFERENCE][index])
                 data["p_value"] = np.array(df[P_VALUE][index])
                 data["adjusted_p"] = np.array(df[ADJUSTED_P][index])
+                data["reference_level_avg"] = np.array(df[ORIGINAL_POINT_ESTIMATE + SFX1][index])
                 if NULL_HYPOTHESIS in df.columns:
                     data["null_hyp"] = np.array(df[NULL_HYPOTHESIS][index])
 
@@ -590,8 +593,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             else []
         )
         nim_tool_tip = [("null hypothesis", f"@null_hyp{{{axis_format}}}")] if NULL_HYPOTHESIS in df.columns else []
+        reference_level_tool_tip = (
+            [(f"{df['level_1'].values[0]} avg", f"@reference_level_avg{{{axis_format}}}")]
+            if "level_1" in df.columns
+            else []
+        )
         tooltips = (
             [("group", "@color")]
+            + reference_level_tool_tip
             + ordinal_tool_tip
             + [(f"{center_name}", f"@{center_name}{{{axis_format}}}")]
             + [
