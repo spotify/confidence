@@ -2,6 +2,10 @@
 History
 =======
 
+3.0.1 (2023-04-20)
+------------------
+* Added reference level point estimate to the hover box of difference plots
+
 3.0.0 (2023-03-24)
 ------------------
 * Dropped support for python 3.6
