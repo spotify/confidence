@@ -32,6 +32,7 @@ from ..confidence_utils import (
 )
 from ..constants import (
     POINT_ESTIMATE,
+    ORIGINAL_POINT_ESTIMATE,
     DIFFERENCE,
     CI_LOWER,
     CI_UPPER,
@@ -43,6 +44,7 @@ from ..constants import (
     NIM,
     NIM_TYPE,
     PREFERENCE,
+    SFX1,
 )
 from ...chartgrid import ChartGrid
 
@@ -184,7 +186,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
         y_axis_label = self._get_difference_plot_label(absolute)
         ch = self._ordinal_plot(
-            "difference",
+            DIFFERENCE,
             difference_df,
             groupby=None,
             level_name="",
@@ -381,6 +383,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             y_column=center_name,
             color_column=colors,
         )
+        # Also plot transparent circles, just to be able to show hover box
+        ch.figure.line(source=df, x=self._ordinal_group_column, y=center_name, name="center", line_alpha=0)
         ch.style.color_palette.reset_palette_order()
         ch.plot.area(
             data_frame=(
@@ -402,6 +406,15 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 color_column=colors,
                 line_dash="dashed",
                 line_width=1,
+            )
+            # Also plot named transparent line, just to be able to show hover box
+            ch.figure.line(
+                source=df.sort_values(self._ordinal_group_column),
+                x=self._ordinal_group_column,
+                y=NULL_HYPOTHESIS,
+                line_width=3,
+                line_alpha=0,
+                name="nim",
             )
         ch.axes.set_yaxis_label(y_axis_label)
         ch.axes.set_xaxis_label(self._ordinal_group_column)
@@ -553,9 +566,11 @@ class ChartifyGrapher(ConfidenceGrapherABC):
                 data["color"] = np.array(df[group_col][index])
             if DIFFERENCE in data.keys() or NULL_HYPOTHESIS in data.keys():
                 index = data["index"]
+                data["reference_level"] = np.array(df["level_1"][index])
                 data[DIFFERENCE] = np.array(df[DIFFERENCE][index])
                 data["p_value"] = np.array(df[P_VALUE][index])
                 data["adjusted_p"] = np.array(df[ADJUSTED_P][index])
+                data["reference_level_avg"] = np.array(df[ORIGINAL_POINT_ESTIMATE + SFX1][index])
                 if NULL_HYPOTHESIS in df.columns:
                     data["null_hyp"] = np.array(df[NULL_HYPOTHESIS][index])
 
@@ -580,6 +595,13 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             absolute=absolute,
             extra_zeros=2,
         )
+        axis_format_reference_level, _, _ = axis_format_precision(
+            numbers=concat(
+                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+            ),
+            absolute=True,
+            extra_zeros=2,
+        )
         ordinal_tool_tip = [] if not ordinal else [(self._ordinal_group_column, f"@{self._ordinal_group_column}")]
         p_value_tool_tip = (
             (
@@ -590,8 +612,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             else []
         )
         nim_tool_tip = [("null hypothesis", f"@null_hyp{{{axis_format}}}")] if NULL_HYPOTHESIS in df.columns else []
+        reference_level_tool_tip = (
+            [("reference level", f"@reference_level: @reference_level_avg{{{axis_format_reference_level}}}")]
+            if "level_1" in df.columns
+            else []
+        )
         tooltips = (
             [("group", "@color")]
+            + reference_level_tool_tip
             + ordinal_tool_tip
             + [(f"{center_name}", f"@{center_name}{{{axis_format}}}")]
             + [
@@ -603,7 +631,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             + p_value_tool_tip
             + nim_tool_tip
         )
-        lines_with_hover = [] if ordinal else ["center", "nim"]
+        lines_with_hover = ["center", "nim"]
         renderers = [r for r in chart.figure.renderers if r.name in lines_with_hover]
         hover = tools.HoverTool(tooltips=tooltips, renderers=renderers)
 
