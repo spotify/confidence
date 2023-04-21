@@ -613,7 +613,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         )
         nim_tool_tip = [("null hypothesis", f"@null_hyp{{{axis_format}}}")] if NULL_HYPOTHESIS in df.columns else []
         reference_level_tool_tip = (
-            [(f"reference level", f"@reference_level: @reference_level_avg{{{axis_format_reference_level}}}")]
+            [("reference level", f"@reference_level: @reference_level_avg{{{axis_format_reference_level}}}")]
             if "level_1" in df.columns
             else []
         )
