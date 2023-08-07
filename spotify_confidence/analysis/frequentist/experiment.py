@@ -33,6 +33,33 @@ from ...chartgrid import ChartGrid
 
 
 class Experiment(ConfidenceABC):
+    """
+    This class represents an A/B experiment. It provides several methods to 
+    analyze and visualize the results of the experiment. The experiment is 
+    based on data provided as a DataFrame, with information about the numerator 
+    and denominator of the tested metrics and their grouping columns.
+
+    Attributes:
+        data_frame (DataFrame): DataFrame that contains the experimental data.
+        numerator_column (str): Name of the DataFrame column that contains the numerator of the tested metric.
+        numerator_sum_squares_column (Union[str, None]): Name of the DataFrame column that contains the sum of squares of the numerator.
+        denominator_column (str): Name of the DataFrame column that contains the denominator of the tested metric.
+        categorical_group_columns (Union[str, Iterable]): Column(s) that categorically group the data.
+        ordinal_group_column (Union[str, None]): Column that ordinally group the data.
+        interval_size (float): Size of the confidence interval. Defaults to 0.95.
+        correction_method (str): Method for correction. Defaults to BONFERRONI.
+        confidence_computer (ConfidenceComputerABC): ConfidenceComputerABC object to compute confidence intervals. 
+        confidence_grapher (ConfidenceGrapherABC): ConfidenceGrapherABC object to plot confidence intervals.
+        method_column (str): Column that contains the experimental method.
+        bootstrap_samples_column (str): Column that contains the bootstrap samples.
+        metric_column (str): Column that contains the metric of interest.
+        treatment_column (str): Column that contains the treatment groups.
+        power (float): Desired statistical power. Defaults to 0.8.
+        feature_column (str): Column that contains the features.
+        feature_sum_squares_column (str): Column that contains the sum of squares of the features.
+        feature_cross_sum_column (str): Column that contains the cross product sum of the features.
+    """
+
     def __init__(
         self,
         data_frame: DataFrame,
