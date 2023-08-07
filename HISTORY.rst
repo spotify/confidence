@@ -5,10 +5,7 @@ History
 3.0.2 (2023-08-08)
 ------------------
 * Added docstring to Experiment
-* When using variance reduction and there is no pre-exposure data,
-  so that the corresponding matrix is not invertable we now fall back 
-  to using a matrix with zeroes, leading to no variance reduction for this case,
-  instead of crashing.
+* When using variance reduction and there is no pre-exposure data, so that the corresponding matrix is not invertable we now fall back to using a matrix with zeroes, leading to no variance reduction for this case, instead of crashing.
 
 
 3.0.1 (2023-04-20)
