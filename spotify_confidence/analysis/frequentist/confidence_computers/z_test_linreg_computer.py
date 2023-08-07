@@ -38,7 +38,10 @@ def estimate_slope(df, **kwargs: Dict) -> DataFrame:
     Xy0[0,] = col_sum(df[kwargs[NUMERATOR]])
     Xy0[1 : (k + 1),] = np.atleast_2d(col_sum(df[kwargs[FEATURE_CROSS]])).reshape(-1, 1)
 
-    b = np.matmul(np.linalg.inv(XX0), Xy0)
+    try:
+        b = np.matmul(np.linalg.inv(XX0), Xy0)
+    except np.linalg.LinAlgError:
+        b = np.zeros((k + 1, 1))
     out = b[1 : (k + 1)]
     if out.size == 1:
         out = out.item()
