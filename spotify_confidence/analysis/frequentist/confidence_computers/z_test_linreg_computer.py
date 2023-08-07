@@ -42,7 +42,10 @@ def estimate_slope(df, arg_dict: Dict) -> DataFrame:
         col_sum(df[arg_dict[FEATURE_CROSS]])
     ).reshape(-1, 1)
 
-    b = np.matmul(np.linalg.inv(XX0), Xy0)
+    try:
+        b = np.matmul(np.linalg.inv(XX0), Xy0)
+    except np.linalg.LinAlgError:
+        b = np.zeros((k + 1, 1))
     out = b[1 : (k + 1)]
     if out.size == 1:
         out = out.item()
