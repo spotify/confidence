@@ -13,7 +13,7 @@ Python library for AB test analysis.
 Why use Spotify Confidence?
 -----------------
 
-Spotify Confidence provides convinience wrappers around statsmodel's various functions for computing p-values and confidence intervalls. 
+Spotify Confidence provides convenience wrappers around statsmodel's various functions for computing p-values and confidence intervalls. 
 With Spotify Confidence it's easy to compute several p-values and confidence bounds in one go, e.g. one for each country or for each date. 
 Each function comes in two versions: 
  - one that return a pandas dataframe,
