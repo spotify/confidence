@@ -2,7 +2,7 @@ Spotify Confidence
 ========
 
 ![Status](https://img.shields.io/badge/Status-Beta-blue.svg)
-![Latest release](https://img.shields.io/badge/release-3.0.1-green.svg "Latest release: 3.0.1")
+![Latest release](https://img.shields.io/badge/release-3.0.2-green.svg "Latest release: 3.0.2")
 ![Python](https://img.shields.io/badge/Python-3.7-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.8-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.9-blue.svg "Python")
