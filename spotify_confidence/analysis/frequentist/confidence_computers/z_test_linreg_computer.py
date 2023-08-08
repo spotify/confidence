@@ -100,7 +100,6 @@ def variance(df: DataFrame, **kwargs) -> Series:
         return variance1
 
 
-
 def add_point_estimate_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return z_test_computer.add_point_estimate_ci(df, **kwargs)
 
