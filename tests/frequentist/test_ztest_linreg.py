@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 import spotify_confidence
 from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED, METHOD_COLUMN_NAME
@@ -567,3 +568,49 @@ class TestUnivariateSingleMetricWithBadPreExposureData(object):
         n0 = y[d == 0].size
         n1 = y[d == 1].size
         assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
+
+
+class TestUnivariateSingleMetricNegativeVariance(object):
+    def setup(self):
+        self.data = pd.DataFrame(
+            [
+                {
+                    "group": "1",
+                    "count": 17512,
+                    "sum": 16544,
+                    "sum_of_squares": 16044,
+                    "sum_2": 6625,
+                    "sum_of_squares_2": 6455,
+                    "sum_of_squares_x": 3513,
+                    "metric_name": "metricA",
+                },
+                {
+                    "group": "2",
+                    "count": 159142,
+                    "sum": 150364,
+                    "sum_of_squares": 145794,
+                    "sum_2": 60540,
+                    "sum_of_squares_2": 59047,
+                    "sum_of_squares_x": 32398,
+                    "metric_name": "metricA",
+                },
+            ]
+        )
+
+        self.test = spotify_confidence.ZTestLinreg(
+            data_frame=self.data,
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_of_squares",
+            denominator_column="count",
+            categorical_group_columns=["group"],
+            feature_column="sum_2",
+            feature_sum_squares_column="sum_of_squares_2",
+            feature_cross_sum_column="sum_of_squares_x",
+            interval_size=0.99,
+            correction_method="bonferroni",
+            metric_column="metric_name",
+        )
+
+    def test_setup_that_will_fail_with_negative_variance(self):
+        with pytest.raises(ValueError):
+            self.test.summary(verbose=True)
