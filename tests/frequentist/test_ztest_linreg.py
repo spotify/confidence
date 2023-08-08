@@ -519,8 +519,7 @@ class TestUnivariateSingleMetricWithBadPreExposureData(object):
         y = 0.5 * d + np.random.standard_normal(size=n)
         data = pd.DataFrame({"variation_name": list(map(str, d)), "y": y})
         data = (
-            data
-            .assign(y2=y ** 2)
+            data.assign(y2=y**2)
             .groupby(["variation_name"])
             .agg({"y": ["sum", "count"], "y2": "sum"})
             .assign(**{"x_sum": 0.0, "x2_sum": 0.0, "xy_sum": 0.0})
@@ -554,7 +553,6 @@ class TestUnivariateSingleMetricWithBadPreExposureData(object):
         assert len(summary_df) == len(self.data)
 
     def test_parameters_univariate(self):
-
         summary_df = self.test.summary(verbose=True)
         assert np.allclose(0.0, summary_df[REGRESSION_PARAM][0], rtol=0.0001)
 

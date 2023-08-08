@@ -91,8 +91,8 @@ def lin_reg_variance_delta(row, **kwargs):
 
 def variance(df: DataFrame, **kwargs) -> Series:
     variance1 = z_test_computer.variance(df, **kwargs)
-    computed_variances = variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
     if kwargs[FEATURE] in df:
+        computed_variances = variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
         if (computed_variances < 0).any():
             raise ValueError("Computed variance is negative, please check sufficient " "statistics.")
         return computed_variances
