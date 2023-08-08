@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 import spotify_confidence
 from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED, METHOD_COLUMN_NAME
@@ -510,5 +511,104 @@ class TestUnivariateMultiMetricRequiredSampleSize(object):
         )
 
 
-# TODO: Test for sequential data (w/ ordinal column)
-# TODO: Test for segmentation
+class TestUnivariateSingleMetricWithBadPreExposureData(object):
+    def setup(self):
+        np.random.seed(123)
+        n = 10000
+        d = np.random.randint(2, size=n)
+        y = 0.5 * d + np.random.standard_normal(size=n)
+        data = pd.DataFrame({"variation_name": list(map(str, d)), "y": y})
+        data = (
+            data.assign(y2=y**2)
+            .groupby(["variation_name"])
+            .agg({"y": ["sum", "count"], "y2": "sum"})
+            .assign(**{"x_sum": 0.0, "x2_sum": 0.0, "xy_sum": 0.0})
+            .reset_index()
+        )
+
+        data.columns = data.columns.map("_".join).str.strip("_")
+        data = data.assign(**{"metric_name": "metricA"})
+        self.n = n
+        self.y = y
+        self.d = d
+        self.data = data
+
+        self.test = spotify_confidence.ZTestLinreg(
+            data_frame=data,
+            numerator_column="y_sum",
+            numerator_sum_squares_column="y2_sum",
+            denominator_column="y_count",
+            categorical_group_columns=["variation_name"],
+            feature_column="x_sum",
+            feature_sum_squares_column="x2_sum",
+            feature_cross_sum_column="xy_sum",
+            interval_size=0.99,
+            correction_method="bonferroni",
+            metric_column="metric_name",
+        )
+
+    def test_summary(self):
+        summary_df = self.test.summary(verbose=True)
+        print(summary_df)
+        assert len(summary_df) == len(self.data)
+
+    def test_parameters_univariate(self):
+        summary_df = self.test.summary(verbose=True)
+        assert np.allclose(0.0, summary_df[REGRESSION_PARAM][0], rtol=0.0001)
+
+        diff = self.test.difference(level_1="0", level_2="1", verbose=True, groupby="metric_name")
+        y = self.y
+        d = self.d
+        assert np.allclose(y[d == 1].mean() - y[d == 0].mean(), diff["difference"])
+
+        v0 = np.var(y[d == 0])
+        v1 = np.var(y[d == 1])
+        n0 = y[d == 0].size
+        n1 = y[d == 1].size
+        assert np.allclose(diff["std_err"], np.sqrt(v0 / n0 + v1 / n1), rtol=1e-3)
+
+
+class TestUnivariateSingleMetricNegativeVariance(object):
+    def setup(self):
+        self.data = pd.DataFrame(
+            [
+                {
+                    "group": "1",
+                    "count": 17512,
+                    "sum": 16544,
+                    "sum_of_squares": 16044,
+                    "sum_2": 6625,
+                    "sum_of_squares_2": 6455,
+                    "sum_of_squares_x": 3513,
+                    "metric_name": "metricA",
+                },
+                {
+                    "group": "2",
+                    "count": 159142,
+                    "sum": 150364,
+                    "sum_of_squares": 145794,
+                    "sum_2": 60540,
+                    "sum_of_squares_2": 59047,
+                    "sum_of_squares_x": 32398,
+                    "metric_name": "metricA",
+                },
+            ]
+        )
+
+        self.test = spotify_confidence.ZTestLinreg(
+            data_frame=self.data,
+            numerator_column="sum",
+            numerator_sum_squares_column="sum_of_squares",
+            denominator_column="count",
+            categorical_group_columns=["group"],
+            feature_column="sum_2",
+            feature_sum_squares_column="sum_of_squares_2",
+            feature_cross_sum_column="sum_of_squares_x",
+            interval_size=0.99,
+            correction_method="bonferroni",
+            metric_column="metric_name",
+        )
+
+    def test_setup_that_will_fail_with_negative_variance(self):
+        with pytest.raises(ValueError):
+            self.test.summary(verbose=True)

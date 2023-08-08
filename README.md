@@ -2,7 +2,7 @@ Spotify Confidence
 ========
 
 ![Status](https://img.shields.io/badge/Status-Beta-blue.svg)
-![Latest release](https://img.shields.io/badge/release-3.0.1-green.svg "Latest release: 3.0.1")
+![Latest release](https://img.shields.io/badge/release-3.0.2-green.svg "Latest release: 3.0.2")
 ![Python](https://img.shields.io/badge/Python-3.7-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.8-blue.svg "Python")
 ![Python](https://img.shields.io/badge/Python-3.9-blue.svg "Python")
@@ -13,7 +13,7 @@ Python library for AB test analysis.
 Why use Spotify Confidence?
 -----------------
 
-Spotify Confidence provides convinience wrappers around statsmodel's various functions for computing p-values and confidence intervalls. 
+Spotify Confidence provides convenience wrappers around statsmodel's various functions for computing p-values and confidence intervalls. 
 With Spotify Confidence it's easy to compute several p-values and confidence bounds in one go, e.g. one for each country or for each date. 
 Each function comes in two versions: 
  - one that return a pandas dataframe,

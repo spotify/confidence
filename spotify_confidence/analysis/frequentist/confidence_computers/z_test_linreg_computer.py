@@ -38,7 +38,10 @@ def estimate_slope(df, **kwargs: Dict) -> DataFrame:
     Xy0[0,] = col_sum(df[kwargs[NUMERATOR]])
     Xy0[1 : (k + 1),] = np.atleast_2d(col_sum(df[kwargs[FEATURE_CROSS]])).reshape(-1, 1)
 
-    b = np.matmul(np.linalg.inv(XX0), Xy0)
+    try:
+        b = np.matmul(np.linalg.inv(XX0), Xy0)
+    except np.linalg.LinAlgError:
+        b = np.zeros((k + 1, 1))
     out = b[1 : (k + 1)]
     if out.size == 1:
         out = out.item()
@@ -88,9 +91,11 @@ def lin_reg_variance_delta(row, **kwargs):
 
 def variance(df: DataFrame, **kwargs) -> Series:
     variance1 = z_test_computer.variance(df, **kwargs)
-
     if kwargs[FEATURE] in df:
-        return variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
+        computed_variances = variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
+        if (computed_variances < 0).any():
+            raise ValueError("Computed variance is negative, please check sufficient " "statistics.")
+        return computed_variances
     else:
         return variance1
 
