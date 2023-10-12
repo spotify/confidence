@@ -61,7 +61,7 @@ class SampleSize(object):
         treatment_allocations=default_treatment_allocations,
         bonferroni_correction=default_bonferroni,
     ):
-        """Calculate the required sample size for a binomial metric.
+        """Calculate the required sample size for a continuous metric.
 
         Args:
             average_absolute_mde (float): Average absolute minimal detectable
