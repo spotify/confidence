@@ -819,6 +819,6 @@ class TestSampleSizeCalculator(object):
         )
 
         assert len(ss) == len(df)
-        assert ss[REQUIRED_SAMPLE_SIZE_METRIC].values[0] is None
+        assert ss[REQUIRED_SAMPLE_SIZE_METRIC].isna()[0]
         assert 0.999 < ss[REQUIRED_SAMPLE_SIZE_METRIC].values[1] / 95459 < 1.001
         assert ss[CI_WIDTH].isna().all()

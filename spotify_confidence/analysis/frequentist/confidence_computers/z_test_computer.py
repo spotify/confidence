@@ -4,7 +4,11 @@ import numpy as np
 from pandas import DataFrame, Series
 from scipy import optimize
 from scipy import stats as st
-from scipy.stats.stats import _unequal_var_ttest_denom
+
+try:
+    from scipy.stats._stats_py import _unequal_var_ttest_denom
+except ImportError:  # Fallback for scipy<1.8.0
+    from scipy.stats.stats import _unequal_var_ttest_denom
 
 from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 

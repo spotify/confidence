@@ -2,6 +2,11 @@
 History
 =======
 
+3.0.3 (2023-10-12)
+------------------
+* Relaxing version requirements for scipy and pandas to allow versions 2.x
+
+
 3.0.2 (2023-08-08)
 ------------------
 * Added docstring to Experiment
