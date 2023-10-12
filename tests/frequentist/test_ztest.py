@@ -203,8 +203,8 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
         assert np.isclose(powered_effect[POWERED_EFFECT][1], 0.5291, atol=0.001)
         assert np.isclose(powered_effect[POWERED_EFFECT][2], 0.4596, atol=0.001)
         assert np.isclose(powered_effect[POWERED_EFFECT][3], 0.4869, atol=0.001)
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][0] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][1] is None
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[0]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[1]
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 16487886, atol=100)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 3083846, atol=100)
 
@@ -329,10 +329,10 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
         assert np.isclose(powered_effect[POWERED_EFFECT][6], 0.4995, atol=0.001)
         assert np.isclose(powered_effect[POWERED_EFFECT][7], 0.5291, atol=0.001)
 
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][0] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][1] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][2] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][3] is None
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[0]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[1]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[2]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[3]
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][4], 19475238, atol=100)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][5], 3642591, atol=100)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 19475238, atol=100)
@@ -733,12 +733,12 @@ class TestPoweredEffectBinary(object):
         #  assert np.isclose(powered_effect[POWERED_EFFECT][10], 0.2663, atol=0.001)
         #  assert np.isclose(powered_effect[POWERED_EFFECT][11], 0.2479, atol=0.001)
 
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][0] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][1] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][2] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][3] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][4] is None
-        assert powered_effect[REQUIRED_SAMPLE_SIZE][5] is None
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[0]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[1]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[2]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[3]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[4]
+        assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[5]
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][6], 260541, atol=100)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][7], 361863, atol=100)
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][8], 326159, atol=100)
