@@ -1,7 +1,7 @@
 from typing import Tuple, Union, Dict
 
 import numpy as np
-from pandas import DataFrame, Series, set_option as pd_set_option
+from pandas import DataFrame, Series
 from scipy import optimize
 from scipy import stats as st
 
@@ -127,16 +127,6 @@ def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict[str, str]):
     ordinal_group_column = kwargs[ORDINAL_GROUP_COLUMN]
     n_comparisons = kwargs[NUMBER_OF_COMPARISONS]
 
-    
-    #pd_set_option('display.max_columns', None)
-    #pd_set_option('display.max_rows', 100)
-    #pd_set_option('display.width', 200)
-    #print('denominator: ' + denominator)
-    #print('n_comparisons: ' + str(n_comparisons))
-    #print('ordinal group column: ' + ordinal_group_column)
-    #print('df before error')
-    #print(df)
-    #assert False, "dumb assert to make PyTest print my stuff" 
 
     if not df.reset_index()[ordinal_group_column].is_unique:
         raise ValueError("Ordinal values cannot be duplicated")

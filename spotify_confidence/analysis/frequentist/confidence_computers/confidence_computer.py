@@ -493,7 +493,6 @@ class ConfidenceComputer(ConfidenceComputerABC):
             if column is not None
             and (column != self._ordinal_group_column or final_expected_sample_size_column is None)
         ]
-        print('groups_except_ordinal: ' + str(groups_except_ordinal))
         n_comparisons = get_num_comparisons(
             comparison_df,
             self._correction_method,
@@ -525,9 +524,10 @@ class ConfidenceComputer(ConfidenceComputerABC):
             ),
             lambda df: _compute_comparisons(df, **kwargs),
         )
-        #comparison_df = (comparison_df.pipe(add_adjusted_p_and_is_significant, **kwargs)
-        #                              .pipe(add_ci, **kwargs)
-        #                              .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE]))
+        
+        comparison_df = (comparison_df.pipe(add_adjusted_p_and_is_significant, **kwargs)
+                                      .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
+                                      .pipe(add_ci, **kwargs))
 
         return comparison_df
 
@@ -564,7 +564,6 @@ def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
         .assign(**{STD_ERR: confidence_computers[df[kwargs[METHOD]].values[0]].std_err(df, **kwargs)})
         .pipe(_add_p_value_and_ci, **kwargs)
         .pipe(_powered_effect_and_required_sample_size_from_difference_df, **kwargs)
-        .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE]) # remove?
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
         .pipe(_add_variance_reduction_rate, **kwargs)
     )
@@ -589,8 +588,6 @@ def _add_p_value_and_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return (
         df.pipe(set_alpha_and_adjust_preference, **kwargs)
         .assign(**{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)})
-        .pipe(add_adjusted_p_and_is_significant, **kwargs) # remove?
-        .pipe(add_ci, **kwargs) # remove?
     )
 
 
