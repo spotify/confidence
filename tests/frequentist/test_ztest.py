@@ -14,6 +14,7 @@ from spotify_confidence.analysis.constants import (
     ADJUSTED_UPPER,
     DIFFERENCE,
     BONFERRONI,
+    BONFERRONI_ONLY_COUNT_TWOSIDED,
     BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
     CORRECTION_METHODS,
     SPOT_1,
@@ -21,6 +22,7 @@ from spotify_confidence.analysis.constants import (
     POWERED_EFFECT,
     REQUIRED_SAMPLE_SIZE,
 )
+from statsmodels.stats.multitest import multipletests
 
 
 class TestPoweredEffectContinuousSingleMetric(object):
@@ -206,7 +208,6 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
         assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[0]
         assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[1]
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 16487886, atol=100)
-
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 3083846, atol=100)
 
 
@@ -1536,7 +1537,12 @@ class TestOrdinalPlusTwoCategorical(object):
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference(self, correction_method):
         self.test._confidence_computer._correction_method = correction_method
-        if BONFERRONI in correction_method:
+        if correction_method in [
+            BONFERRONI,
+            BONFERRONI_ONLY_COUNT_TWOSIDED,
+            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+            SPOT_1
+        ]:
             difference_df = self.test.multiple_difference(
                 level=("control", 1), groupby="country", level_as_reference=True
             )
@@ -1570,10 +1576,32 @@ class TestOrdinalPlusTwoCategorical(object):
                 )
             )
 
+            if correction_method.startswith("spot-"):
+                corr_method = correction_method[7:]
+            else:
+                corr_method = correction_method
+
+            _, adjusted_p, _, _ = multipletests(
+                pvals=difference_df["p-value"],
+                alpha=1 - self.test._confidence_computer._interval_size,
+                method=corr_method
+            )
+
+            assert np.allclose(
+                adjusted_p,
+                difference_df["adjusted p-value"],
+                rtol=0.01,
+            )
+
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference_groupby(self, correction_method):
         self.test._confidence_computer._correction_method = correction_method
-        if BONFERRONI in correction_method:
+        if correction_method in [
+            BONFERRONI,
+            BONFERRONI_ONLY_COUNT_TWOSIDED,
+            BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+            SPOT_1
+        ]:
             difference_df = self.test.multiple_difference(
                 level="control", groupby=["days_since_reg", "country"], level_as_reference=True
             )
@@ -1604,8 +1632,25 @@ class TestOrdinalPlusTwoCategorical(object):
             if correction_method in CORRECTION_METHODS_THAT_SUPPORT_CI:
                 assert not any(difference_df[ADJUSTED_LOWER].isna())
 
+            if correction_method.startswith("spot-"):
+                corr_method = correction_method[7:]
+            else:
+                corr_method = correction_method
+
+            _, adjusted_p, _, _ = multipletests(
+                pvals=difference_df["p-value"],
+                alpha=1 - self.test._confidence_computer._interval_size,
+                method=corr_method
+            )
+
+            assert np.allclose(
+                adjusted_p,
+                difference_df["adjusted p-value"],
+                rtol=0.01,
+            )
+
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
-    def test_differece_with_nims(self, correction_method):
+    def test_difference_with_nims(self, correction_method):
         self.test._confidence_computer._correction_method = correction_method
         df = self.test.difference(
             level_1=("test", "us"),
