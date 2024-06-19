@@ -524,10 +524,13 @@ class ConfidenceComputer(ConfidenceComputerABC):
             ),
             lambda df: _compute_comparisons(df, **kwargs),
         )
-        
-        comparison_df = (comparison_df.pipe(add_adjusted_p_and_is_significant, **kwargs)
-                                      .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
-                                      .pipe(add_ci, **kwargs))
+        comparison_df = comparison_df.pipe(add_adjusted_p_and_is_significant, **kwargs)
+        comparison_df = groupbyApplyParallel(
+            comparison_df.groupby(
+                groups_except_ordinal + [self._method_column, "level_1", "level_2"], as_index=False, sort=False
+            ),
+            lambda df: _add_ci_and_adjust_if_absolute(df, **kwargs),
+        )
 
         return comparison_df
 
@@ -562,7 +565,7 @@ def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return (
         df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
         .assign(**{STD_ERR: confidence_computers[df[kwargs[METHOD]].values[0]].std_err(df, **kwargs)})
-        .pipe(_add_p_value_and_ci, **kwargs)
+        .pipe(_add_p_value, **kwargs)
         .pipe(_powered_effect_and_required_sample_size_from_difference_df, **kwargs)
         .assign(**{PREFERENCE: lambda df: df[PREFERENCE].map(PREFERENCE_DICT)})
         .pipe(_add_variance_reduction_rate, **kwargs)
@@ -584,10 +587,17 @@ def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return df
 
 
-def _add_p_value_and_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_p_value(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return (
         df.pipe(set_alpha_and_adjust_preference, **kwargs)
         .assign(**{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)})
+    )
+
+
+def _add_ci_and_adjust_if_absolute(df: DataFrame, **kwargs: Dict) -> DataFrame:
+    return (
+        df.pipe(add_ci, **kwargs)
+        .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
     )
 
 

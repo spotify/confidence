@@ -127,7 +127,6 @@ def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict[str, str]):
     ordinal_group_column = kwargs[ORDINAL_GROUP_COLUMN]
     n_comparisons = kwargs[NUMBER_OF_COMPARISONS]
 
-
     if not df.reset_index()[ordinal_group_column].is_unique:
         raise ValueError("Ordinal values cannot be duplicated")
 

@@ -206,6 +206,7 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
         assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[0]
         assert powered_effect[REQUIRED_SAMPLE_SIZE].isna()[1]
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][2], 16487886, atol=100)
+
         assert np.isclose(powered_effect[REQUIRED_SAMPLE_SIZE][3], 3083846, atol=100)
 
 
