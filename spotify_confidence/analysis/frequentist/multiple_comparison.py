@@ -1,9 +1,12 @@
 from _warnings import warn
 from typing import Iterable, Dict
 
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from statsmodels.stats.multitest import multipletests
 
+from spotify_confidence.analysis.confidence_utils import (
+    groupbyApplyParallel
+)
 from spotify_confidence.analysis.constants import (
     BONFERRONI,
     BONFERRONI_ONLY_COUNT_TWOSIDED,
@@ -32,6 +35,7 @@ from spotify_confidence.analysis.constants import (
     NIM,
     NUMBER_OF_COMPARISONS,
     FINAL_EXPECTED_SAMPLE_SIZE,
+    ORDINAL_GROUP_COLUMN,
     CORRECTION_METHOD,
     METHOD,
     IS_SIGNIFICANT,
@@ -144,11 +148,21 @@ def add_adjusted_p_and_is_significant(df: DataFrame, **kwargs: Dict) -> DataFram
                 f"{BONFERRONI}, {BONFERRONI_ONLY_COUNT_TWOSIDED}, "
                 f"{BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY}, {SPOT_1}"
             )
-        adjusted_alpha = compute_sequential_adjusted_alpha(df, **kwargs)
-        df = df.merge(adjusted_alpha, left_index=True, right_index=True)
-        df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
-        df[P_VALUE] = None
-        df[ADJUSTED_P] = None
+
+        groups_except_ordinal = [
+            column
+            for column in df.index.names
+            if kwargs[ORDINAL_GROUP_COLUMN] is not None
+            and column is not None
+            and (column != kwargs[ORDINAL_GROUP_COLUMN]
+                 or kwargs[FINAL_EXPECTED_SAMPLE_SIZE] is None)
+        ]
+        df = groupbyApplyParallel(
+            df.groupby(
+                groups_except_ordinal + [kwargs[METHOD], "level_1", "level_2"], as_index=False, sort=False
+            ),
+            lambda df: compute_sequential_adjusted_alpha(df, **kwargs),
+        )
     elif kwargs[CORRECTION_METHOD] in [
         HOLM,
         HOMMEL,
@@ -194,9 +208,14 @@ def add_adjusted_p_and_is_significant(df: DataFrame, **kwargs: Dict) -> DataFram
     return df
 
 
-def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict) -> Series:
+def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict) -> DataFrame:
     if df[kwargs[METHOD]].isin([ZTEST, ZTESTLINREG]).all():
-        return confidence_computers[ZTEST].compute_sequential_adjusted_alpha(df, **kwargs)
+        adjusted_alpha = confidence_computers[ZTEST].compute_sequential_adjusted_alpha(df, **kwargs)
+        df = df.merge(adjusted_alpha, left_index=True, right_index=True)
+        df[IS_SIGNIFICANT] = df[P_VALUE] < df[ADJUSTED_ALPHA]
+        df[P_VALUE] = None
+        df[ADJUSTED_P] = None
+        return df
     else:
         raise NotImplementedError("Sequential testing is only supported for z-test and z-testlinreg")
 
