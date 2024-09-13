@@ -588,17 +588,13 @@ def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
 
 
 def _add_p_value(df: DataFrame, **kwargs: Dict) -> DataFrame:
-    return (
-        df.pipe(set_alpha_and_adjust_preference, **kwargs)
-        .assign(**{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)})
+    return df.pipe(set_alpha_and_adjust_preference, **kwargs).assign(
+        **{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)}
     )
 
 
 def _add_ci_and_adjust_if_absolute(df: DataFrame, **kwargs: Dict) -> DataFrame:
-    return (
-        df.pipe(add_ci, **kwargs)
-        .pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
-    )
+    return df.pipe(add_ci, **kwargs).pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
 
 
 def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:

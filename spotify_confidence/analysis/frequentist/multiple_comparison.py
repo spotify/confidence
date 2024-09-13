@@ -4,9 +4,7 @@ from typing import Iterable, Dict
 from pandas import DataFrame
 from statsmodels.stats.multitest import multipletests
 
-from spotify_confidence.analysis.confidence_utils import (
-    groupbyApplyParallel
-)
+from spotify_confidence.analysis.confidence_utils import groupbyApplyParallel
 from spotify_confidence.analysis.constants import (
     BONFERRONI,
     BONFERRONI_ONLY_COUNT_TWOSIDED,
@@ -154,13 +152,10 @@ def add_adjusted_p_and_is_significant(df: DataFrame, **kwargs: Dict) -> DataFram
             for column in df.index.names
             if kwargs[ORDINAL_GROUP_COLUMN] is not None
             and column is not None
-            and (column != kwargs[ORDINAL_GROUP_COLUMN]
-                 or kwargs[FINAL_EXPECTED_SAMPLE_SIZE] is None)
+            and (column != kwargs[ORDINAL_GROUP_COLUMN] or kwargs[FINAL_EXPECTED_SAMPLE_SIZE] is None)
         ]
         df = groupbyApplyParallel(
-            df.groupby(
-                groups_except_ordinal + [kwargs[METHOD], "level_1", "level_2"], as_index=False, sort=False
-            ),
+            df.groupby(groups_except_ordinal + [kwargs[METHOD], "level_1", "level_2"], as_index=False, sort=False),
             lambda df: compute_sequential_adjusted_alpha(df, **kwargs),
         )
     elif kwargs[CORRECTION_METHOD] in [
@@ -273,9 +268,9 @@ def set_alpha_and_adjust_preference(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return df.assign(
         **{
             ALPHA: df.apply(
-                lambda row: 2 * alpha_0
-                if kwargs[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED
-                else alpha_0,
+                lambda row: (
+                    2 * alpha_0 if kwargs[CORRECTION_METHOD] == SPOT_1 and row[PREFERENCE] != TWO_SIDED else alpha_0
+                ),
                 axis=1,
             )
         }
