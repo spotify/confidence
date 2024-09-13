@@ -141,9 +141,11 @@ def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict[str, str]):
             .assign(
                 **{
                     ADJUSTED_ALPHA: lambda df: df.apply(
-                        lambda row: 2 * (1 - st.norm.cdf(row["zb"]))
-                        if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
-                        else 1 - st.norm.cdf(row["zb"]),
+                        lambda row: (
+                            2 * (1 - st.norm.cdf(row["zb"]))
+                            if (grp[PREFERENCE_TEST] == TWO_SIDED).all()
+                            else 1 - st.norm.cdf(row["zb"])
+                        ),
                         axis=1,
                     )
                 }

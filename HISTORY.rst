@@ -2,6 +2,11 @@
 History
 =======
 
+3.0.4 (2023-10-12)
+------------------
+* Fixing so that other multiple correction methods than Bonferroni are applied correctly.
+
+
 3.0.3 (2023-10-12)
 ------------------
 * Relaxing version requirements for scipy and pandas to allow versions 2.x

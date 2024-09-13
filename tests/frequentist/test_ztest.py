@@ -1541,7 +1541,7 @@ class TestOrdinalPlusTwoCategorical(object):
             BONFERRONI,
             BONFERRONI_ONLY_COUNT_TWOSIDED,
             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-            SPOT_1
+            SPOT_1,
         ]:
             difference_df = self.test.multiple_difference(
                 level=("control", 1), groupby="country", level_as_reference=True
@@ -1584,7 +1584,7 @@ class TestOrdinalPlusTwoCategorical(object):
             _, adjusted_p, _, _ = multipletests(
                 pvals=difference_df["p-value"],
                 alpha=1 - self.test._confidence_computer._interval_size,
-                method=corr_method
+                method=corr_method,
             )
 
             assert np.allclose(
@@ -1600,7 +1600,7 @@ class TestOrdinalPlusTwoCategorical(object):
             BONFERRONI,
             BONFERRONI_ONLY_COUNT_TWOSIDED,
             BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
-            SPOT_1
+            SPOT_1,
         ]:
             difference_df = self.test.multiple_difference(
                 level="control", groupby=["days_since_reg", "country"], level_as_reference=True
@@ -1640,7 +1640,7 @@ class TestOrdinalPlusTwoCategorical(object):
             _, adjusted_p, _, _ = multipletests(
                 pvals=difference_df["p-value"],
                 alpha=1 - self.test._confidence_computer._interval_size,
-                method=corr_method
+                method=corr_method,
             )
 
             assert np.allclose(
