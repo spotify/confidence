@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -454,8 +454,8 @@ def _find_optimal_group_weights_across_rows(
 
 
 def _calculate_optimal_sample_size_given_weights(
-    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, **kwargs: Dict
-) -> int:
+    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, **kwargs: Any
+) -> Optional[float]:
     kwargs[TREATMENT_WEIGHTS] = optimal_weights
     sample_size_df = groupbyApplyParallel(
         df.groupby(de_list_if_length_one(group_columns), as_index=False, sort=False),

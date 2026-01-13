@@ -238,10 +238,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         axis_format, y_min, y_max = axis_format_precision(
             numbers=concat(
                 [
-                    difference_df[LOWER],
-                    difference_df[DIFFERENCE],
-                    difference_df[UPPER],
-                    difference_df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in difference_df.columns else None,
+                    x
+                    for x in [
+                        difference_df[LOWER],
+                        difference_df[DIFFERENCE],
+                        difference_df[UPPER],
+                        difference_df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in difference_df.columns else None,
+                    ]
+                    if x is not None
                 ],
             ),
             absolute=absolute,
@@ -374,7 +378,11 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         colors = "color" if remaining_groups else None
         axis_format, y_min, y_max = axis_format_precision(
             numbers=concat(
-                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                [
+                    x
+                    for x in [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                    if x is not None
+                ]
             ),
             absolute=absolute,
         )
@@ -592,14 +600,22 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart.figure.legend.click_policy = "hide"
         axis_format, y_min, y_max = axis_format_precision(
             numbers=concat(
-                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                [
+                    x
+                    for x in [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                    if x is not None
+                ]
             ),
             absolute=absolute,
             extra_zeros=2,
         )
         axis_format_reference_level, _, _ = axis_format_precision(
             numbers=concat(
-                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                [
+                    x
+                    for x in [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                    if x is not None
+                ]
             ),
             absolute=True,
             extra_zeros=2,

@@ -51,7 +51,7 @@ def estimate_slope(df, **kwargs: Dict) -> DataFrame:
     return df
 
 
-def point_estimate(df: Series, **kwargs) -> float:
+def point_estimate(df: DataFrame, **kwargs) -> float:
     df = estimate_slope(df, **kwargs)
     point_estimate = df[kwargs[NUMERATOR]] / df[kwargs[DENOMINATOR]]
 
@@ -89,7 +89,7 @@ def lin_reg_variance_delta(row, **kwargs):
     return variance2 + variance3
 
 
-def variance(df: DataFrame, **kwargs) -> Series:
+def variance(df: DataFrame, **kwargs) -> Union[float, Series]:
     variance1 = z_test_computer.variance(df, **kwargs)
     if kwargs[FEATURE] in df:
         computed_variances = variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
