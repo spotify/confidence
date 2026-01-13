@@ -14,6 +14,12 @@
 
 from typing import Dict, Tuple, Union
 
+# TODO: Consider using TypedDict for ConfidenceComputerKwargs to properly type
+# the kwargs passed to confidence computer functions. Currently using Any because
+# kwargs contain heterogeneous types (column names as str, interval_size as float,
+# treatment_weights as List[float], etc.) and TypedDict would be needed to express
+# "when key is DENOMINATOR, value is str; when key is INTERVAL_SIZE, value is float".
+
 NUMERATOR = "numerator"
 NUMERATOR_SUM_OF_SQUARES = "numerator_sum_of_squares"
 DENOMINATOR = "denominator"

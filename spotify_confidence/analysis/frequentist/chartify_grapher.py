@@ -380,7 +380,12 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             numbers=concat(
                 [
                     x
-                    for x in [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                    for x in [
+                        df[LOWER],
+                        df[center_name],
+                        df[UPPER],
+                        df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None,
+                    ]
                     if x is not None
                 ]
             ),
@@ -602,7 +607,12 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             numbers=concat(
                 [
                     x
-                    for x in [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                    for x in [
+                        df[LOWER],
+                        df[center_name],
+                        df[UPPER],
+                        df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None,
+                    ]
                     if x is not None
                 ]
             ),
@@ -613,7 +623,12 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             numbers=concat(
                 [
                     x
-                    for x in [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                    for x in [
+                        df[LOWER],
+                        df[center_name],
+                        df[UPPER],
+                        df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None,
+                    ]
                     if x is not None
                 ]
             ),
