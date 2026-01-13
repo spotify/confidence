@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Any, Iterable, List, Tuple, Union
 
 import numpy as np
 from numpy import isnan
@@ -561,7 +561,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         )[["level_1", "level_2", "achieved_power"]]
 
 
-def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _compute_comparisons(df: DataFrame, **kwargs: Any) -> DataFrame:
     return (
         df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
         .assign(**{STD_ERR: confidence_computers[df[kwargs[METHOD]].values[0]].std_err(df, **kwargs)})
@@ -572,7 +572,7 @@ def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
     )
 
 
-def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_variance_reduction_rate(df: DataFrame, **kwargs: Any) -> DataFrame:
     denominator = kwargs[DENOMINATOR]
     method_column = kwargs[METHOD]
     if (df[method_column] == ZTESTLINREG).any():
@@ -587,13 +587,13 @@ def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return df
 
 
-def _add_p_value(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_p_value(df: DataFrame, **kwargs: Any) -> DataFrame:
     return df.pipe(set_alpha_and_adjust_preference, **kwargs).assign(
         **{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)}
     )
 
 
-def _add_ci_and_adjust_if_absolute(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_ci_and_adjust_if_absolute(df: DataFrame, **kwargs: Any) -> DataFrame:
     return df.pipe(add_ci, **kwargs).pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
 
 
@@ -613,13 +613,13 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
         )
 
 
-def _p_value(df: DataFrame, **kwargs: Dict) -> float:
+def _p_value(df: DataFrame, **kwargs: Any) -> float:
     if df[kwargs[METHOD]].values[0] == CHI2 and (df[NIM].notna()).any():
         raise ValueError("Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead.")
     return confidence_computers[df[kwargs[METHOD]].values[0]].p_value(df, **kwargs)
 
 
-def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, **kwargs: Any) -> DataFrame:
     if df[kwargs[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] and kwargs[MDE] in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
     elif df[kwargs[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] or (df[ADJUSTED_POWER].isna()).any():
