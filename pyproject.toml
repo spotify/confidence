@@ -35,6 +35,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.2",
     "coverage>=7.0.0",
+    "ty>=0.0.11",
 ]
 
 [project.urls]
@@ -52,6 +53,9 @@ extend-exclude = ["examples/"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.ty.src]
+exclude = ["examples/"]
 
 [tool.pytest.ini_options]
 addopts = "-v -n auto --cov=spotify_confidence --cov-report=html --cov-report=xml --cov-report=term-missing"
