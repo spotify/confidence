@@ -1,8 +1,9 @@
 """Tests for `confidence` sample size calculation."""
 
-import pytest
-import spotify_confidence as conf
 import numpy as np
+import pytest
+
+import spotify_confidence as conf
 
 
 class TestSampleSizeCalc(object):

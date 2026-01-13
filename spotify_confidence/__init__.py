@@ -13,17 +13,18 @@
 # limitations under the License.
 
 from importlib.metadata import version as _version
-from .analysis.bayesian.bayesian_models import BetaBinomial
+
 from spotify_confidence.analysis.frequentist.chi_squared import ChiSquared
+from spotify_confidence.analysis.frequentist.experiment import Experiment
+from spotify_confidence.analysis.frequentist.sample_size_calculator import SampleSizeCalculator
 from spotify_confidence.analysis.frequentist.t_test import StudentsTTest
 from spotify_confidence.analysis.frequentist.z_test import ZTest
 from spotify_confidence.analysis.frequentist.z_test_linreg import ZTestLinreg
-from spotify_confidence.analysis.frequentist.experiment import Experiment
-from spotify_confidence.analysis.frequentist.sample_size_calculator import SampleSizeCalculator
-from .samplesize.sample_size_calculator import SampleSize
 
 from . import examples
+from .analysis.bayesian.bayesian_models import BetaBinomial
 from .options import options
+from .samplesize.sample_size_calculator import SampleSize
 
 __version__ = _version("spotify_confidence")
 

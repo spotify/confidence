@@ -1,12 +1,13 @@
-from typing import Union, Iterable, Tuple
+from typing import Iterable, Tuple, Union
 
 from pandas import DataFrame
 
 from spotify_confidence.analysis.frequentist.confidence_computers.sample_size_computer import SampleSizeComputer
+
 from ..confidence_utils import (
     listify,
 )
-from ..constants import BONFERRONI, ZTEST, METHOD_COLUMN_NAME
+from ..constants import BONFERRONI, METHOD_COLUMN_NAME, ZTEST
 
 
 class SampleSizeCalculator:

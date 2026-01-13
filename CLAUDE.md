@@ -11,7 +11,7 @@ Spotify Confidence is a Python library for A/B test analysis. It provides conven
 ### Setup
 ```bash
 # Install with development dependencies (including tox-uv)
-uv pip install -e ".[dev]"
+uv pip install -e . --group dev
 ```
 
 ### Testing
@@ -34,17 +34,14 @@ uv run tox
 
 ### Code Quality
 ```bash
-# Format code with black (line length: 119)
-uv run black spotify_confidence tests
+# Run linting
+uv run ruff check
 
-# Check formatting without making changes
-uv run black --check --diff spotify_confidence tests
-
-# Lint with flake8 (max line length: 120)
-uv run flake8 spotify_confidence tests
+# Run formatting
+uv run ruff format
 
 # Run all quality checks (as done in CI)
-uv run black --check --diff spotify_confidence tests && uv run flake8 spotify_confidence tests && uv run pytest
+uv run ruff check && uv run ruff format && uv run pytest
 ```
 
 ### Build
@@ -151,7 +148,4 @@ The project uses `tox-uv` to leverage uv's fast package installation and environ
 
 ## Code Style
 
-- Black formatting with 119 character line length
-- Flake8 linting with max line length 120
-- Ignored flake8 rules: E203, E231, W503
-- Excluded from linting: `.venv`, `.tox`, `dist`, `build`, `scratch.py`, `confidence_dev`
+Uses ruff linting and formatting.

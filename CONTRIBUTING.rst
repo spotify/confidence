@@ -71,7 +71,7 @@ Ready to contribute? Here's how to set up `confidence` for local development.
 3. Set up your development environment using uv::
 
     $ uv venv
-    $ uv pip install -e ".[dev]"
+    $ uv pip install -e . --group dev
 
    This creates a virtual environment and installs the package in editable mode with all development dependencies.
 
@@ -89,9 +89,9 @@ Ready to contribute? Here's how to set up `confidence` for local development.
 
 6. When you're done making changes, check that your changes pass all quality checks::
 
-    $ uv run black spotify_confidence tests --line-length 119  # Format code
-    $ uv run flake8 spotify_confidence tests                   # Lint code
-    $ uv run pytest                                            # Run tests
+    $ uv run ruff format       # Format code
+    $ uv run ruff check        # Lint code
+    $ uv run pytest            # Run tests
 
    To test across all supported Python versions (3.9, 3.10, 3.11, 3.12)::
 

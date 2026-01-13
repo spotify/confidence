@@ -1,17 +1,17 @@
 from functools import reduce
-from typing import Union, Dict
+from typing import Dict, Union
 
 import numpy as np
 from pandas import DataFrame, Series
 
-from spotify_confidence.analysis.confidence_utils import unlist, dfmatmul
+from spotify_confidence.analysis.confidence_utils import dfmatmul, unlist
 from spotify_confidence.analysis.constants import (
-    REGRESSION_PARAM,
-    FEATURE,
-    FEATURE_SUMSQ,
-    FEATURE_CROSS,
-    NUMERATOR,
     DENOMINATOR,
+    FEATURE,
+    FEATURE_CROSS,
+    FEATURE_SUMSQ,
+    NUMERATOR,
+    REGRESSION_PARAM,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import z_test_computer
 
@@ -94,7 +94,7 @@ def variance(df: DataFrame, **kwargs) -> Series:
     if kwargs[FEATURE] in df:
         computed_variances = variance1 + df.apply(lin_reg_variance_delta, axis=1, **kwargs)
         if (computed_variances < 0).any():
-            raise ValueError("Computed variance is negative, please check sufficient " "statistics.")
+            raise ValueError("Computed variance is negative, please check sufficient statistics.")
         return computed_variances
     else:
         return variance1

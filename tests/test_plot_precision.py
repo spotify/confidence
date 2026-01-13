@@ -1,5 +1,6 @@
-import spotify_confidence
 import pandas as pd
+
+import spotify_confidence
 
 OUTPUT_DIR = "./tests/outputs/precision/"
 

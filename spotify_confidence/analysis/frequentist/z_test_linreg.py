@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable
+from typing import Iterable, Union
 
 from pandas import DataFrame
 
 from spotify_confidence.analysis.constants import BONFERRONI, METHOD_COLUMN_NAME
-from .experiment import Experiment
+
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
+from .experiment import Experiment
 
 
 class ZTestLinreg(Experiment):

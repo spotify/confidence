@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -6,21 +6,21 @@ from statsmodels.stats.weightstats import _tconfint_generic, _tstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import (
-    NUMERATOR,
-    NUMERATOR_SUM_OF_SQUARES,
-    DENOMINATOR,
-    INTERVAL_SIZE,
-    POINT_ESTIMATE,
     CI_LOWER,
     CI_UPPER,
-    VARIANCE,
-    TWO_SIDED,
+    DENOMINATOR,
+    DIFFERENCE,
+    INTERVAL_SIZE,
+    NULL_HYPOTHESIS,
+    NUMERATOR,
+    NUMERATOR_SUM_OF_SQUARES,
+    POINT_ESTIMATE,
+    PREFERENCE_TEST,
     SFX1,
     SFX2,
     STD_ERR,
-    PREFERENCE_TEST,
-    NULL_HYPOTHESIS,
-    DIFFERENCE,
+    TWO_SIDED,
+    VARIANCE,
 )
 
 
@@ -44,7 +44,7 @@ def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     else:
         variance = (df[numerator_sumsq] - np.power(df[numerator], 2) / df[denominator]) / (df[denominator] - 1)
     if (variance < 0).any():
-        raise ValueError("Computed variance is negative. " "Please check your inputs.")
+        raise ValueError("Computed variance is negative. Please check your inputs.")
     return variance
 
 

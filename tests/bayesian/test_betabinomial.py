@@ -1,9 +1,10 @@
 """Tests for `confidence` categorical variables."""
 
-import pytest
-import spotify_confidence
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
+import spotify_confidence
 
 spotify_confidence.options.set_option("randomization_seed", 1)
 

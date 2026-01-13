@@ -6,19 +6,19 @@ import pytest
 
 import spotify_confidence
 from spotify_confidence.analysis.constants import (
-    POINT_ESTIMATE,
-    VARIANCE,
+    CI_LOWER,
+    CI_UPPER,
+    DECREASE_PREFFERED,
+    DENOMINATOR,
+    DIFFERENCE,
+    INCREASE_PREFFERED,
     NUMERATOR,
     NUMERATOR_SUM_OF_SQUARES,
-    DENOMINATOR,
+    P_VALUE,
+    POINT_ESTIMATE,
     SFX1,
     SFX2,
-    INCREASE_PREFFERED,
-    DECREASE_PREFFERED,
-    DIFFERENCE,
-    P_VALUE,
-    CI_UPPER,
-    CI_LOWER,
+    VARIANCE,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import t_test_computer as computer
 

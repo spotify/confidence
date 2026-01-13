@@ -21,11 +21,10 @@ from scipy.stats import beta
 
 from spotify_confidence.analysis.bayesian.bayesian_base import (
     BaseTest,
-    randomization_warning_decorator,
-    format_str_precision,
     axis_format_precision,
+    format_str_precision,
+    randomization_warning_decorator,
 )
-
 from spotify_confidence.analysis.confidence_utils import de_list_if_length_one
 
 

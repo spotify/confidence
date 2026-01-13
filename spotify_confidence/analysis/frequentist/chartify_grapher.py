@@ -12,41 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, Tuple
+from typing import Iterable, Tuple, Union
 
 import numpy as np
 from bokeh.models import tools
 from chartify import Chart
 from pandas import DataFrame, concat
 
+from ...chartgrid import ChartGrid
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (
-    axis_format_precision,
     add_color_column,
-    get_remaning_groups,
-    get_all_group_columns,
-    listify,
-    level2str,
-    to_finite,
+    axis_format_precision,
     de_list_if_length_one,
+    get_all_group_columns,
+    get_remaning_groups,
+    level2str,
+    listify,
+    to_finite,
 )
 from ..constants import (
-    POINT_ESTIMATE,
-    ORIGINAL_POINT_ESTIMATE,
-    DIFFERENCE,
+    ADJUSTED_LOWER,
+    ADJUSTED_P,
+    ADJUSTED_UPPER,
     CI_LOWER,
     CI_UPPER,
-    P_VALUE,
-    ADJUSTED_LOWER,
-    ADJUSTED_UPPER,
-    ADJUSTED_P,
-    NULL_HYPOTHESIS,
+    DIFFERENCE,
     NIM,
     NIM_TYPE,
+    NULL_HYPOTHESIS,
+    ORIGINAL_POINT_ESTIMATE,
+    P_VALUE,
+    POINT_ESTIMATE,
     PREFERENCE,
     SFX1,
 )
-from ...chartgrid import ChartGrid
 
 
 class ChartifyGrapher(ConfidenceGrapherABC):
@@ -627,7 +627,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             + [
                 (
                     ("adjusted " if use_adjusted_intervals else "") + "confidence interval",
-                    f"(@{{{LOWER}}}{{{axis_format}}}," f" @{{{UPPER}}}{{{axis_format}}})",
+                    f"(@{{{LOWER}}}{{{axis_format}}}, @{{{UPPER}}}{{{axis_format}}})",
                 )
             ]
             + p_value_tool_tip

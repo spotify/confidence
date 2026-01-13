@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 
 from spotify_confidence.analysis.constants import (
-    SPOT_1,
-    REQUIRED_SAMPLE_SIZE_METRIC,
-    CI_WIDTH,
-    POWERED_EFFECT,
-    POINT_ESTIMATE,
     ADJUSTED_LOWER,
+    CI_WIDTH,
+    POINT_ESTIMATE,
+    POWERED_EFFECT,
+    REQUIRED_SAMPLE_SIZE_METRIC,
+    SPOT_1,
 )
 from spotify_confidence.analysis.frequentist.sample_size_calculator import SampleSizeCalculator
 from spotify_confidence.analysis.frequentist.z_test import ZTest

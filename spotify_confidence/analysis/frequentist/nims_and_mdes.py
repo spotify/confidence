@@ -3,17 +3,17 @@ from pandas import DataFrame
 
 from spotify_confidence.analysis.confidence_utils import listify
 from spotify_confidence.analysis.constants import (
-    NIM_TYPE,
-    NIM_COLUMN_DEFAULT,
-    PREFERRED_DIRECTION_COLUMN_DEFAULT,
-    ORIGINAL_POINT_ESTIMATE,
-    TWO_SIDED,
-    INCREASE_PREFFERED,
-    DECREASE_PREFFERED,
-    NIM,
-    PREFERENCE,
-    NULL_HYPOTHESIS,
     ALTERNATIVE_HYPOTHESIS,
+    DECREASE_PREFFERED,
+    INCREASE_PREFFERED,
+    NIM,
+    NIM_COLUMN_DEFAULT,
+    NIM_TYPE,
+    NULL_HYPOTHESIS,
+    ORIGINAL_POINT_ESTIMATE,
+    PREFERENCE,
+    PREFERRED_DIRECTION_COLUMN_DEFAULT,
+    TWO_SIDED,
 )
 
 
@@ -66,7 +66,7 @@ def add_nims_and_mdes(
             preference = "smaller"
             signed_mde = None if mde_is_na else -mde * grp[ORIGINAL_POINT_ESTIMATE]
         else:
-            raise ValueError(f"{input_preference.lower()} not in " f"{[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
+            raise ValueError(f"{input_preference.lower()} not in {[INCREASE_PREFFERED, DECREASE_PREFFERED]}")
 
         return (
             grp.assign(**{NIM: nim})
