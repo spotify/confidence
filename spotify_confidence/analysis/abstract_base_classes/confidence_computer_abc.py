@@ -60,6 +60,7 @@ class ConfidenceComputerABC(ABC):
         """
         pass
 
+    @abstractmethod
     def compute_differences(
         self,
         levels: List[Tuple],
@@ -75,6 +76,7 @@ class ConfidenceComputerABC(ABC):
         """
         pass
 
+    @abstractmethod
     def achieved_power(
         self,
         level_1: Union[str, Iterable],
