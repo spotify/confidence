@@ -735,38 +735,3 @@ class BetaBinomial(BaseTest):
         )
 
         return results_df
-
-
-# class GammaPoisson(PoissonResponse):
-#     pass
-
-
-# class DirichetMultinomial(MultinomialResponse):
-#     def __init__(self,
-#                  data_frame,
-#                  group_columns,
-#                  category_column,
-#                  value_column,
-#                  prior_value_column=None):
-
-#         super().__init__(data_frame, group_columns, category_column,
-#                          value_column)
-
-
-# class Gaussian(GaussianResponse):
-#     def __init__(self,
-#                  data_frame,
-#                  groupings,
-#                  mean_col,
-#                  std_col,
-#                  n_col,
-#                  time_grouping=None,
-#                  prior_columns=None):
-#         self.prior_lambda_column = prior_lambda_column
-#         super(BaseGaussianResponse, self).__init__(
-#             data_frame, groups, mean_col, std_col, n_col, time_grouping)
-#         raise (NotImplementedError)
-
-
-# class DirichetCategorical(CategoricalResponse):
-#     pass

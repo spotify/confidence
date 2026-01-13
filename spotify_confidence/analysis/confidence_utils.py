@@ -35,15 +35,6 @@ def groupbyApplyParallel(dfGrouped, func_to_apply):
     return concat(ret_list)
 
 
-def applyParallel(df, func_to_apply, splits=32):
-    with ThreadPoolExecutor(max_workers=splits, thread_name_prefix="applyParallel") as p:
-        ret_list = p.map(
-            func_to_apply,
-            np.array_split(df, min(splits, len(df))),
-        )
-    return concat(ret_list)
-
-
 def get_all_group_columns(categorical_columns: Iterable, additional_column: str) -> Iterable:
     all_columns = listify(categorical_columns) + listify(additional_column)
     return list(OrderedDict.fromkeys(all_columns))

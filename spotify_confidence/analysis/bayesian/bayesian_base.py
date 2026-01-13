@@ -137,36 +137,6 @@ class BaseTest(object, metaclass=ABCMeta):
     Must be number or datetime type.""".format(ordinal_column_type)
                 )
 
-    @classmethod
-    def as_cumulative(
-        cls, data_frame, numerator_column, denominator_column, ordinal_group_column, categorical_group_columns=None
-    ):
-        """
-        Instantiate the class with a cumulative representation of the dataframe.
-        Sorts by the ordinal variable and calculates the cumulative sum
-        May be used for to visualize the difference between groups as a
-        time series.
-
-        Args:
-           data_frame (pd.DataFrame): DataFrame
-           numerator_column (str): Column name for numerator column.
-           denominator_column (str): Column name for denominator column.
-           ordinal_group_column (str): Column name for ordinal grouping
-               (e.g. numeric or date values).
-           categorical_group_columns (str or list),
-               Optional: Column names for categorical groupings.
-
-        """
-
-        sorted_df = data_frame.sort_values(by=ordinal_group_column)
-        cumsum_cols = [numerator_column, denominator_column]
-        if categorical_group_columns:
-            sorted_df[cumsum_cols] = sorted_df.groupby(by=categorical_group_columns)[cumsum_cols].cumsum()
-        else:
-            sorted_df[cumsum_cols] = sorted_df[cumsum_cols].cumsum()
-
-        return cls(sorted_df, numerator_column, denominator_column, categorical_group_columns, ordinal_group_column)
-
     def summary(self):
         """Return Pandas DataFrame with summary statistics."""
         return self._summary(self._data_frame, self._interval)
@@ -490,13 +460,6 @@ class BaseTest(object, metaclass=ABCMeta):
 
         return results_data_frame
 
-    def _all_groups(self):
-        """Return a list of all group keys.
-
-        Returns: list"""
-        groups = list(self._data_frame.groupby(self._all_group_columns).groups.keys())
-        return groups
-
     def _add_group_by_columns(self, difference_df, groupby, level_name):
         if groupby:
             groupby = groupby[0] if len(groupby) == 1 else groupby
@@ -505,55 +468,3 @@ class BaseTest(object, metaclass=ABCMeta):
             else:
                 for col, val in zip(groupby, level_name):
                     difference_df.insert(0, column=col, value=val)
-
-
-# class BinomialResponse(BaseTest, metaclass=ABCMeta):
-#     """Binomial Response Variable.
-#     """
-
-# class GaussianResponse(BaseTest, metaclass=ABCMeta):
-#     """Base class for tests of normal response variables
-
-#     E.g. Revenue per user
-#     """
-
-#     pass
-
-
-# class PoissonResponse(BaseTest, metaclass=ABCMeta):
-#     """Base class for tests of poisson response variables.
-
-#     E.g. # of days active per user per month
-#     """
-#     pass
-
-
-# class MultinomialResponse(BaseTest, metaclass=ABCMeta):
-#     """Base class for tests of multinomial response variables.
-
-#     E.g. single choice answer survey
-#         self.
-#     """
-
-#     def __init__(self, data_frame, categorical_group_columns,
-#                  ordinal_group_column, category_column, value_column):
-#         self._category_column = category_column
-#         self._value_column = value_column
-#         super().__init__(data_frame, categorical_group_columns,
-#                          ordinal_group_column)
-
-
-# class CategoricalResponse(BaseTest, metaclass=ABCMeta):
-#     """Base class for tests of categorical response variables.
-
-#     E.g. multiple choice answer survey
-#     """
-
-#     def __init__(self, data_frame, categorical_group_columns,
-#                  ordinal_group_column, category_column, value_column):
-#         self._category_column = category_column
-#         self._value_column = value_column
-#         super().__init__(data_frame, categorical_group_columns,
-#                          ordinal_group_column)
-
-#     pass

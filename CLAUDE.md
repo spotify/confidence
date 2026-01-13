@@ -16,6 +16,10 @@ uv pip install -e . --group dev
 
 ### Testing
 ```bash
+# IMPORTANT Run all tests across Python versions
+# to make sure all code changes work on older Python versions
+uv run tox -p auto
+
 # Run all tests with coverage
 uv run pytest
 
@@ -27,9 +31,6 @@ uv run pytest tests/frequentist/test_z_test.py
 
 # Run specific test
 uv run pytest tests/frequentist/test_z_test.py::test_name
-
-# Run all tests across Python versions
-uv run tox
 ```
 
 ### Code Quality

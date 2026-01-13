@@ -43,7 +43,6 @@ P_VALUE = "p-value"
 ADJUSTED_P = "adjusted p-value"
 SFX1, SFX2 = "_1", "_2"
 STD_ERR = "std_err"
-Z_CRIT = "z_crit"
 ALPHA = "alpha"
 ADJUSTED_ALPHA = "adjusted_alpha"
 ADJUSTED_ALPHA_POWER_SAMPLE_SIZE = "adjusted_alpha_power_sample_size"
@@ -141,10 +140,6 @@ CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO = [
     SPOT_1_FDR_TSBH,
     SPOT_1_FDR_TSBKY,
 ]
-
-CORRECTION_METHODS_THAT_DONT_REQUIRE_METRIC_INFO = list(
-    set(CORRECTION_METHODS) - set(CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO)
-)
 
 NULL_HYPOTHESIS = "null_hypothesis"
 ALTERNATIVE_HYPOTHESIS = "alternative_hypothesis"
