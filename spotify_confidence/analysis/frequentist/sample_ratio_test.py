@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict, Iterable, Tuple
+
 import numpy as np
 from pandas import DataFrame
 from scipy.stats import chi2
-from typing import Dict, Tuple, Iterable
 
 
 def sample_ratio_test(
@@ -44,7 +45,7 @@ def sample_ratio_test(
 
     if not isinstance(expected_proportions, dict):
         raise TypeError(
-            "`expected_proportions` must be a dict with " "groupings as keys and expected proportions " "as values"
+            "`expected_proportions` must be a dict with groupings as keys and expected proportions as values"
         )
     elif not np.allclose(sum(expected_proportions.values()), 1.0):
         raise ValueError("proportions must sum to one")
@@ -53,7 +54,7 @@ def sample_ratio_test(
 
     all_groups = list(df.groupby(all_group_columns, sort=False).groups.keys())
     if set(all_groups) != set(expected_proportions.keys()):
-        raise ValueError(f"`expected_proportion` keys must match groupings in the " f"order {all_group_columns}")
+        raise ValueError(f"`expected_proportion` keys must match groupings in the order {all_group_columns}")
 
     n_tot = df[denominator].sum()
 

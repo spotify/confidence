@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Union, Iterable, Tuple, List
+from typing import Iterable, List, Tuple, Union
 
 from pandas import DataFrame
 
 from spotify_confidence.chartgrid import ChartGrid
+
+from ..constants import NIM_TYPE
 from .confidence_computer_abc import ConfidenceComputerABC
 from .confidence_grapher_abc import ConfidenceGrapherABC
-from ..constants import NIM_TYPE
 
 
 class ConfidenceABC(ABC):

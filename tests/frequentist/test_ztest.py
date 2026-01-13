@@ -1,28 +1,28 @@
 import numpy as np
 import pandas as pd
 import pytest
+from statsmodels.stats.multitest import multipletests
 
 import spotify_confidence
 from spotify_confidence.analysis.constants import (
-    INCREASE_PREFFERED,
-    DECREASE_PREFFERED,
-    POINT_ESTIMATE,
-    CI_LOWER,
-    CI_UPPER,
-    P_VALUE,
     ADJUSTED_LOWER,
     ADJUSTED_UPPER,
-    DIFFERENCE,
     BONFERRONI,
-    BONFERRONI_ONLY_COUNT_TWOSIDED,
     BONFERRONI_DO_NOT_COUNT_NON_INFERIORITY,
+    BONFERRONI_ONLY_COUNT_TWOSIDED,
+    CI_LOWER,
+    CI_UPPER,
     CORRECTION_METHODS,
-    SPOT_1,
     CORRECTION_METHODS_THAT_SUPPORT_CI,
+    DECREASE_PREFFERED,
+    DIFFERENCE,
+    INCREASE_PREFFERED,
+    P_VALUE,
+    POINT_ESTIMATE,
     POWERED_EFFECT,
     REQUIRED_SAMPLE_SIZE,
+    SPOT_1,
 )
-from statsmodels.stats.multitest import multipletests
 
 
 class TestPoweredEffectContinuousSingleMetric(object):

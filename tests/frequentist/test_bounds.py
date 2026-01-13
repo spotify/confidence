@@ -1,11 +1,12 @@
-import pandas as pd
 import time
+
 import numpy as np
+import pandas as pd
 from pandas import Timestamp
 
 from spotify_confidence.analysis.frequentist.confidence_computers.z_test_computer import (
-    sequential_bounds,
     compute_sequential_adjusted_alpha,
+    sequential_bounds,
 )
 
 

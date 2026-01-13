@@ -13,7 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        include:
+          - python-version: '3.9'
+            tox-env: py39-min
+          - python-version: '3.10'
+            tox-env: py310
+          - python-version: '3.11'
+            tox-env: py311
+          - python-version: '3.12'
+            tox-env: py312
 
     steps:
     - uses: actions/checkout@v4
@@ -26,9 +34,7 @@ jobs:
       with:
         enable-cache: true
         cache-dependency-glob: "**/pyproject.toml"
-    - name: Install dependencies
-      run: |
-        uv pip install --system -e ".[dev]"
-        uv pip install --system tox tox-gh-actions
+    - name: Install tox
+      run: uv pip install --system tox tox-uv
     - name: Test with tox
-      run: tox
+      run: tox -e ${{ matrix.tox-env }}

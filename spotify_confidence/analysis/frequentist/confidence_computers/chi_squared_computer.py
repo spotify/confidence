@@ -1,20 +1,20 @@
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 import numpy as np
 from pandas import DataFrame, Series
-from statsmodels.stats.proportion import proportion_confint, proportions_chisquare, confint_proportions_2indep
+from statsmodels.stats.proportion import confint_proportions_2indep, proportion_confint, proportions_chisquare
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import (
-    NUMERATOR,
-    DENOMINATOR,
-    INTERVAL_SIZE,
-    POINT_ESTIMATE,
-    VARIANCE,
     CI_LOWER,
     CI_UPPER,
+    DENOMINATOR,
+    INTERVAL_SIZE,
+    NUMERATOR,
+    POINT_ESTIMATE,
     SFX1,
     SFX2,
+    VARIANCE,
 )
 
 
@@ -29,7 +29,7 @@ def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
 def variance(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
     variance = df[POINT_ESTIMATE] * (1 - df[POINT_ESTIMATE])
     if (variance < 0).any():
-        raise ValueError(f"Computed variance is negative: {variance}. " "Please check your inputs.")
+        raise ValueError(f"Computed variance is negative: {variance}. Please check your inputs.")
     return variance
 
 

@@ -12,62 +12,62 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, List, Tuple, Dict
+from typing import Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
 from scipy import stats as st
 
 from spotify_confidence.analysis.confidence_utils import (
+    de_list_if_length_one,
     get_all_categorical_group_columns,
     get_all_group_columns,
-    validate_data,
-    remove_group_columns,
     groupbyApplyParallel,
     is_non_inferiority,
+    remove_group_columns,
     reset_named_indices,
-    de_list_if_length_one,
+    validate_data,
 )
 from spotify_confidence.analysis.constants import (
-    INTERVAL_SIZE,
-    POINT_ESTIMATE,
-    FINAL_EXPECTED_SAMPLE_SIZE,
-    MDE,
-    CORRECTION_METHOD,
-    VARIANCE,
-    NUMBER_OF_COMPARISONS,
-    TREATMENT_WEIGHTS,
-    IS_BINARY,
+    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
+    ADJUSTED_LOWER,
+    ADJUSTED_POWER,
+    ADJUSTED_UPPER,
+    ALTERNATIVE_HYPOTHESIS,
     CI_LOWER,
     CI_UPPER,
+    CI_WIDTH,
+    CORRECTION_METHOD,
+    CORRECTION_METHODS,
     DIFFERENCE,
-    SFX1,
-    ADJUSTED_ALPHA_POWER_SAMPLE_SIZE,
-    POWER,
-    POWERED_EFFECT,
-    ADJUSTED_POWER,
-    ADJUSTED_LOWER,
-    ADJUSTED_UPPER,
-    REQUIRED_SAMPLE_SIZE_METRIC,
+    FINAL_EXPECTED_SAMPLE_SIZE,
+    INTERVAL_SIZE,
+    IS_BINARY,
+    MDE,
+    NIM,
+    NULL_HYPOTHESIS,
+    NUMBER_OF_COMPARISONS,
     OPTIMAL_KAPPA,
     OPTIMAL_WEIGHTS,
-    CI_WIDTH,
-    NULL_HYPOTHESIS,
-    ALTERNATIVE_HYPOTHESIS,
-    NIM,
-    PREFERENCE_TEST,
-    TWO_SIDED,
-    CORRECTION_METHODS,
-    ZTEST,
     ORIGINAL_POINT_ESTIMATE,
     ORIGINAL_VARIANCE,
+    POINT_ESTIMATE,
+    POWER,
+    POWERED_EFFECT,
+    PREFERENCE_TEST,
+    REQUIRED_SAMPLE_SIZE_METRIC,
+    SFX1,
+    TREATMENT_WEIGHTS,
+    TWO_SIDED,
+    VARIANCE,
+    ZTEST,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import confidence_computers
 from spotify_confidence.analysis.frequentist.multiple_comparison import (
-    get_num_comparisons,
-    set_alpha_and_adjust_preference,
-    get_preference,
     add_adjusted_power,
+    get_num_comparisons,
+    get_preference,
+    set_alpha_and_adjust_preference,
 )
 from spotify_confidence.analysis.frequentist.nims_and_mdes import (
     add_nims_and_mdes,

@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABCMeta, abstractmethod
-from functools import wraps
 import types
 import warnings
+from abc import ABCMeta, abstractmethod
+from functools import wraps
 
 import chartify
 import numpy as np
 import pandas as pd
 
-from spotify_confidence.options import options
-from spotify_confidence.chartgrid import ChartGrid
 from spotify_confidence.analysis.confidence_utils import de_list_if_length_one
+from spotify_confidence.chartgrid import ChartGrid
+from spotify_confidence.options import options
 
 # warnings.simplefilter("once")
 
@@ -77,9 +77,7 @@ def randomization_warning_decorator(f):
 
     confidence.options.set_option('randomization_seed', {})
 
-    """.format(
-                INITIAL_RANDOMIZATION_SEED
-            )
+    """.format(INITIAL_RANDOMIZATION_SEED)
             warnings.warn(randomization_warning_message)
             option_seed = np_seed
         np.random.seed(option_seed)
@@ -136,9 +134,7 @@ class BaseTest(object, metaclass=ABCMeta):
             ):
                 raise TypeError(
                     """`ordinal_group_column` is type `{}`.
-    Must be number or datetime type.""".format(
-                        ordinal_column_type
-                    )
+    Must be number or datetime type.""".format(ordinal_column_type)
                 )
 
     @classmethod
@@ -455,9 +451,7 @@ class BaseTest(object, metaclass=ABCMeta):
                 Must supply a level within the ungrouped dimensions: {}
                 Valid levels:
                 {}
-                """.format(
-                    level, remaining_groups, list(level_df.groupby(remaining_groups).groups.keys())
-                )
+                """.format(level, remaining_groups, list(level_df.groupby(remaining_groups).groups.keys()))
             )
 
     def _groupby_iterator(self, input_function, groupby, **kwargs):

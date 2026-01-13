@@ -1,9 +1,9 @@
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 import numpy as np
 from pandas import DataFrame, Series
 
-from spotify_confidence.analysis.constants import CI_LOWER, CI_UPPER, SFX1, SFX2, BOOTSTRAPS, INTERVAL_SIZE
+from spotify_confidence.analysis.constants import BOOTSTRAPS, CI_LOWER, CI_UPPER, INTERVAL_SIZE, SFX1, SFX2
 
 
 def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
@@ -16,7 +16,7 @@ def variance(df: Series, **kwargs: Dict[str, str]) -> float:
     variance = df[bootstrap_samples].map(lambda a: a.var())
 
     if (variance < 0).any():
-        raise ValueError("Computed variance is negative. " "Please check your inputs.")
+        raise ValueError("Computed variance is negative. Please check your inputs.")
     return variance
 
 

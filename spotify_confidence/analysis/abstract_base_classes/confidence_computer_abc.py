@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Union, Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Union
 
 from pandas import DataFrame
 

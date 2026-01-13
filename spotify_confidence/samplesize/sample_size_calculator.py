@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ipywidgets import widgets
-from IPython.display import display
-import scipy.stats as st
-import numpy as np
 import math
+
+import numpy as np
+import scipy.stats as st
+from IPython.display import display
+from ipywidgets import widgets
 
 
 class SampleSize(object):
@@ -285,7 +286,7 @@ class SampleSize(object):
                 layout=desc_layout,
             )
 
-            baseline_title = widgets.HTML("<strong>Baseline " "proportion</strong>")
+            baseline_title = widgets.HTML("<strong>Baseline proportion</strong>")
             baseline_widget = widgets.FloatSlider(value=0.5, min=0.00001, max=0.99999, step=0.01, description="")
             baseline_desc = widgets.HTML(
                 """
@@ -364,7 +365,7 @@ class SampleSize(object):
                 widgets.HTML("<h4>Target metric</h4>"),
                 widgets.VBox(
                     children=[
-                        widgets.HTML("<strong>Minimal Detectable Effect " "size</strong>"),
+                        widgets.HTML("<strong>Minimal Detectable Effect size</strong>"),
                         mde_widget,
                         mde_desc,
                     ],
@@ -501,7 +502,7 @@ class SampleSize(object):
                 else:
                     treatment = "Variant " + str(i)
 
-                cell_str += f"<br><em>{treatment}:</em> " f"{n_cell[i]:,} ({prop_cell[i] * 100:.1f}%)"
+                cell_str += f"<br><em>{treatment}:</em> {n_cell[i]:,} ({prop_cell[i] * 100:.1f}%)"
 
             display(widgets.HTML(cell_str))
             display(code_html)
@@ -539,7 +540,7 @@ class SampleSize(object):
                 equal to two.
 
         """
-        error_string = "Treatments must be a whole number " "greater than or equal to two"
+        error_string = "Treatments must be a whole number greater than or equal to two"
         try:
             remainder = treatments % 1
         except TypeError:
@@ -569,7 +570,7 @@ class SampleSize(object):
 
         """
         if comparisons not in ("control_vs_all", "all_vs_all"):
-            raise ValueError("comparisons must be either " '"control_vs_all" or "all_vs_all"')
+            raise ValueError('comparisons must be either "control_vs_all" or "all_vs_all"')
         else:
             return comparisons
 
@@ -664,7 +665,7 @@ class SampleSize(object):
             or len(treatment_costs) != treatments
         ):
             raise TypeError(
-                "treatment_costs must be a list or numpy array of" "the same length as the number of treatments"
+                "treatment_costs must be a list or numpy array ofthe same length as the number of treatments"
             )
 
         try:
@@ -726,10 +727,10 @@ class SampleSize(object):
                 )
 
             elif not (treatment_allocations > 0).all():
-                raise ValueError("treatment_allocations values " "must all be positive")
+                raise ValueError("treatment_allocations values must all be positive")
 
             elif not math.isclose(treatment_allocations.sum(), 1.0):
-                raise ValueError("treatment_allocations values " "must sum to one")
+                raise ValueError("treatment_allocations values must sum to one")
 
             else:
                 return np.array(treatment_allocations)
@@ -864,6 +865,6 @@ class SampleSize(object):
         baseline = SampleSize._validate_percentage(baseline_proportion)
 
         if baseline - mde < 0 and baseline + mde > 1:
-            raise ValueError("absolute_percentage_mde is too large " "given baseline_proportion")
+            raise ValueError("absolute_percentage_mde is too large given baseline_proportion")
         else:
             return mde

@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Iterable, Tuple, Dict, List
+from typing import Dict, Iterable, List, Tuple, Union
 
 from pandas import DataFrame
 
 from spotify_confidence.analysis.frequentist.confidence_computers.confidence_computer import ConfidenceComputer
-from .chartify_grapher import ChartifyGrapher
+
+from ...chartgrid import ChartGrid
 from ..abstract_base_classes.confidence_abc import ConfidenceABC
 from ..abstract_base_classes.confidence_computer_abc import ConfidenceComputerABC
 from ..abstract_base_classes.confidence_grapher_abc import ConfidenceGrapherABC
 from ..confidence_utils import (
-    validate_categorical_columns,
-    listify,
     get_all_categorical_group_columns,
     get_all_group_columns,
+    listify,
+    validate_categorical_columns,
 )
-from ..constants import BONFERRONI, NIM_TYPE, METHODS
+from ..constants import BONFERRONI, METHODS, NIM_TYPE
 from ..frequentist.sample_ratio_test import sample_ratio_test
-from ...chartgrid import ChartGrid
+from .chartify_grapher import ChartifyGrapher
 
 
 class Experiment(ConfidenceABC):

@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Dict
+from typing import Dict, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -14,37 +14,37 @@ from statsmodels.stats.weightstats import _zconfint_generic, _zstat_generic
 
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import (
-    NUMERATOR,
-    NUMERATOR_SUM_OF_SQUARES,
-    DENOMINATOR,
-    INTERVAL_SIZE,
-    FINAL_EXPECTED_SAMPLE_SIZE,
-    ORDINAL_GROUP_COLUMN,
-    POINT_ESTIMATE,
-    CI_LOWER,
-    CI_UPPER,
+    ADJUSTED_ALPHA,
     ADJUSTED_LOWER,
     ADJUSTED_UPPER,
-    VARIANCE,
-    NUMBER_OF_COMPARISONS,
-    TWO_SIDED,
-    SFX2,
-    SFX1,
-    STD_ERR,
-    PREFERENCE_TEST,
-    NULL_HYPOTHESIS,
-    DIFFERENCE,
     ALPHA,
-    IS_SIGNIFICANT,
+    CI_LOWER,
+    CI_UPPER,
+    DENOMINATOR,
+    DIFFERENCE,
+    FINAL_EXPECTED_SAMPLE_SIZE,
     HOLM,
-    SPOT_1_HOLM,
     HOMMEL,
+    INTERVAL_SIZE,
+    IS_SIGNIFICANT,
+    NIM,
+    NULL_HYPOTHESIS,
+    NUMBER_OF_COMPARISONS,
+    NUMERATOR,
+    NUMERATOR_SUM_OF_SQUARES,
+    ORDINAL_GROUP_COLUMN,
+    ORIGINAL_POINT_ESTIMATE,
+    POINT_ESTIMATE,
+    PREFERENCE_TEST,
+    SFX1,
+    SFX2,
     SIMES_HOCHBERG,
+    SPOT_1_HOLM,
     SPOT_1_HOMMEL,
     SPOT_1_SIMES_HOCHBERG,
-    NIM,
-    ADJUSTED_ALPHA,
-    ORIGINAL_POINT_ESTIMATE,
+    STD_ERR,
+    TWO_SIDED,
+    VARIANCE,
 )
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
@@ -73,7 +73,7 @@ def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     else:
         variance = (df[numerator_sumsq] - np.power(df[numerator], 2) / df[denominator]) / (df[denominator] - 1)
     if (variance < 0).any():
-        raise ValueError("Computed variance is negative. " "Please check your inputs.")
+        raise ValueError("Computed variance is negative. Please check your inputs.")
     return variance
 
 

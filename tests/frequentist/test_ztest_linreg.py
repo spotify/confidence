@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PREFFERED, METHOD_COLUMN_NAME
+from spotify_confidence.analysis.constants import DECREASE_PREFFERED, METHOD_COLUMN_NAME, REGRESSION_PARAM
 
 
 class TestUnivariateSingleMetric(object):

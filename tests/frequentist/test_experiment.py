@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 import spotify_confidence
-from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST, ADJUSTED_LOWER, ADJUSTED_UPPER
+from spotify_confidence.analysis.constants import ADJUSTED_LOWER, ADJUSTED_UPPER, METHOD_COLUMN_NAME, ZTEST
 
 
 class TestBootstrap(object):

@@ -47,50 +47,38 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 
-format: ## format code with black
-	black spotify_confidence tests --line-length 119
+format:
+	uv run ruff format
 
-lint: ## check style with flake8
-	flake8 spotify_confidence tests
+lint:
+	uv run ruff check
 
 test: ## run tests quickly with the default Python
-	python3 -m pytest
+	uv run pytest
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source spotify_confidence -m pytest
-	coverage report -m
-	coverage html
+	uv run coverage run --source spotify_confidence -m pytest
+	uv run coverage report -m
+	uv run coverage html
 	$(BROWSER) htmlcov/index.html
 
-# docs: ## generate Sphinx HTML documentation, including API docs
-# 	rm -f docs/confidence.rst
-# 	rm -f docs/modules.rst
-# 	sphinx-apidoc -o docs/ confidence
-# 	$(MAKE) -C docs clean
-# 	$(MAKE) -C docs html
-# 	$(BROWSER) docs/_build/html/index.html
-
-# servedocs: docs ## compile the docs watching for changes
-# 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
-
 release-test: clean ## package and upload a release
-	python3 -m build
-	python3 -m twine upload --repository testpypi dist/*
+	uv build
+	uv run twine upload --repository testpypi dist/*
 
 release-prod: clean ## package and upload a release
-	python3 -m build
-	python3 -m twine upload dist/*
+	uv build
+	uv run twine upload dist/*
 
 dist: clean ## builds source and wheel packagels
-	python3 -m build
+	uv build
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
-	pip install -e .
+	uv pip install -e .
 
 install-test: clean
-	pip3 install --index-url https://test.pypi.org/simple/ spotify-confidence
+	uv pip install --index-url https://test.pypi.org/simple/ spotify-confidence
 
 install-prod: clean
-	pip3 install spotify-confidence
-
+	uv pip install spotify-confidence

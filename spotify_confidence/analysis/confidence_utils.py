@@ -14,10 +14,10 @@
 
 from collections import OrderedDict
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Union, Iterable, Tuple, List
+from typing import Iterable, List, Tuple, Union
 
 import numpy as np
-from pandas import DataFrame, concat, Series
+from pandas import DataFrame, Series, concat
 from scipy.stats import norm
 
 from spotify_confidence.analysis.constants import (
@@ -106,9 +106,7 @@ def validate_levels(df: DataFrame, level_columns: Union[str, Iterable], levels: 
                     Must supply a level within the ungrouped dimensions: {}
                     Valid levels:
                     {}
-                    """.format(
-                    level, level_columns, list(df.groupby(level_columns).groups.keys())
-                )
+                    """.format(level, level_columns, list(df.groupby(level_columns).groups.keys()))
             )
 
 
@@ -162,9 +160,7 @@ def validate_data(df: DataFrame, columns_that_must_exist, group_columns: Iterabl
         if not np.issubdtype(ordinal_column_type, np.number) and not issubclass(ordinal_column_type, np.datetime64):
             raise TypeError(
                 """`ordinal_group_column` is type `{}`.
-        Must be number or datetime type.""".format(
-                    ordinal_column_type
-                )
+        Must be number or datetime type.""".format(ordinal_column_type)
             )
 
 

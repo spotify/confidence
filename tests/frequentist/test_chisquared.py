@@ -7,7 +7,7 @@ from scipy.stats import chisquare
 
 import spotify_confidence
 from spotify_confidence.analysis.confidence_utils import power_calculation
-from spotify_confidence.analysis.constants import POINT_ESTIMATE, VARIANCE, SFX1, SFX2, DENOMINATOR
+from spotify_confidence.analysis.constants import DENOMINATOR, POINT_ESTIMATE, SFX1, SFX2, VARIANCE
 from spotify_confidence.analysis.frequentist.confidence_computers import chi_squared_computer as computer
 
 

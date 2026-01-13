@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Union, Iterable
+from typing import Iterable, Union
 
 from pandas import DataFrame
 
 from spotify_confidence.chartgrid import ChartGrid
+
 from ..constants import NIM_TYPE
 
 

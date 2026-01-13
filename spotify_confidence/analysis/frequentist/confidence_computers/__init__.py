@@ -1,9 +1,17 @@
-from spotify_confidence.analysis.constants import CHI2, TTEST, ZTEST, BOOTSTRAP, ZTESTLINREG
+from spotify_confidence.analysis.constants import BOOTSTRAP, CHI2, TTEST, ZTEST, ZTESTLINREG
+from spotify_confidence.analysis.frequentist.confidence_computers import (
+    bootstrap_computer as bootstrap_computer,
+)
 from spotify_confidence.analysis.frequentist.confidence_computers import (
     chi_squared_computer as chi_squared_computer,
+)
+from spotify_confidence.analysis.frequentist.confidence_computers import (
     t_test_computer as t_test_computer,
+)
+from spotify_confidence.analysis.frequentist.confidence_computers import (
     z_test_computer as z_test_computers,
-    bootstrap_computer as bootstrap_computer,
+)
+from spotify_confidence.analysis.frequentist.confidence_computers import (
     z_test_linreg_computer as z_test_linreg_computer,
 )
 

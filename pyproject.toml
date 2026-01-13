@@ -24,12 +24,11 @@ dependencies = [
     "ipywidgets>=8.0.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "build",
     "twine",
-    "black>=23.7.0",
-    "flake8>=6.0.0",
+    "ruff>=0.14.11",
     "tox>=4.0.0",
     "tox-uv>=1.0.0",
     "pytest>=7.0.0",
@@ -47,9 +46,12 @@ where = ["."]
 include = ["spotify_confidence*"]
 namespaces = false
 
-[tool.black]
+[tool.ruff]
 line-length = 119
-target-version = ["py39", "py310", "py311", "py312"]
+extend-exclude = ["examples/"]
+
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.pytest.ini_options]
 addopts = "-v -n auto --cov=spotify_confidence --cov-report=html --cov-report=xml --cov-report=term-missing"
