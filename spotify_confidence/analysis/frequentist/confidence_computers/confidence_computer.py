@@ -24,7 +24,7 @@ from spotify_confidence.analysis.confidence_utils import (
     drop_and_rename_columns,
     get_all_categorical_group_columns,
     get_all_group_columns,
-    get_remaning_groups,
+    get_remaining_groups,
     groupbyApplyParallel,
     level2str,
     listify,
@@ -267,7 +267,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         verbose: bool,
         mde_column: str,
     ) -> DataFrame:
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
             level_columns=level_columns,
             levels=[(level_1, level_2)],
@@ -300,7 +300,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         verbose: bool,
         mde_column: str,
     ) -> DataFrame:
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         other_levels = [
             other
             for other in self._sufficient_statistics.groupby(level_columns, sort=False).groups.keys()
@@ -348,7 +348,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         verbose: bool,
         mde_column: str,
     ) -> DataFrame:
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
             level_columns=level_columns,
             levels=[levels] if isinstance(levels, tuple) else levels,
@@ -536,7 +536,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
 
     def achieved_power(self, level_1, level_2, mde, alpha, groupby):
         groupby = listify(groupby)
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         kwargs = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
         return (
             self._compute_differences(

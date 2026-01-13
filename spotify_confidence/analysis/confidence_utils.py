@@ -14,7 +14,7 @@
 
 from collections import OrderedDict
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series, concat
@@ -35,19 +35,19 @@ def groupbyApplyParallel(dfGrouped, func_to_apply):
     return concat(ret_list)
 
 
-def get_all_group_columns(categorical_columns: Iterable, additional_column: str) -> Iterable:
+def get_all_group_columns(categorical_columns: Iterable, additional_column: Optional[str]) -> List:
     all_columns = listify(categorical_columns) + listify(additional_column)
     return list(OrderedDict.fromkeys(all_columns))
 
 
-def remove_group_columns(categorical_columns: Iterable, additional_column: str) -> Iterable:
+def remove_group_columns(categorical_columns: Iterable, additional_column: Optional[str]) -> List:
     od = OrderedDict.fromkeys(categorical_columns)
     if additional_column is not None:
         del od[additional_column]
     return list(od)
 
 
-def validate_categorical_columns(categorical_group_columns: Union[str, Iterable]) -> Iterable:
+def validate_categorical_columns(categorical_group_columns: Union[str, Iterable]) -> None:
     if isinstance(categorical_group_columns, str):
         pass
     elif isinstance(categorical_group_columns, Iterable):
@@ -60,28 +60,32 @@ def validate_categorical_columns(categorical_group_columns: Union[str, Iterable]
         )
 
 
-def listify(column_s: Union[str, Iterable]) -> List:
-    if isinstance(column_s, str):
+def listify(column_s: Union[str, Iterable, None]) -> List:
+    if column_s is None:
+        return []
+    elif isinstance(column_s, str):
         return [column_s]
     elif isinstance(column_s, Iterable):
         return list(column_s)
-    elif column_s is None:
+    else:
         return []
 
 
-def get_remaning_groups(all_groups: Iterable, some_groups: Iterable) -> Iterable:
+def get_remaining_groups(all_groups: Union[str, Iterable, None], some_groups: Union[str, Iterable, None]) -> List:
+    if all_groups is None:
+        return []
+    all_groups_list = listify(all_groups)
     if some_groups is None:
-        remaining_groups = all_groups
-    else:
-        remaining_groups = [group for group in all_groups if group not in some_groups and group is not None]
-    return remaining_groups
+        return all_groups_list
+    some_groups_list = listify(some_groups)
+    return [group for group in all_groups_list if group not in some_groups_list and group is not None]
 
 
 def get_all_categorical_group_columns(
     categorical_columns: Union[str, Iterable, None],
     metric_column: Union[str, None],
     treatment_column: Union[str, None],
-) -> Iterable:
+) -> List:
     all_columns = listify(treatment_column) + listify(categorical_columns) + listify(metric_column)
     return list(OrderedDict.fromkeys(all_columns))
 
@@ -161,10 +165,12 @@ def _validate_column(df: DataFrame, col: str):
 
 
 def is_non_inferiority(nim) -> bool:
-    if isinstance(nim, float):
+    if nim is None:
+        return False
+    elif isinstance(nim, (int, float)):
         return not np.isnan(nim)
-    elif nim is None:
-        return nim is not None
+    else:
+        return False
 
 
 def reset_named_indices(df):

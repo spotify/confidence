@@ -26,7 +26,7 @@ from ..confidence_utils import (
     axis_format_precision,
     de_list_if_length_one,
     get_all_group_columns,
-    get_remaning_groups,
+    get_remaining_groups,
     level2str,
     listify,
     to_finite,
@@ -84,7 +84,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         split_plot_by_groups: bool,
     ) -> ChartGrid:
         ch = ChartGrid()
-        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
             ch.charts += self.plot_differece_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
@@ -111,7 +111,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         split_plot_by_groups: bool,
     ) -> ChartGrid:
         ch = ChartGrid()
-        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
             ch.charts += self.plot_differences_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
@@ -121,7 +121,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         return ch
 
     def plot_differences_group(self, absolute, difference_df, groupby, use_adjusted_intervals):
-        categorical_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(groupby, self._ordinal_group_column)
         groupby_columns = self._add_level_columns(categorical_groups)
         if self._ordinal_group_column in listify(groupby):
             ch = self._ordinal_difference_plot(difference_df, absolute, groupby_columns, use_adjusted_intervals)
@@ -143,7 +143,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         split_plot_by_groups: bool,
     ) -> ChartGrid:
         ch = ChartGrid()
-        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(listify(groupby), self._ordinal_group_column)
 
         groupby = de_list_if_length_one(groupby)
 
@@ -175,7 +175,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     def _ordinal_difference_plot(
         self, difference_df: DataFrame, absolute: bool, groupby: Union[str, Iterable], use_adjusted_intervals: bool
     ) -> Chart:
-        remaining_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        remaining_groups = get_remaining_groups(groupby, self._ordinal_group_column)
 
         if "level_1" in groupby and "level_2" in groupby:
             title = "Change from level_1 to level_2"
@@ -328,7 +328,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         return chart_grid
 
     def _summary_plot(self, level_name: Union[str, Tuple], level_df: DataFrame, groupby: Union[str, Iterable]):
-        remaining_groups = get_remaning_groups(self._all_group_columns, groupby)
+        remaining_groups = get_remaining_groups(self._all_group_columns, groupby)
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
@@ -342,7 +342,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         remaining_groups: Union[str, Iterable],
         groupby: Union[str, Iterable],
     ):
-        remaining_groups = get_remaning_groups(remaining_groups, self._ordinal_group_column)
+        remaining_groups = get_remaining_groups(remaining_groups, self._ordinal_group_column)
         title = "Estimate of {} / {}".format(self._numerator, self._denominator)
         y_axis_label = "{} / {}".format(self._numerator, self._denominator)
         return self._ordinal_plot(
@@ -493,7 +493,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         level_as_reference: bool,
         use_adjusted_intervals: bool,
     ):
-        remaining_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        remaining_groups = get_remaining_groups(groupby, self._ordinal_group_column)
         groupby_columns = self._add_level_column(remaining_groups, level_as_reference)
         title = self._get_multiple_difference_title(difference_df, level_as_reference)
         y_axis_label = self._get_difference_plot_label(absolute)

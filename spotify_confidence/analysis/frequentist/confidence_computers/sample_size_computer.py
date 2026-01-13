@@ -421,7 +421,7 @@ def _optimal_kappa(row: Series, is_binary_column) -> float:
         return 1.0
 
 
-def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
+def _optimal_weights(kappa: float, number_of_groups: int) -> List[float]:
     treatment_weight = 1 / (kappa + number_of_groups - 1)
     control_weight = kappa * treatment_weight
     return [control_weight] + [treatment_weight for _ in range(number_of_groups - 1)]
@@ -429,7 +429,7 @@ def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
 
 def _find_optimal_group_weights_across_rows(
     df: DataFrame, group_count: int, group_columns: Iterable, **kwargs: Dict
-) -> (List[float], int):
+) -> Tuple[List[float], int]:
     min_kappa = min(df[OPTIMAL_KAPPA])
     max_kappa = max(df[OPTIMAL_KAPPA])
 
