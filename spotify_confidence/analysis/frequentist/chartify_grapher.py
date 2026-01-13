@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, Tuple, Union
+from typing import Hashable, Iterable, Optional, Union
 
 import numpy as np
 from bokeh.models import tools
@@ -331,7 +331,9 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
         return chart_grid
 
-    def _summary_plot(self, level_name: Union[str, Tuple], level_df: DataFrame, groupby: Union[str, Iterable]):
+    def _summary_plot(
+        self, level_name: Optional[Hashable], level_df: DataFrame, groupby: Optional[Union[str, Iterable]]
+    ):
         remaining_groups = get_remaining_groups(self._all_group_columns, groupby)
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
@@ -341,10 +343,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
     def _ordinal_summary_plot(
         self,
-        level_name: Union[str, Tuple],
+        level_name: Optional[Hashable],
         level_df: DataFrame,
         remaining_groups: Union[str, Iterable],
-        groupby: Union[str, Iterable],
+        groupby: Optional[Union[str, Iterable]],
     ):
         remaining_groups = get_remaining_groups(remaining_groups, self._ordinal_group_column)
         title = "Estimate of {} / {}".format(self._numerator, self._denominator)
@@ -365,8 +367,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         center_name: str,
         level_df: DataFrame,
-        groupby: Union[str, Iterable],
-        level_name: Union[str, Tuple],
+        groupby: Optional[Union[str, Iterable]],
+        level_name: Optional[Hashable],
         remaining_groups: Union[str, Iterable],
         absolute: bool,
         title: str,

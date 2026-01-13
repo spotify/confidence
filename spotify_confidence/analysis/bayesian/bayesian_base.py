@@ -27,7 +27,7 @@ from spotify_confidence.options import options
 
 # warnings.simplefilter("once")
 
-INITIAL_RANDOMIZATION_SEED = np.random.get_state()[1][0]
+INITIAL_RANDOMIZATION_SEED = np.random.get_state()[1][0]  # type: ignore[index]
 
 
 def num_decimals(value: float, absolute: bool) -> int:

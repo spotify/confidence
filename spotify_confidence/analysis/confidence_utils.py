@@ -131,7 +131,9 @@ def level2str(level: Union[str, Tuple]) -> str:
         return ", ".join([str(sub_level) for sub_level in level])
 
 
-def validate_data(df: DataFrame, columns_that_must_exist, group_columns: Iterable, ordinal_group_column: str):
+def validate_data(
+    df: DataFrame, columns_that_must_exist, group_columns: Iterable, ordinal_group_column: Optional[str]
+):
     """Integrity check input dataframe."""
     for col in columns_that_must_exist:
         _validate_column(df, col)
