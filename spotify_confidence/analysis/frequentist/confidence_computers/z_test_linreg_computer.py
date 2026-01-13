@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Dict, Optional, Union
+from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -16,7 +16,7 @@ from spotify_confidence.analysis.constants import (
 from spotify_confidence.analysis.frequentist.confidence_computers import z_test_computer
 
 
-def estimate_slope(df, **kwargs: Dict) -> DataFrame:
+def estimate_slope(df, **kwargs: Any) -> DataFrame:
     if kwargs[FEATURE] not in df:
         return df
 
@@ -58,7 +58,7 @@ def point_estimate(df: DataFrame, **kwargs) -> float:
     if REGRESSION_PARAM in df:
         feature_mean = df[kwargs[FEATURE]].sum() / df[kwargs[DENOMINATOR]].sum()
 
-        def lin_reg_point_estimate_delta(row: Series, feature_mean: float, **kwargs: Dict) -> Series:
+        def lin_reg_point_estimate_delta(row: Series, feature_mean: float, **kwargs: Any) -> Series:
             return dfmatmul(
                 row[REGRESSION_PARAM], row[kwargs[FEATURE]] - feature_mean * row[kwargs[DENOMINATOR]], outer=False
             )
@@ -100,19 +100,19 @@ def variance(df: DataFrame, **kwargs) -> Union[float, Series]:
         return variance1
 
 
-def add_point_estimate_ci(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def add_point_estimate_ci(df: DataFrame, **kwargs: Any) -> DataFrame:
     return z_test_computer.add_point_estimate_ci(df, **kwargs)
 
 
-def std_err(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def std_err(df: DataFrame, **kwargs: Any) -> float:
     return z_test_computer.std_err(df, **kwargs)
 
 
-def p_value(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def p_value(df: DataFrame, **kwargs: Any) -> Series:
     return z_test_computer.p_value(df, **kwargs)
 
 
-def ci(df: DataFrame, alpha_column: str, **kwargs: Dict) -> DataFrame:
+def ci(df: DataFrame, alpha_column: str, **kwargs: Any) -> Tuple[Series, Series]:
     return z_test_computer.ci(df, alpha_column, **kwargs)
 
 

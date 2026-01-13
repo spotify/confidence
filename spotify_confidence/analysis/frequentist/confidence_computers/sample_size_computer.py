@@ -230,7 +230,7 @@ class SampleSizeComputer:
 
     def compute_optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
-    ) -> Tuple[Iterable, int]:
+    ) -> Tuple[List[float], Optional[float]]:
         sample_size_df = (
             sample_size_df.reset_index(drop=True)
             .assign(**{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)})
@@ -428,8 +428,8 @@ def _optimal_weights(kappa: float, number_of_groups: int) -> List[float]:
 
 
 def _find_optimal_group_weights_across_rows(
-    df: DataFrame, group_count: int, group_columns: Iterable, **kwargs: Dict
-) -> Tuple[List[float], int]:
+    df: DataFrame, group_count: int, group_columns: Iterable, **kwargs: Any
+) -> Tuple[List[float], Optional[float]]:
     min_kappa = min(df[OPTIMAL_KAPPA])
     max_kappa = max(df[OPTIMAL_KAPPA])
 

@@ -19,7 +19,7 @@ import pandas
 from scipy.stats import norm
 
 
-def _alphas(alpha: np.ndarray, phi: float, t: np.ndarray):
+def _alphas(alpha: float, phi: float, t: np.ndarray):
     """Alpha spending function."""
     pe = np.zeros(len(t))
     pd = np.zeros(len(t))
@@ -44,7 +44,7 @@ def _bsearch(
     stdv: float,
     ya: float,
     yb: float,
-) -> np.ndarray:
+) -> float:
     """
     Note: function signature slightly modified in comparison to R implementation (which takes complete nints
     array instead of scalar), but should be semantically equivalent

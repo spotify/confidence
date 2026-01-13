@@ -204,7 +204,7 @@ def ci_for_multiple_comparison_methods(
             f"{SPOT_1_HOLM}, {SPOT_1_HOMMEL} and {SPOT_1_SIMES_HOCHBERG}"
         )
 
-    def _compute_ci_for_row(row: Series) -> Tuple[float, float]:
+    def _compute_ci_for_row(row: Series) -> Series:
         if row[IS_SIGNIFICANT] and num_significant == m_scal:
             alpha_adj = adjusted_alpha_rej_equal_m
         elif row[IS_SIGNIFICANT] and num_significant < m_scal:
