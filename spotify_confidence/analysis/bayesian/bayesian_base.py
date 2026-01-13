@@ -114,6 +114,11 @@ class BaseTest(object, metaclass=ABCMeta):
         self._all_group_columns = [column for column in self._all_group_columns if column is not None]
         self._validate_data()
 
+    @abstractmethod
+    def _interval(self, row):
+        """Return confidence/credible interval for a row. Must be implemented by subclasses."""
+        pass
+
     def _validate_data(self):
         """Integrity check input dataframe."""
         if not self._all_group_columns:

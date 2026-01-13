@@ -19,7 +19,7 @@ import pandas
 from scipy.stats import norm
 
 
-def _alphas(alpha: np.array, phi: float, t: np.array):
+def _alphas(alpha: np.ndarray, phi: float, t: np.ndarray):
     """Alpha spending function."""
     pe = np.zeros(len(t))
     pd = np.zeros(len(t))
@@ -38,13 +38,13 @@ def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: floa
 
 
 def _bsearch(
-    last: np.array,
+    last: np.ndarray,
     nints: int,
     pd: float,
     stdv: float,
     ya: float,
     yb: float,
-) -> np.array:
+) -> np.ndarray:
     """
     Note: function signature slightly modified in comparison to R implementation (which takes complete nints
     array instead of scalar), but should be semantically equivalent
@@ -75,13 +75,13 @@ def _bsearch(
 _NORM_CONSTANT = 1 / np.sqrt(2 * np.pi)
 
 
-def _fast_norm_pdf_prescaled(x: np.array, scale):
+def _fast_norm_pdf_prescaled(x: np.ndarray, scale):
     norm_constant2 = _NORM_CONSTANT / scale
     pdf_val = norm_constant2 * np.exp(-0.5 * np.power(x, 2))
     return pdf_val
 
 
-def _fcab(last: np.array, nints: int, yam1: float, h: float, x: np.array, stdv: float):
+def _fcab(last: np.ndarray, nints: int, yam1: float, h: float, x: np.ndarray, stdv: float):
     X, Y = np.meshgrid(x / stdv, (h * np.linspace(0, nints, nints + 1) + yam1) / stdv)
     scaled_x = Y - X
     pdf_prescaled = _fast_norm_pdf_prescaled(scaled_x, stdv)
@@ -102,7 +102,7 @@ class ComputationState:
     structure may be changed anytime.
     """
 
-    def __init__(self, df: pandas.DataFrame, last_fcab: np.array):
+    def __init__(self, df: pandas.DataFrame, last_fcab: Optional[np.ndarray]):
         if df is None or any(df["zb"].isnull()) or len(df) > 0 and last_fcab is None:
             raise ValueError()
 
@@ -128,7 +128,7 @@ class ComputationState:
 
 
 def landem(
-    t: np.array,
+    t: np.ndarray,
     alpha: float,
     phi: float,
     ztrun: float,
@@ -319,7 +319,7 @@ EMPTY_STATE = ComputationState(df=pandas.DataFrame(index=None, columns=columns, 
 
 
 def bounds(
-    t: np.array,
+    t: np.ndarray,
     alpha: float,
     rho: float,
     ztrun: float,

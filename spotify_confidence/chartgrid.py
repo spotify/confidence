@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # TODO: Move this to chartify.
-from typing import Iterable, Optional
+from typing import Any, List, Optional
 
 
 class ChartGrid:
@@ -24,10 +24,10 @@ class ChartGrid:
         - .show(): Render all the charts.
     """
 
-    def __init__(self, charts: Optional[Iterable] = None):
+    def __init__(self, charts: Optional[List[Any]] = None):
         if charts is None:
             charts = []
-        self.charts = charts
+        self.charts: List[Any] = charts
 
     def show(self, format="html"):
         for chart in self.charts:
