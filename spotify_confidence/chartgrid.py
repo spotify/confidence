@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # TODO: Move this to chartify.
-from typing import Iterable
+from typing import Iterable, Optional
 
 
 class ChartGrid:
@@ -24,7 +24,7 @@ class ChartGrid:
         - .show(): Render all the charts.
     """
 
-    def __init__(self, charts: Iterable = None):
+    def __init__(self, charts: Optional[Iterable] = None):
         if charts is None:
             charts = []
         self.charts = charts

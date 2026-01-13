@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 from pandas import DataFrame
 
@@ -41,7 +41,7 @@ class SampleSizeCalculator:
         mde_column: str,
         nim_column: str,
         preferred_direction_column: str,
-        final_expected_sample_size_column: str = None,
+        final_expected_sample_size_column: Optional[str] = None,
     ) -> DataFrame:
         """Args:
             treatment_weights (Iterable): The first weight is treated as control, the rest as treatment groups.

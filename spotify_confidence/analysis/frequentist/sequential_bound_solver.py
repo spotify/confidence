@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 import numpy as np
 import pandas
 from scipy.stats import norm
@@ -131,7 +133,7 @@ def landem(
     phi: float,
     ztrun: float,
     state: ComputationState,
-    max_nints: int = None,
+    max_nints: Optional[int] = None,
 ):
     """
     This function is a Python implementation of landem.R of ldbounds package.
