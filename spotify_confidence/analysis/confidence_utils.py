@@ -250,5 +250,5 @@ def dfmatmul(x, y, outer=True):
 
 def de_list_if_length_one(x):
     """Return first element of x if x is a list of length one"""
-    is_iterable = type(x) != str and isinstance(x, Iterable)
+    is_iterable = not isinstance(x, str) and isinstance(x, Iterable)
     return x[0] if is_iterable and len(x) == 1 else x

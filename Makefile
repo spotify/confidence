@@ -47,14 +47,17 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 
+format: ## format code with black
+	black spotify_confidence tests --line-length 119
+
 lint: ## check style with flake8
-	flake8 confidence tests
+	flake8 spotify_confidence tests
 
 test: ## run tests quickly with the default Python
 	python3 -m pytest
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source confidence -m pytest
+	coverage run --source spotify_confidence -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
@@ -86,10 +89,8 @@ install: clean ## install the package to the active Python's site-packages
 	pip install -e .
 
 install-test: clean
-	pip3 install --index-url https://test.pypi.org/simple/ confidence-spotify
+	pip3 install --index-url https://test.pypi.org/simple/ spotify-confidence
 
 install-prod: clean
-	pip3 install confidence-spotify
+	pip3 install spotify-confidence
 
-black:
-	black spotify_confidence tests --line-length 119

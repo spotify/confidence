@@ -7,7 +7,7 @@ from spotify_confidence.analysis.constants import METHOD_COLUMN_NAME, ZTEST, ADJ
 
 
 class TestBootstrap(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
         n_bootstraps = int(5e5)
         self.data = pd.DataFrame(

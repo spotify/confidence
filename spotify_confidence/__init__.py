@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pkg_resources import require as _require
+from importlib.metadata import version as _version
 from .analysis.bayesian.bayesian_models import BetaBinomial
 from spotify_confidence.analysis.frequentist.chi_squared import ChiSquared
 from spotify_confidence.analysis.frequentist.t_test import StudentsTTest
@@ -25,7 +25,7 @@ from .samplesize.sample_size_calculator import SampleSize
 from . import examples
 from .options import options
 
-__version__ = _require("spotify_confidence")[0].version
+__version__ = _version("spotify_confidence")
 
 __all__ = [
     "BetaBinomial",

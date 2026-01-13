@@ -422,18 +422,18 @@ class SampleSize(object):
                 )
                 code_html = widgets.HTML(
                     "<pre><code>"
-                    f"SampleSize.continuous(average_absolute_mde={ mde },\n"
-                    f"                      baseline_variance={ baseline },\n"
-                    f"                      alpha={ alpha },\n"
-                    f"                      power={ power },\n"
-                    f"                      treatments={ treatments },\n"
+                    f"SampleSize.continuous(average_absolute_mde={mde},\n"
+                    f"                      baseline_variance={baseline},\n"
+                    f"                      alpha={alpha},\n"
+                    f"                      power={power},\n"
+                    f"                      treatments={treatments},\n"
                     f"                      comparisons="
-                    f"'{ comparisons }',\n"
+                    f"'{comparisons}',\n"
                     f"                      treatment_costs="
-                    f"{ list(treatment_costs) },\n"
+                    f"{list(treatment_costs)},\n"
                     f"                      treatment_allocations=None,\n"
                     f"                      bonferroni_correction="
-                    f"{ bonferroni_correction })"
+                    f"{bonferroni_correction})"
                     "<code></pre>"
                 )
             else:
@@ -461,19 +461,19 @@ class SampleSize(object):
                 )
                 code_html = widgets.HTML(
                     "<pre><code>"
-                    f"SampleSize.binomial(absolute_percentage_mde={ mde },\n"
+                    f"SampleSize.binomial(absolute_percentage_mde={mde},\n"
                     f"                    baseline_proportion="
-                    f"{ baseline },\n"
-                    f"                    alpha={ alpha },\n"
-                    f"                    power={ power },\n"
-                    f"                    treatments={ treatments },\n"
+                    f"{baseline},\n"
+                    f"                    alpha={alpha},\n"
+                    f"                    power={power},\n"
+                    f"                    treatments={treatments},\n"
                     f"                    comparisons="
-                    f"'{ comparisons }',\n"
+                    f"'{comparisons}',\n"
                     f"                    treatment_costs="
-                    f"{ list(treatment_costs) },\n"
+                    f"{list(treatment_costs)},\n"
                     f"                    treatment_allocations=None,\n"
                     f"                    bonferroni_correction="
-                    f"{ bonferroni_correction })"
+                    f"{bonferroni_correction})"
                     "<code></pre>"
                 )
 
@@ -482,7 +482,7 @@ class SampleSize(object):
                     return ""
                 else:
                     return (
-                        f"<br><small><em>{current/optimal:.1f}x "
+                        f"<br><small><em>{current / optimal:.1f}x "
                         f"optimal group allocation of {optimal:,}."
                         f"</em></small>"
                     )
@@ -501,7 +501,7 @@ class SampleSize(object):
                 else:
                     treatment = "Variant " + str(i)
 
-                cell_str += f"<br><em>{treatment}:</em> " f"{n_cell[i]:,} ({prop_cell[i]*100:.1f}%)"
+                cell_str += f"<br><em>{treatment}:</em> " f"{n_cell[i]:,} ({prop_cell[i] * 100:.1f}%)"
 
             display(widgets.HTML(cell_str))
             display(code_html)

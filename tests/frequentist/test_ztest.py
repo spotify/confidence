@@ -26,7 +26,7 @@ from statsmodels.stats.multitest import multipletests
 
 
 class TestPoweredEffectContinuousSingleMetric(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -87,7 +87,7 @@ class TestPoweredEffectContinuousSingleMetric(object):
 
 
 class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": ["test", "control", "test2", "test", "control", "test2"],
@@ -149,7 +149,7 @@ class TestPoweredEffectContinuousMultipleSuccessMetrics(object):
 
 
 class TestPoweredEffectContinuousMultipleMetricTypes(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": ["test", "control", "test2", "test", "control", "test2"],
@@ -212,7 +212,7 @@ class TestPoweredEffectContinuousMultipleMetricTypes(object):
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -342,7 +342,7 @@ class TestPoweredEffectContinuousMultipleMetricsSegments(object):
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -472,7 +472,7 @@ class TestPoweredEffectContinuousMultipleMetricsSegments2(object):
 
 
 class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -605,7 +605,7 @@ class TestPoweredEffectContinuousMultipleMetricsSegments3(object):
 
 
 class TestPoweredEffectBinary(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -750,7 +750,7 @@ class TestPoweredEffectBinary(object):
 
 
 class TestPoweredEffectBinaryOnlyGuardrail(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -816,7 +816,7 @@ class TestPoweredEffectBinaryOnlyGuardrail(object):
 
 
 class TestBinary(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -922,7 +922,7 @@ class TestBinary(object):
 
 
 class TestCategoricalBinary(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -1038,7 +1038,7 @@ class TestCategoricalBinary(object):
 
 
 class TestCategoricalContinuous(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -1126,7 +1126,7 @@ class TestCategoricalContinuous(object):
 
 
 class TestOrdinal(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -1230,7 +1230,7 @@ class TestOrdinal(object):
 
 
 class TestOrdinalPlusTwoCategorical(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -1892,7 +1892,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
 
 class TestCategoricalBinomialData(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -2004,7 +2004,7 @@ class TestCategoricalBinomialData(object):
 
 
 class TestWithNims(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             [
                 {
@@ -2109,7 +2109,7 @@ class TestWithNims(object):
 
 
 class TestSequentialOrdinalPlusTwoCategorical(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
         d = 50 + 1 * np.random.randn(60)
         u = np.floor(2000 + np.linspace(0, 1000, 60) + 10 * np.random.randn(60))
@@ -2636,7 +2636,7 @@ GROUP = "group"
 
 
 class TestSequentialOrdinalPlusTwoCategorical2(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             [
                 {
@@ -3406,7 +3406,7 @@ class TestSequentialOrdinalPlusTwoCategorical2(object):
 
 
 class TestSequentialOneSided(object):
-    def setup(self):
+    def setup_method(self):
         DATE = "date"
         COUNT = "count"
         SUM = "sum"
@@ -3448,7 +3448,7 @@ class TestSequentialOneSided(object):
 
 
 class TestSequentialTwoSided(object):
-    def setup(self):
+    def setup_method(self):
         DATE = "date"
         COUNT = "count"
         SUM = "sum"
@@ -3489,7 +3489,7 @@ class TestSequentialTwoSided(object):
 
 
 class TestSequentialOneSidedThreeGroups(object):
-    def setup(self):
+    def setup_method(self):
         DATE = "date"
         COUNT = "count"
         SUM = "sum"
@@ -3534,7 +3534,7 @@ class TestSequentialOneSidedThreeGroups(object):
 
 
 class TestNimsWithNaN(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "count": {

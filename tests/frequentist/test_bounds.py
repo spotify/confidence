@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 import time
 import numpy as np
 from pandas import Timestamp
@@ -10,7 +9,6 @@ from spotify_confidence.analysis.frequentist.confidence_computers.z_test_compute
 )
 
 
-@pytest.mark.skip(reason="Skipping because this test is very slow")
 def test_many_days():
     """
     This input (based on a real experiment) is very long, which can cause slow calculation
@@ -404,7 +402,6 @@ def test_many_days():
     assert (time.time() - start_time) < 0.01
 
 
-@pytest.mark.skip(reason="Skipping because this test is very slow")
 def test_many_days_fast_and_no_crash():
     """
     This is based on experiment 1735 on 26.11.2020. The calculation of the corresponding bounds takes many minutes

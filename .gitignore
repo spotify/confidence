@@ -91,3 +91,7 @@ ENV/
 .DS_store
 
 .idea/
+
+# uv
+uv.lock
+.venv/

@@ -7,7 +7,7 @@ from spotify_confidence.analysis.constants import REGRESSION_PARAM, DECREASE_PRE
 
 
 class TestUnivariateSingleMetric(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
         n = 10000
         d = np.random.randint(2, size=n)
@@ -74,7 +74,7 @@ class TestUnivariateSingleMetric(object):
 
 
 class TestUnivariateMultiMetric(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
         n = 20000
         d = np.random.randint(2, size=n)
@@ -164,7 +164,7 @@ class TestUnivariateMultiMetric(object):
 
 
 class TestUnivariateNoFeatures(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             [
                 {
@@ -214,7 +214,7 @@ class TestUnivariateNoFeatures(object):
 
 
 class TestMultivariateSingleMetric(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         n = 10000
@@ -316,7 +316,7 @@ class TestMultivariateSingleMetric(object):
 
 
 class TestMultivariateMultipleMetrics(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         n = 10000
@@ -441,7 +441,7 @@ class TestMultivariateMultipleMetrics(object):
 
 
 class TestUnivariateMultiMetricRequiredSampleSize(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
         n = 2000000
         d = np.random.randint(2, size=n)
@@ -512,7 +512,7 @@ class TestUnivariateMultiMetricRequiredSampleSize(object):
 
 
 class TestUnivariateSingleMetricWithBadPreExposureData(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
         n = 10000
         d = np.random.randint(2, size=n)
@@ -569,7 +569,7 @@ class TestUnivariateSingleMetricWithBadPreExposureData(object):
 
 
 class TestUnivariateSingleMetricNegativeVariance(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             [
                 {

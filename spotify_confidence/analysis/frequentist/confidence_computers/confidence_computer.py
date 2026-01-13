@@ -351,7 +351,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         level_columns = get_remaning_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
             level_columns=level_columns,
-            levels=[levels] if type(levels) == tuple else levels,
+            levels=[levels] if isinstance(levels, tuple) else levels,
             absolute=absolute,
             groupby=groupby,
             level_as_reference=True,

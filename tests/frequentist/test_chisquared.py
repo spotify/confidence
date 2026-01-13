@@ -24,7 +24,7 @@ def chart_data(chart_object, series_name):
 
 
 class TestCategorical(object):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(123)
 
         self.data = pd.DataFrame(
@@ -335,7 +335,7 @@ class TestCategorical(object):
 
 
 class TestOrdinal(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
@@ -514,7 +514,7 @@ class TestOrdinal(object):
 
 
 class TestOrdinalPlusTwoCategorical(object):
-    def setup(self):
+    def setup_method(self):
         self.data = pd.DataFrame(
             {
                 "variation_name": [
