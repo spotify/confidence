@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 
 from pandas import DataFrame
 
@@ -40,8 +40,8 @@ class ZTestLinreg(Experiment):
         interval_size: float = 0.95,
         power: float = 0.8,
         correction_method: str = BONFERRONI,
-        confidence_computer: ConfidenceComputerABC = None,
-        confidence_grapher: ConfidenceGrapherABC = None,
+        confidence_computer: Optional[ConfidenceComputerABC] = None,
+        confidence_grapher: Optional[ConfidenceGrapherABC] = None,
     ):
         super().__init__(
             data_frame=data_frame.assign(**{METHOD_COLUMN_NAME: "z-test-linreg"}),

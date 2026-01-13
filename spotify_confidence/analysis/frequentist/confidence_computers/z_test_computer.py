@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -49,7 +49,7 @@ from spotify_confidence.analysis.constants import (
 from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
 
 
-def sequential_bounds(t: np.array, alpha: float, sides: int, state: DataFrame = None):
+def sequential_bounds(t: np.array, alpha: float, sides: int, state: Optional[DataFrame] = None):
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
@@ -290,10 +290,10 @@ def required_sample_size(
     hypothetical_effect: Union[Series, float],
     control_avg: Union[Series, float],
     control_var: Union[Series, float],
-    z_alpha: float = None,
-    kappa: float = None,
-    proportion_of_total: Union[Series, float] = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    kappa: Optional[float] = None,
+    proportion_of_total: Optional[Union[Series, float]] = None,
+    z_power: Optional[float] = None,
 ) -> Union[Series, float]:
     if kappa is None:
         raise ValueError("kappa is None, must be postive float")
@@ -323,8 +323,8 @@ def _search_MDE_binary_local_search(
     kappa: float,
     proportion_of_total: float,
     current_number_of_units: float,
-    z_alpha: float = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    z_power: Optional[float] = None,
 ):
     def f(x):
         return _find_current_powered_effect(
@@ -409,8 +409,8 @@ def _search_MDE_binary(
     kappa: float,
     proportion_of_total: float,
     current_number_of_units: float,
-    z_alpha: float = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    z_power: Optional[float] = None,
     return_cost_val=False,
 ):
     candidate_effects = np.linspace(10e-9, 1 - control_avg, num=2000)
@@ -467,8 +467,8 @@ def _find_current_powered_effect(
     kappa: float,
     proportion_of_total: float,
     current_number_of_units: float,
-    z_power: float = None,
-    z_alpha: float = None,
+    z_power: Optional[float] = None,
+    z_alpha: Optional[float] = None,
 ) -> float:
     treatment_var = _get_hypothetical_treatment_var(
         binary_metric=binary,

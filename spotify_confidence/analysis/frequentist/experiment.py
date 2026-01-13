@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from pandas import DataFrame
 
@@ -75,8 +75,8 @@ class Experiment(ConfidenceABC):
         ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
         correction_method: str = BONFERRONI,
-        confidence_computer: ConfidenceComputerABC = None,
-        confidence_grapher: ConfidenceGrapherABC = None,
+        confidence_computer: Optional[ConfidenceComputerABC] = None,
+        confidence_grapher: Optional[ConfidenceGrapherABC] = None,
         method_column: str = None,
         bootstrap_samples_column: str = None,
         metric_column=None,

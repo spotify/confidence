@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -134,10 +134,10 @@ def required_sample_size(
     hypothetical_effect: Union[Series, float],
     control_avg: Union[Series, float],
     control_var: Union[Series, float],
-    z_alpha: float = None,
-    kappa: float = None,
-    proportion_of_total: Union[Series, float] = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    kappa: Optional[float] = None,
+    proportion_of_total: Optional[Union[Series, float]] = None,
+    z_power: Optional[float] = None,
 ) -> Union[Series, float]:
     return z_test_computer.required_sample_size(
         binary,
