@@ -55,8 +55,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         data_frame: DataFrame,
         numerator_column: str,
         denominator_column: str,
-        categorical_group_columns: str,
-        ordinal_group_column: str,
+        categorical_group_columns: Union[str, Iterable],
+        ordinal_group_column: Optional[str],
     ):
         self._df = data_frame
         self._numerator = numerator_column
@@ -65,7 +65,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self._ordinal_group_column = ordinal_group_column
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
-    def plot_summary(self, summary_df: DataFrame, groupby: Union[str, Iterable]) -> ChartGrid:
+    def plot_summary(self, summary_df: DataFrame, groupby: Optional[Union[str, Iterable]]) -> ChartGrid:
         ch = ChartGrid()
         if groupby is None:
             ch.charts.append(self._summary_plot(level_name=None, level_df=summary_df, groupby=groupby))
@@ -78,8 +78,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         difference_df,
         absolute,
-        groupby,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
@@ -105,8 +105,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         difference_df,
         absolute,
-        groupby,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
@@ -136,9 +136,9 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         difference_df,
         absolute,
-        groupby,
-        level_as_reference,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:

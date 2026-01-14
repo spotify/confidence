@@ -320,7 +320,9 @@ class Experiment(ConfidenceABC):
         """
         return self._confidence_computer.achieved_power(level_1, level_2, mde, alpha, groupby)
 
-    def _validate_sequential(self, final_expected_sample_size: float, groupby: Union[str, Iterable]):
+    def _validate_sequential(
+        self, final_expected_sample_size: Optional[Union[str, float]], groupby: Optional[Union[str, Iterable]]
+    ):
         if final_expected_sample_size is not None:
             if self._ordinal_group_column not in listify(groupby):
                 raise ValueError(

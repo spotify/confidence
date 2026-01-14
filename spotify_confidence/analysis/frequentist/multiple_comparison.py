@@ -1,5 +1,5 @@
 from _warnings import warn
-from typing import Any, List
+from typing import Any, List, Optional
 
 from pandas import DataFrame
 from statsmodels.stats.multitest import multipletests
@@ -62,8 +62,8 @@ def get_num_comparisons(
     correction_method: str,
     number_of_level_comparisons: int,
     groupby: List[str],
-    metric_column: str,
-    treatment_column: str,
+    metric_column: Optional[str],
+    treatment_column: Optional[str],
     single_metric: bool,
     segments: List[str],
 ) -> int:

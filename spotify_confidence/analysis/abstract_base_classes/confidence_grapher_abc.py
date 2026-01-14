@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 
 from pandas import DataFrame
 
@@ -29,13 +29,13 @@ class ConfidenceGrapherABC(ABC):
         data_frame: DataFrame,
         numerator_column: str,
         denominator_column: str,
-        categorical_group_columns: str,
-        ordinal_group_column: str,
+        categorical_group_columns: Union[str, Iterable],
+        ordinal_group_column: Optional[str],
     ):
         pass
 
     @abstractmethod
-    def plot_summary(self, summary_df: DataFrame, groupby: Union[str, Iterable]) -> ChartGrid:
+    def plot_summary(self, summary_df: DataFrame, groupby: Optional[Union[str, Iterable]]) -> ChartGrid:
         """Plot for each group in the data_frame:
 
         if ordinal level exists:
@@ -57,8 +57,8 @@ class ConfidenceGrapherABC(ABC):
         self,
         difference_df: DataFrame,
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
@@ -79,8 +79,8 @@ class ConfidenceGrapherABC(ABC):
         self,
         difference_df: DataFrame,
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
@@ -101,9 +101,9 @@ class ConfidenceGrapherABC(ABC):
         self,
         difference_df: DataFrame,
         absolute: bool,
-        groupby: Union[str, Iterable],
-        level_as_reference: bool,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Iterable, List, Tuple, Union
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from numpy import isnan
@@ -261,11 +261,11 @@ class ConfidenceComputer(ConfidenceComputerABC):
         level_1: Union[str, Iterable],
         level_2: Union[str, Iterable],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
         level_columns = get_remaining_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
@@ -293,12 +293,12 @@ class ConfidenceComputer(ConfidenceComputerABC):
         self,
         level: Union[str, Iterable],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        level_as_reference: bool,
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
         level_columns = get_remaining_groups(self._all_group_columns, groupby)
         other_levels = [
@@ -340,13 +340,13 @@ class ConfidenceComputer(ConfidenceComputerABC):
 
     def compute_differences(
         self,
-        levels: List[Tuple],
+        levels: Union[Tuple, List[Tuple]],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
         level_columns = get_remaining_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
@@ -375,11 +375,11 @@ class ConfidenceComputer(ConfidenceComputerABC):
         level_columns: Iterable,
         levels: Union[str, Iterable],
         absolute: bool,
-        groupby: Union[str, Iterable],
+        groupby: Optional[Union[str, Iterable]],
         level_as_reference: bool,
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
-        mde_column: str,
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
+        mde_column: Optional[str],
     ):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_as_reference must be either True or False, but is {level_as_reference}.")
