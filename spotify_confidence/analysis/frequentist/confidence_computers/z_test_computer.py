@@ -46,10 +46,16 @@ from spotify_confidence.analysis.constants import (
     TWO_SIDED,
     VARIANCE,
 )
-from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
+from spotify_confidence.analysis.frequentist.sequential_bound_solver import (
+    CalculationResult,
+    ComputationState,
+    bounds,
+)
 
 
-def sequential_bounds(t: np.ndarray, alpha: float, sides: int, state: Optional[DataFrame] = None):
+def sequential_bounds(
+    t: np.ndarray, alpha: float, sides: int, state: Optional[ComputationState] = None
+) -> CalculationResult:
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
@@ -77,7 +83,7 @@ def variance(df: DataFrame, **kwargs: Any) -> float:
     return variance
 
 
-def std_err(df: Series, **kwargs: Any) -> float:
+def std_err(df: DataFrame, **kwargs: Any) -> float:
     denominator = kwargs[DENOMINATOR]
     return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
@@ -448,13 +454,15 @@ def _search_MDE_binary(
 
 
 def _treatment_group_sample_size(
-    z_alpha: float,
-    z_power: float,
-    hypothetical_effect: float,
-    control_var: float,
-    treatment_var: float,
+    z_alpha: Optional[Union[int, float]],
+    z_power: Optional[Union[int, float]],
+    hypothetical_effect: Union[Series, int, float],
+    control_var: Union[Series, int, float],
+    treatment_var: Union[Series, int, float, np.ndarray],
     kappa: float,
-) -> float:
+) -> Union[float, np.ndarray]:
+    if z_alpha is None or z_power is None:
+        raise ValueError("z_alpha and z_power must not be None")
     return np.ceil(np.power((z_alpha + z_power) / abs(hypothetical_effect), 2) * (control_var / kappa + treatment_var))
 
 

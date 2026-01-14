@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 from pandas import DataFrame
 
@@ -68,7 +68,7 @@ class SampleSizeCalculator:
 
     def optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
-    ) -> Tuple[Iterable, int]:
+    ) -> Tuple[List[float], Optional[float]]:
         """Args:
             sample_size_df (DataFrame): A data frame returned by the sample_size method of this class
             number_of_groups (int): Number of groups in the experiment, including control

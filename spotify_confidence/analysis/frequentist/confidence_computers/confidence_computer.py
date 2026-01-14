@@ -376,7 +376,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         levels: Union[str, Iterable],
         absolute: bool,
         groupby: Optional[Union[str, Iterable]],
-        level_as_reference: bool,
+        level_as_reference: Optional[bool],
         nims: Optional[NIM_TYPE],
         final_expected_sample_size_column: Optional[str],
         mde_column: Optional[str],
@@ -534,7 +534,14 @@ class ConfidenceComputer(ConfidenceComputerABC):
 
         return comparison_df
 
-    def achieved_power(self, level_1, level_2, mde, alpha, groupby):
+    def achieved_power(
+        self,
+        level_1: Union[str, Iterable],
+        level_2: Union[str, Iterable],
+        mde: float,
+        alpha: float,
+        groupby: Optional[Union[str, Iterable]],
+    ) -> DataFrame:
         groupby = listify(groupby)
         level_columns = get_remaining_groups(self._all_group_columns, groupby)
         kwargs = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}

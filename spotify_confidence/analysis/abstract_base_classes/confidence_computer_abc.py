@@ -83,7 +83,7 @@ class ConfidenceComputerABC(ABC):
         level_2: Union[str, Iterable],
         mde: float,
         alpha: float,
-        groupby: Union[str, Iterable],
+        groupby: Optional[Union[str, Iterable]],
     ) -> DataFrame:
         """Calculated the achieved power of test of differences between
         level 1 and level 2 given a targeted MDE.

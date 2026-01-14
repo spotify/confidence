@@ -29,7 +29,7 @@ def _alphas(alpha: float, phi: float, t: np.ndarray):
     return pe, pd
 
 
-def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: float):
+def _qp(xq: float, last: np.ndarray, nints: int, yam1: float, ybm1: float, stdv: float):
     hlast = (ybm1 - yam1) / nints
     grid = np.linspace(yam1, ybm1, nints + 1)
     fun = last * norm.cdf(grid, xq, stdv)
@@ -312,10 +312,10 @@ class CalculationResult:
         return self._state
 
 
-columns = ["za", "zb", "ya", "yb", "pe", "pd", "stdv", "sdproc", "nints", "information_ratio"]
+_BOUND_COLUMNS = pandas.Index(["za", "zb", "ya", "yb", "pe", "pd", "stdv", "sdproc", "nints", "information_ratio"])
 
 # Initial state to be fed into bounds() to calculate sequential bounds from scratch
-EMPTY_STATE = ComputationState(df=pandas.DataFrame(index=None, columns=columns, dtype=float), last_fcab=None)
+EMPTY_STATE = ComputationState(df=pandas.DataFrame(index=None, columns=_BOUND_COLUMNS, dtype=float), last_fcab=None)
 
 
 def bounds(
@@ -324,8 +324,8 @@ def bounds(
     rho: float,
     ztrun: float,
     sides: int,
-    state: ComputationState = EMPTY_STATE,
-    max_nints=None,
+    state: Optional[ComputationState] = None,
+    max_nints: Optional[int] = None,
 ) -> CalculationResult:
     """
     See landem() for parameter explanation
@@ -334,9 +334,11 @@ def bounds(
     """
 
     def get_input_str():
+        state_df_str = state.df.to_json() if state is not None else "None"
+        state_fcab_str = state.last_fcab if state is not None else "None"
         return (
             f"input params: t={t}, alpha={alpha}, sides={sides}, rho={rho}, ztrun={ztrun},"
-            f"state_df={state.df.to_json()}, state_fcab={state.last_fcab}, max_nints={max_nints}"
+            f"state_df={state_df_str}, state_fcab={state_fcab_str}, max_nints={max_nints}"
         )
 
     if any(t == 0.0):

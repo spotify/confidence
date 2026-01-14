@@ -66,14 +66,14 @@ def add_point_estimate_ci(df: DataFrame, **kwargs: Any) -> DataFrame:
     return df
 
 
-def _dof(row: Series, **kwargs: Any) -> float:
+def _dof(df: DataFrame, **kwargs: Any) -> float:
     denominator = kwargs[DENOMINATOR]
-    v1, v2 = row[VARIANCE + SFX1], row[VARIANCE + SFX2]
-    n1, n2 = row[denominator + SFX1], row[denominator + SFX2]
+    v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
+    n1, n2 = df[denominator + SFX1], df[denominator + SFX2]
     return (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
 
 
-def p_value(df: Series, **kwargs: Any) -> Series:
+def p_value(df: DataFrame, **kwargs: Any) -> Series:
     _, p_value = _tstat_generic(
         value1=df[POINT_ESTIMATE + SFX2],
         value2=df[POINT_ESTIMATE + SFX1],

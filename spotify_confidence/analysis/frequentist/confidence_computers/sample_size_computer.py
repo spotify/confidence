@@ -81,7 +81,7 @@ class SampleSizeComputer:
         categorical_group_columns: Union[str, Iterable],
         interval_size: float,
         correction_method: str,
-        metric_column: str,
+        metric_column: Optional[str],
         power: float,
         point_estimate_column: str,
         var_column: str,
@@ -146,7 +146,7 @@ class SampleSizeComputer:
         mde_column: str,
         nim_column: str,
         preferred_direction_column: str,
-        final_expected_sample_size_column: str,
+        final_expected_sample_size_column: Optional[str],
     ) -> DataFrame:
         kwargs, group_columns, sample_size_df = self._initialise_sample_size_and_power_computation(
             final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
