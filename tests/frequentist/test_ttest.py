@@ -226,7 +226,9 @@ class TestCategorical(object):
     def test_multiple_difference_plot(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference_plot(
-                ("bad_value", "bad_value"), ("bad_value", "bad_value"), level_as_reference=False
+                ("bad_value", "bad_value"),
+                ("bad_value", "bad_value"),  # type: ignore[arg-type]
+                level_as_reference=False,
             )
 
         ch = self.test.multiple_difference_plot(("us", "control"), level_as_reference=False)
@@ -374,7 +376,9 @@ class TestOrdinal(object):
     def test_multiple_difference(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference(
-                ("bad_value", "bad_value"), ("bad_value", "bad_value"), level_as_reference=False
+                ("bad_value", "bad_value"),
+                ("bad_value", "bad_value"),  # type: ignore[arg-type]
+                level_as_reference=False,
             )
 
         diff = self.test.multiple_difference(("control", 1), level_as_reference=False)
@@ -386,7 +390,9 @@ class TestOrdinal(object):
     def test_multiple_difference_plot(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference_plot(
-                ("bad_value", "bad_value"), ("bad_value", "bad_value"), level_as_reference=False
+                ("bad_value", "bad_value"),
+                ("bad_value", "bad_value"),  # type: ignore[arg-type]
+                level_as_reference=False,
             )
 
         ch = self.test.multiple_difference_plot(("control", 1), level_as_reference=False)

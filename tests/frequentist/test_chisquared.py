@@ -24,6 +24,8 @@ def chart_data(chart_object, series_name):
 
 
 class TestCategorical(object):
+    test: spotify_confidence.ChiSquared
+
     def setup_method(self):
         np.random.seed(123)
 
@@ -248,7 +250,9 @@ class TestCategorical(object):
     def test_multiple_difference_plot(self):
         with pytest.raises(ValueError):
             self.test.multiple_difference_plot(
-                ("bad_value", "bad_value"), ("bad_value", "bad_value"), level_as_reference=False
+                ("bad_value", "bad_value"),
+                ("bad_value", "bad_value"),  # type: ignore[arg-type]
+                level_as_reference=False,
             )
 
         ch = self.test.multiple_difference_plot(("us", "control"), level_as_reference=False)
@@ -268,7 +272,7 @@ class TestCategorical(object):
         }
 
         with pytest.raises(TypeError):
-            self.test.sample_ratio_test("not a dict")
+            self.test.sample_ratio_test("not a dict")  # type: ignore[arg-type]
 
         with pytest.raises(ValueError):
             negative = expected.copy()
@@ -439,7 +443,7 @@ class TestOrdinal(object):
 
     def test_raise_error_with_nim(self):
         with pytest.raises(ValueError):
-            self.test.difference(("control", 1), ("test", 1), non_inferiority_margins=("blah", "hah"))
+            self.test.difference(("control", 1), ("test", 1), non_inferiority_margins=("blah", "hah"))  # type: ignore[arg-type]
 
     def test_difference(self):
         with pytest.raises(ValueError):

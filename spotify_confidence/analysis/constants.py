@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 # TODO: Consider using TypedDict for ConfidenceComputerKwargs to properly type
 # the kwargs passed to confidence computer functions. Currently using Any because
@@ -158,7 +158,7 @@ TWO_SIDED = "two-sided"
 PREFERENCE = "preference"
 PREFERENCE_TEST = "preference_used_in_test"
 PREFERENCE_DICT = {"smaller": DECREASE_PREFFERED, "larger": INCREASE_PREFFERED, TWO_SIDED: TWO_SIDED}
-NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]
+NIM_TYPE = Union[Tuple[Optional[float], Optional[str]], Dict[Any, Tuple[Optional[float], Optional[str]]], bool]
 METHOD_COLUMN_NAME = "method_column_name"
 CHI2 = "chi-squared"
 TTEST = "t-test"

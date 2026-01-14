@@ -68,9 +68,9 @@ class Experiment(ConfidenceABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
+        numerator_column: Optional[str],
         numerator_sum_squares_column: Union[str, None],
-        denominator_column: str,
+        denominator_column: Optional[str],
         categorical_group_columns: Union[str, Iterable],
         ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
@@ -187,7 +187,7 @@ class Experiment(ConfidenceABC):
 
     def multiple_difference(
         self,
-        level: Union[str, Tuple],
+        level: Union[str, Tuple, int],
         absolute: bool = True,
         groupby: Optional[Union[str, Iterable]] = None,
         level_as_reference: Optional[bool] = None,
@@ -259,7 +259,7 @@ class Experiment(ConfidenceABC):
 
     def multiple_difference_plot(
         self,
-        level: Union[str, Tuple],
+        level: Union[str, Tuple, int],
         absolute: bool = True,
         groupby: Optional[Union[str, Iterable]] = None,
         level_as_reference: Optional[bool] = None,

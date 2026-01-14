@@ -10,6 +10,8 @@ spotify_confidence.options.set_option("randomization_seed", 1)
 
 
 class TestCategorical(object):
+    test: spotify_confidence.BetaBinomial
+
     def setup_method(self):
         self.data = pd.DataFrame(
             {

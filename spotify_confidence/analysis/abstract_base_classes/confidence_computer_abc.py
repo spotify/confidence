@@ -46,7 +46,7 @@ class ConfidenceComputerABC(ABC):
     @abstractmethod
     def compute_multiple_difference(
         self,
-        level: Union[str, Iterable],
+        level: Union[str, Iterable, int],
         absolute: bool,
         groupby: Optional[Union[str, Iterable]],
         level_as_reference: Optional[bool],
