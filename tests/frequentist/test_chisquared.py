@@ -9,6 +9,7 @@ import spotify_confidence
 from spotify_confidence.analysis.confidence_utils import power_calculation
 from spotify_confidence.analysis.constants import DENOMINATOR, POINT_ESTIMATE, SFX1, SFX2, VARIANCE
 from spotify_confidence.analysis.frequentist.confidence_computers import chi_squared_computer as computer
+from spotify_confidence.analysis.frequentist.confidence_computers.confidence_computer import ConfidenceComputer
 
 
 def chart_data(chart_object, series_name):
@@ -142,6 +143,7 @@ class TestCategorical(object):
         assert np.allclose(diff["p-value"], np.array([0.155218, 0.074866]))
 
     def test_difference_with_interval_sizes(self):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._interval_size = 0.99
         diff = self.test.difference(("us", "control"), ("us", "test"))
         assert np.allclose(diff["difference"].iloc[0], 0.091694)

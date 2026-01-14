@@ -21,6 +21,7 @@ from spotify_confidence.analysis.constants import (
     VARIANCE,
 )
 from spotify_confidence.analysis.frequentist.confidence_computers import t_test_computer as computer
+from spotify_confidence.analysis.frequentist.confidence_computers.confidence_computer import ConfidenceComputer
 
 
 def chart_data(chart_object, series_name):
@@ -188,6 +189,7 @@ class TestCategorical(object):
         https: // www.quantitativeskills.com / sisa / statistics / t - test.htm
         was used to validate results
         """
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._interval_size = 0.99
 
         diff = self.test.difference(("us", "control"), ("us", "test"))
