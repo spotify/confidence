@@ -57,6 +57,9 @@ quote-style = "double"
 [tool.ty.src]
 exclude = ["examples/"]
 
+[tool.ty.rules]
+unused-ignore-comment = "ignore"
+
 [tool.pytest.ini_options]
 addopts = "-v -n auto --cov=spotify_confidence --cov-report=html --cov-report=xml --cov-report=term-missing"
 testpaths = ["tests"]

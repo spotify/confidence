@@ -123,7 +123,7 @@ class ComputationState:
 
     def __eq__(self, other):
         if isinstance(other, ComputationState):
-            return self._df.equals(other._df) and np.array_equal(self._last_fcab, other._last_fcab)
+            return self._df.equals(other._df) and np.array_equal(self._last_fcab, other._last_fcab)  # type: ignore[arg-type,unused-ignore]
         return False
 
 

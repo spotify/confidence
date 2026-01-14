@@ -113,7 +113,7 @@ def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFr
         if (df[column + SFX1].isna() == df[column + SFX2].isna()).all() and (
             df[column + SFX1][df[column + SFX1].notna()] == df[column + SFX2][df[column + SFX2].notna()]
         ).all():
-            df = df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])
+            df = df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])  # type: ignore[union-attr,unused-ignore]
         else:
             raise ValueError(f"Values of {column} do not agree across levels: {df[[column + SFX1, column + SFX2]]}")
     return df
@@ -121,7 +121,7 @@ def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFr
 
 def drop_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
     columns_dict = {col + SFX1: col for col in columns}
-    return df.rename(columns=columns_dict).drop(columns=[col + SFX2 for col in columns])
+    return df.rename(columns=columns_dict).drop(columns=[col + SFX2 for col in columns])  # type: ignore[union-attr,unused-ignore]
 
 
 def level2str(level: Union[str, Tuple]) -> str:
