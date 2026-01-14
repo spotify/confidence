@@ -105,7 +105,7 @@ class TestCategorical(object):
             self.test.multiple_difference_joint(("bad_value", "bad_value"))
 
         diff = self.test.multiple_difference_joint(("us", "test2"))
-        print(np.random.get_state()[1][0])
+        print(np.random.get_state()[1][0])  # type: ignore
         assert np.allclose(diff["difference"], np.array([0.000743]), rtol=1e-05, atol=1e-06)
         assert np.allclose(diff["P(('us', 'test2') >= all)"], np.array([0.508644]))
         assert np.allclose(diff["('us', 'test2') potential loss"], np.array([-0.032459]))

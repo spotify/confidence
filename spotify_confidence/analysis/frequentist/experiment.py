@@ -289,6 +289,8 @@ class Experiment(ConfidenceABC):
         return chartgrid
 
     def sample_ratio_test(self, expected_proportions: Dict) -> Tuple[float, DataFrame]:
+        if self._denominator is None:
+            raise ValueError("Denominator is not set")
         return sample_ratio_test(
             self._df,
             all_group_columns=self._all_group_columns,

@@ -19,7 +19,7 @@ pd.options.display.width = 1000
 class TestSampleSizeCalculator(object):
     def test_sample_size_1(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, 0.00617, None, "increase"],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],
@@ -50,6 +50,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 894863 < 1.001
 
@@ -67,7 +68,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_2(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, 0.00617, None, None],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],
@@ -98,6 +99,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 1004113 < 1.001
 
@@ -115,7 +117,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_3(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, 0.00617, None, None],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],
@@ -146,6 +148,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 596991 < 1.001
 
@@ -163,7 +166,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_4(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, None, 0.00617, "increase"],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],
@@ -194,6 +197,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 586168 < 1.001
 
@@ -211,7 +215,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_5(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, None, 0.00617, "increase"],
             ],
@@ -240,6 +244,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 451934 < 1.001
 
@@ -257,7 +262,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_6(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, None],
             ],
@@ -286,6 +291,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 47854 < 1.001
 
@@ -303,7 +309,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_7(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, 0.00617, None, None],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],
@@ -334,6 +340,7 @@ class TestSampleSizeCalculator(object):
         assert ss[CI_WIDTH].isna().all()
 
         optimal_weights, optimal_sample_size = ssc.optimal_weights_and_sample_size(ss, len(treatment_weights))
+        assert optimal_sample_size is not None
         assert len(optimal_weights) == len(treatment_weights)
         assert 0.999 < optimal_sample_size / 556565 < 1.001
 
@@ -351,7 +358,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_8(self):
         df = pd.DataFrame(
-            columns=["metric_name", "country", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "country", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", "denmark", True, 0.7, 0.21, 0.01, None, None],
                 ["share_bananas_1d", "sweden", True, 0.4, 0.24, 0.01, None, None],
@@ -400,7 +407,9 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_calculation_ciwidth_nimless_with_expected_sample_size(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference", "expected_sample_size"],
+            columns=pd.Index(
+                ["metric_name", "binary", "avg", "var", "mde", "nim", "preference", "expected_sample_size"]
+            ),
             data=[
                 ["share_bananas_1d", True, 0.7, 0.21, None, 0.0, "increase", 1e6],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase", int(1e6)],
@@ -447,7 +456,9 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_calculation_ciwidth_matches_real_width_returned_by_onesided_test(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference", "expected_sample_size"],
+            columns=pd.Index(
+                ["metric_name", "binary", "avg", "var", "mde", "nim", "preference", "expected_sample_size"]
+            ),
             data=[
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase", int(1e6)],
             ],
@@ -490,7 +501,9 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_calculation_ciwidth_matches_real_width_returned_by_twosided_test_with_direction(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference", "expected_sample_size"],
+            columns=pd.Index(
+                ["metric_name", "binary", "avg", "var", "mde", "nim", "preference", "expected_sample_size"]
+            ),
             data=[
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, None, int(1e6)],
             ],
@@ -535,7 +548,7 @@ class TestSampleSizeCalculator(object):
         mde_pp = 0.15
         baseline = 0.48
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 [
                     "share_users_with_bananas",
@@ -620,7 +633,7 @@ class TestSampleSizeCalculator(object):
         mde_pp = 0.15
         baseline = 0.48
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 [
                     "share_users_with_bananas",
@@ -707,7 +720,7 @@ class TestSampleSizeCalculator(object):
         mde_pp = 0.15
         baseline = 0.48
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 [
                     "share_users_with_bananas",
@@ -793,7 +806,7 @@ class TestSampleSizeCalculator(object):
 
     def test_sample_size_with_nan(self):
         df = pd.DataFrame(
-            columns=["metric_name", "binary", "avg", "var", "mde", "nim", "preference"],
+            columns=pd.Index(["metric_name", "binary", "avg", "var", "mde", "nim", "preference"]),
             data=[
                 ["share_bananas_1d", True, None, None, 0.00617, None, "increase"],
                 ["bananas_per_user_7d", False, 4.56, 2.13, 0.01, None, "increase"],

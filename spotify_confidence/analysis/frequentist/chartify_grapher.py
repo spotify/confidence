@@ -53,8 +53,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
-        denominator_column: str,
+        numerator_column: Optional[str],
+        denominator_column: Optional[str],
         categorical_group_columns: Union[str, Iterable],
         ordinal_group_column: Optional[str],
     ):
