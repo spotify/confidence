@@ -163,9 +163,9 @@ def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Any):
         data=(
             df.assign(**{comparison_total_column: df[denominator + SFX1] + df[denominator + SFX2]})
             .assign(
-                max_sample_size=lambda df: df[[comparison_total_column, final_expected_sample_size_column]]
-                .max(axis=1)
-                .max()
+                max_sample_size=lambda df: (
+                    df[[comparison_total_column, final_expected_sample_size_column]].max(axis=1).max()
+                )
             )
             .assign(sample_size_proportions=lambda df: df[comparison_total_column] / df["max_sample_size"])
             .pipe(adjusted_alphas_for_group)[ADJUSTED_ALPHA]
