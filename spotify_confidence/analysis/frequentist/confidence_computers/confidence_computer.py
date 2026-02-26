@@ -212,43 +212,45 @@ class ConfidenceComputer(ConfidenceComputerABC):
             self._sufficient = (
                 self._df.groupby(groupby, sort=False, group_keys=True)
                 .apply(
-                    lambda df: df.assign(
-                        **{
-                            POINT_ESTIMATE: lambda df: confidence_computers[
-                                df[self._method_column].values[0]
-                            ].point_estimate(df, **kwargs)
-                        }
-                    )
-                    .assign(
-                        **{
-                            ORIGINAL_POINT_ESTIMATE: lambda df: (
-                                confidence_computers[ZTEST].point_estimate(df, **kwargs)
-                                if df[self._method_column].values[0] == ZTESTLINREG
-                                else confidence_computers[df[self._method_column].values[0]].point_estimate(
+                    lambda df: (
+                        df.assign(
+                            **{
+                                POINT_ESTIMATE: lambda df: confidence_computers[
+                                    df[self._method_column].values[0]
+                                ].point_estimate(df, **kwargs)
+                            }
+                        )
+                        .assign(
+                            **{
+                                ORIGINAL_POINT_ESTIMATE: lambda df: (
+                                    confidence_computers[ZTEST].point_estimate(df, **kwargs)
+                                    if df[self._method_column].values[0] == ZTESTLINREG
+                                    else confidence_computers[df[self._method_column].values[0]].point_estimate(
+                                        df, **kwargs
+                                    )
+                                )
+                            }
+                        )
+                        .assign(
+                            **{
+                                VARIANCE: lambda df: confidence_computers[df[self._method_column].values[0]].variance(
                                     df, **kwargs
                                 )
-                            )
-                        }
-                    )
-                    .assign(
-                        **{
-                            VARIANCE: lambda df: confidence_computers[df[self._method_column].values[0]].variance(
+                            }
+                        )
+                        .assign(
+                            **{
+                                ORIGINAL_VARIANCE: lambda df: (
+                                    confidence_computers[ZTEST].variance(df, **kwargs)
+                                    if df[self._method_column].values[0] == ZTESTLINREG
+                                    else confidence_computers[df[self._method_column].values[0]].variance(df, **kwargs)
+                                )
+                            }
+                        )
+                        .pipe(
+                            lambda df: confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
                                 df, **kwargs
                             )
-                        }
-                    )
-                    .assign(
-                        **{
-                            ORIGINAL_VARIANCE: lambda df: (
-                                confidence_computers[ZTEST].variance(df, **kwargs)
-                                if df[self._method_column].values[0] == ZTESTLINREG
-                                else confidence_computers[df[self._method_column].values[0]].variance(df, **kwargs)
-                            )
-                        }
-                    )
-                    .pipe(
-                        lambda df: confidence_computers[df[self._method_column].values[0]].add_point_estimate_ci(
-                            df, **kwargs
                         )
                     )
                 )

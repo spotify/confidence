@@ -131,10 +131,12 @@ class SampleSizeComputer:
             self._sufficient = (
                 self._df.groupby(groupby, sort=False, group_keys=True)
                 .apply(
-                    lambda df: df.assign(**{POINT_ESTIMATE: lambda df: df[self._point_estimate_column]})
-                    .assign(**{ORIGINAL_POINT_ESTIMATE: lambda df: df[self._point_estimate_column]})
-                    .assign(**{VARIANCE: lambda df: df[self._var_column]})
-                    .assign(**{ORIGINAL_VARIANCE: lambda df: df[self._var_column]})
+                    lambda df: (
+                        df.assign(**{POINT_ESTIMATE: lambda df: df[self._point_estimate_column]})
+                        .assign(**{ORIGINAL_POINT_ESTIMATE: lambda df: df[self._point_estimate_column]})
+                        .assign(**{VARIANCE: lambda df: df[self._var_column]})
+                        .assign(**{ORIGINAL_VARIANCE: lambda df: df[self._var_column]})
+                    )
                 )
                 .pipe(reset_named_indices)
             )

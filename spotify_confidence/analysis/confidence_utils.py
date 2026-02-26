@@ -47,7 +47,9 @@ def remove_group_columns(categorical_columns: Iterable, additional_column: Optio
     return list(od)
 
 
-def validate_categorical_columns(categorical_group_columns: Union[str, Iterable]) -> None:
+def validate_categorical_columns(
+    categorical_group_columns: Union[str, Iterable],
+) -> None:
     if isinstance(categorical_group_columns, str):
         pass
     elif isinstance(categorical_group_columns, Iterable):
@@ -113,7 +115,7 @@ def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFr
         if (df[column + SFX1].isna() == df[column + SFX2].isna()).all() and (
             df[column + SFX1][df[column + SFX1].notna()] == df[column + SFX2][df[column + SFX2].notna()]
         ).all():
-            df = df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])  # type: ignore[union-attr,unused-ignore]
+            df = df.rename(columns={column + SFX1: column}).drop(columns=[column + SFX2])
         else:
             raise ValueError(f"Values of {column} do not agree across levels: {df[[column + SFX1, column + SFX2]]}")
     return df
@@ -121,7 +123,7 @@ def validate_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFr
 
 def drop_and_rename_columns(df: DataFrame, columns: Iterable[str]) -> DataFrame:
     columns_dict = {col + SFX1: col for col in columns}
-    return df.rename(columns=columns_dict).drop(columns=[col + SFX2 for col in columns])  # type: ignore[union-attr,unused-ignore]
+    return df.rename(columns=columns_dict).drop(columns=[col + SFX2 for col in columns])
 
 
 def level2str(level: Union[str, Tuple]) -> str:
@@ -132,7 +134,10 @@ def level2str(level: Union[str, Tuple]) -> str:
 
 
 def validate_data(
-    df: DataFrame, columns_that_must_exist, group_columns: Iterable, ordinal_group_column: Optional[str]
+    df: DataFrame,
+    columns_that_must_exist,
+    group_columns: Iterable,
+    ordinal_group_column: Optional[str],
 ):
     """Integrity check input dataframe."""
     for col in columns_that_must_exist:
@@ -201,7 +206,9 @@ def axis_format_precision(numbers: Series, absolute: bool, extra_zeros: int = 0)
 
 
 def to_finite(s: Series, lower_limit: float, upper_limit: float) -> Series:
-    return s.clip(-100 * abs(lower_limit), 100 * abs(upper_limit))
+    result = s.clip(-100 * abs(lower_limit), 100 * abs(upper_limit))
+    assert result is not None
+    return result
 
 
 def add_color_column(df: DataFrame, cols: Iterable) -> DataFrame:
