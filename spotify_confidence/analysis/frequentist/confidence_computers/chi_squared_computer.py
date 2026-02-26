@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Any, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -18,7 +18,7 @@ from spotify_confidence.analysis.constants import (
 )
 
 
-def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+def point_estimate(df: DataFrame, **kwargs: Any) -> float:
     numerator = kwargs[NUMERATOR]
     denominator = kwargs[DENOMINATOR]
     if (df[denominator] == 0).any():
@@ -26,19 +26,19 @@ def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     return df[numerator] / df[denominator]
 
 
-def variance(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def variance(df: DataFrame, **kwargs: Any) -> Series:
     variance = df[POINT_ESTIMATE] * (1 - df[POINT_ESTIMATE])
     if (variance < 0).any():
         raise ValueError(f"Computed variance is negative: {variance}. Please check your inputs.")
     return variance
 
 
-def std_err(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def std_err(df: DataFrame, **kwargs: Any) -> Series:
     denominator = kwargs[DENOMINATOR]
     return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
 
-def add_point_estimate_ci(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def add_point_estimate_ci(df: DataFrame, **kwargs: Any) -> DataFrame:
     numerator = kwargs[NUMERATOR]
     denominator = kwargs[DENOMINATOR]
     interval_size = kwargs[INTERVAL_SIZE]
@@ -50,7 +50,7 @@ def add_point_estimate_ci(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def p_value(df: DataFrame, **kwargs: Any) -> Series:
     n1, n2 = kwargs[NUMERATOR] + SFX1, kwargs[NUMERATOR] + SFX2
     d1, d2 = kwargs[DENOMINATOR] + SFX1, kwargs[DENOMINATOR] + SFX2
 
@@ -64,7 +64,7 @@ def p_value(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
     return df.apply(p_value_row, axis=1)
 
 
-def ci(df: DataFrame, alpha_column: str, **kwargs: Dict[str, str]) -> Tuple[Series, Series]:
+def ci(df: DataFrame, alpha_column: str, **kwargs: Any) -> Tuple[Series, Series]:
     n1, n2 = kwargs[NUMERATOR] + SFX1, kwargs[NUMERATOR] + SFX2
     d1, d2 = kwargs[DENOMINATOR] + SFX1, kwargs[DENOMINATOR] + SFX2
     return confint_proportions_2indep(
@@ -78,7 +78,7 @@ def ci(df: DataFrame, alpha_column: str, **kwargs: Dict[str, str]) -> Tuple[Seri
     )
 
 
-def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Dict[str, str]) -> DataFrame:
+def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Any) -> Union[int, float]:
     n1, n2 = kwargs[NUMERATOR] + SFX1, kwargs[NUMERATOR] + SFX2
     d1, d2 = kwargs[DENOMINATOR] + SFX1, kwargs[DENOMINATOR] + SFX2
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -81,7 +81,7 @@ class SampleSizeComputer:
         categorical_group_columns: Union[str, Iterable],
         interval_size: float,
         correction_method: str,
-        metric_column: str,
+        metric_column: Optional[str],
         power: float,
         point_estimate_column: str,
         var_column: str,
@@ -124,18 +124,6 @@ class SampleSizeComputer:
 
         self._sufficient = None
 
-    def compute_summary(self, verbose: bool) -> DataFrame:
-        return (
-            self._sufficient_statistics
-            if verbose
-            else self._sufficient_statistics[
-                self._all_group_columns
-                + ([self._metric_column] if self._metric_column is not None and self._single_metric else [])
-                + [c for c in [self._numerator, self._denominator] if c is not None]
-                + [POINT_ESTIMATE, CI_LOWER, CI_UPPER]
-            ]
-        )
-
     @property
     def _sufficient_statistics(self) -> DataFrame:
         if self._sufficient is None:
@@ -158,7 +146,7 @@ class SampleSizeComputer:
         mde_column: str,
         nim_column: str,
         preferred_direction_column: str,
-        final_expected_sample_size_column: str,
+        final_expected_sample_size_column: Optional[str],
     ) -> DataFrame:
         kwargs, group_columns, sample_size_df = self._initialise_sample_size_and_power_computation(
             final_expected_sample_size_column, mde_column, nim_column, preferred_direction_column, treatment_weights
@@ -242,7 +230,7 @@ class SampleSizeComputer:
 
     def compute_optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
-    ) -> Tuple[Iterable, int]:
+    ) -> Tuple[List[float], Optional[float]]:
         sample_size_df = (
             sample_size_df.reset_index(drop=True)
             .assign(**{OPTIMAL_KAPPA: lambda df: df.apply(_optimal_kappa, is_binary_column=self._is_binary, axis=1)})
@@ -433,15 +421,15 @@ def _optimal_kappa(row: Series, is_binary_column) -> float:
         return 1.0
 
 
-def _optimal_weights(kappa: float, number_of_groups) -> Iterable:
+def _optimal_weights(kappa: float, number_of_groups: int) -> List[float]:
     treatment_weight = 1 / (kappa + number_of_groups - 1)
     control_weight = kappa * treatment_weight
     return [control_weight] + [treatment_weight for _ in range(number_of_groups - 1)]
 
 
 def _find_optimal_group_weights_across_rows(
-    df: DataFrame, group_count: int, group_columns: Iterable, **kwargs: Dict
-) -> (List[float], int):
+    df: DataFrame, group_count: int, group_columns: Iterable, **kwargs: Any
+) -> Tuple[List[float], Optional[float]]:
     min_kappa = min(df[OPTIMAL_KAPPA])
     max_kappa = max(df[OPTIMAL_KAPPA])
 
@@ -466,8 +454,8 @@ def _find_optimal_group_weights_across_rows(
 
 
 def _calculate_optimal_sample_size_given_weights(
-    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, **kwargs: Dict
-) -> int:
+    df: DataFrame, optimal_weights: List[float], group_columns: Iterable, **kwargs: Any
+) -> Optional[float]:
     kwargs[TREATMENT_WEIGHTS] = optimal_weights
     sample_size_df = groupbyApplyParallel(
         df.groupby(de_list_if_length_one(group_columns), as_index=False, sort=False),

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, Tuple, Union
+from typing import Hashable, Iterable, Optional, Union
 
 import numpy as np
 from bokeh.models import tools
@@ -26,7 +26,7 @@ from ..confidence_utils import (
     axis_format_precision,
     de_list_if_length_one,
     get_all_group_columns,
-    get_remaning_groups,
+    get_remaining_groups,
     level2str,
     listify,
     to_finite,
@@ -53,10 +53,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
-        denominator_column: str,
-        categorical_group_columns: str,
-        ordinal_group_column: str,
+        numerator_column: Optional[str],
+        denominator_column: Optional[str],
+        categorical_group_columns: Union[str, Iterable],
+        ordinal_group_column: Optional[str],
     ):
         self._df = data_frame
         self._numerator = numerator_column
@@ -65,7 +65,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self._ordinal_group_column = ordinal_group_column
         self._all_group_columns = get_all_group_columns(self._categorical_group_columns, self._ordinal_group_column)
 
-    def plot_summary(self, summary_df: DataFrame, groupby: Union[str, Iterable]) -> ChartGrid:
+    def plot_summary(self, summary_df: DataFrame, groupby: Optional[Union[str, Iterable]]) -> ChartGrid:
         ch = ChartGrid()
         if groupby is None:
             ch.charts.append(self._summary_plot(level_name=None, level_df=summary_df, groupby=groupby))
@@ -78,13 +78,13 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         difference_df,
         absolute,
-        groupby,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
         ch = ChartGrid()
-        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
             ch.charts += self.plot_differece_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
@@ -105,13 +105,13 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         difference_df,
         absolute,
-        groupby,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
         ch = ChartGrid()
-        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(listify(groupby), self._ordinal_group_column)
 
         if len(categorical_groups) == 0 or not split_plot_by_groups:
             ch.charts += self.plot_differences_group(absolute, difference_df, groupby, use_adjusted_intervals).charts
@@ -121,7 +121,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         return ch
 
     def plot_differences_group(self, absolute, difference_df, groupby, use_adjusted_intervals):
-        categorical_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(groupby, self._ordinal_group_column)
         groupby_columns = self._add_level_columns(categorical_groups)
         if self._ordinal_group_column in listify(groupby):
             ch = self._ordinal_difference_plot(difference_df, absolute, groupby_columns, use_adjusted_intervals)
@@ -136,14 +136,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         difference_df,
         absolute,
-        groupby,
-        level_as_reference,
-        nims: NIM_TYPE,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
         use_adjusted_intervals: bool,
         split_plot_by_groups: bool,
     ) -> ChartGrid:
         ch = ChartGrid()
-        categorical_groups = get_remaning_groups(listify(groupby), self._ordinal_group_column)
+        categorical_groups = get_remaining_groups(listify(groupby), self._ordinal_group_column)
 
         groupby = de_list_if_length_one(groupby)
 
@@ -175,7 +175,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
     def _ordinal_difference_plot(
         self, difference_df: DataFrame, absolute: bool, groupby: Union[str, Iterable], use_adjusted_intervals: bool
     ) -> Chart:
-        remaining_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        remaining_groups = get_remaining_groups(groupby, self._ordinal_group_column)
 
         if "level_1" in groupby and "level_2" in groupby:
             title = "Change from level_1 to level_2"
@@ -238,10 +238,14 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         axis_format, y_min, y_max = axis_format_precision(
             numbers=concat(
                 [
-                    difference_df[LOWER],
-                    difference_df[DIFFERENCE],
-                    difference_df[UPPER],
-                    difference_df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in difference_df.columns else None,
+                    x
+                    for x in [
+                        difference_df[LOWER],
+                        difference_df[DIFFERENCE],
+                        difference_df[UPPER],
+                        difference_df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in difference_df.columns else None,
+                    ]
+                    if x is not None
                 ],
             ),
             absolute=absolute,
@@ -327,8 +331,10 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
         return chart_grid
 
-    def _summary_plot(self, level_name: Union[str, Tuple], level_df: DataFrame, groupby: Union[str, Iterable]):
-        remaining_groups = get_remaning_groups(self._all_group_columns, groupby)
+    def _summary_plot(
+        self, level_name: Optional[Hashable], level_df: DataFrame, groupby: Optional[Union[str, Iterable]]
+    ):
+        remaining_groups = get_remaining_groups(self._all_group_columns, groupby)
         if self._ordinal_group_column is not None and self._ordinal_group_column in remaining_groups:
             ch = self._ordinal_summary_plot(level_name, level_df, remaining_groups, groupby)
         else:
@@ -337,12 +343,12 @@ class ChartifyGrapher(ConfidenceGrapherABC):
 
     def _ordinal_summary_plot(
         self,
-        level_name: Union[str, Tuple],
+        level_name: Optional[Hashable],
         level_df: DataFrame,
         remaining_groups: Union[str, Iterable],
-        groupby: Union[str, Iterable],
+        groupby: Optional[Union[str, Iterable]],
     ):
-        remaining_groups = get_remaning_groups(remaining_groups, self._ordinal_group_column)
+        remaining_groups = get_remaining_groups(remaining_groups, self._ordinal_group_column)
         title = "Estimate of {} / {}".format(self._numerator, self._denominator)
         y_axis_label = "{} / {}".format(self._numerator, self._denominator)
         return self._ordinal_plot(
@@ -361,8 +367,8 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         self,
         center_name: str,
         level_df: DataFrame,
-        groupby: Union[str, Iterable],
-        level_name: Union[str, Tuple],
+        groupby: Optional[Union[str, Iterable]],
+        level_name: Optional[Hashable],
         remaining_groups: Union[str, Iterable],
         absolute: bool,
         title: str,
@@ -374,7 +380,16 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         colors = "color" if remaining_groups else None
         axis_format, y_min, y_max = axis_format_precision(
             numbers=concat(
-                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                [
+                    x
+                    for x in [
+                        df[LOWER],
+                        df[center_name],
+                        df[UPPER],
+                        df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None,
+                    ]
+                    if x is not None
+                ]
             ),
             absolute=absolute,
         )
@@ -493,7 +508,7 @@ class ChartifyGrapher(ConfidenceGrapherABC):
         level_as_reference: bool,
         use_adjusted_intervals: bool,
     ):
-        remaining_groups = get_remaning_groups(groupby, self._ordinal_group_column)
+        remaining_groups = get_remaining_groups(groupby, self._ordinal_group_column)
         groupby_columns = self._add_level_column(remaining_groups, level_as_reference)
         title = self._get_multiple_difference_title(difference_df, level_as_reference)
         y_axis_label = self._get_difference_plot_label(absolute)
@@ -592,14 +607,32 @@ class ChartifyGrapher(ConfidenceGrapherABC):
             chart.figure.legend.click_policy = "hide"
         axis_format, y_min, y_max = axis_format_precision(
             numbers=concat(
-                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                [
+                    x
+                    for x in [
+                        df[LOWER],
+                        df[center_name],
+                        df[UPPER],
+                        df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None,
+                    ]
+                    if x is not None
+                ]
             ),
             absolute=absolute,
             extra_zeros=2,
         )
         axis_format_reference_level, _, _ = axis_format_precision(
             numbers=concat(
-                [df[LOWER], df[center_name], df[UPPER], df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None]
+                [
+                    x
+                    for x in [
+                        df[LOWER],
+                        df[center_name],
+                        df[UPPER],
+                        df[NULL_HYPOTHESIS] if NULL_HYPOTHESIS in df.columns else None,
+                    ]
+                    if x is not None
+                ]
             ),
             absolute=True,
             extra_zeros=2,

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 from pandas import DataFrame
 
@@ -32,11 +32,11 @@ class ConfidenceComputerABC(ABC):
         level_1: Union[str, Iterable],
         level_2: Union[str, Iterable],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
         """Return dataframe containing the difference in means between
         group 1 and 2, p-value and confidence interval
@@ -46,42 +46,44 @@ class ConfidenceComputerABC(ABC):
     @abstractmethod
     def compute_multiple_difference(
         self,
-        level: Union[str, Iterable],
+        level: Union[str, Iterable, int],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        level_as_reference: bool,
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
         """Return dataframe containing the difference in means between
         level and all other groups, with p-value and confidence interval
         """
         pass
 
+    @abstractmethod
     def compute_differences(
         self,
-        levels: List[Tuple],
+        levels: Union[Tuple, List[Tuple]],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
         """Return dataframe containing the difference in means between
         level and all other groups, with p-value and confidence interval
         """
         pass
 
+    @abstractmethod
     def achieved_power(
         self,
         level_1: Union[str, Iterable],
         level_2: Union[str, Iterable],
         mde: float,
         alpha: float,
-        groupby: Union[str, Iterable],
+        groupby: Optional[Union[str, Iterable]],
     ) -> DataFrame:
         """Calculated the achieved power of test of differences between
         level 1 and level 2 given a targeted MDE.

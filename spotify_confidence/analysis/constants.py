@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
+
+# TODO: Consider using TypedDict for ConfidenceComputerKwargs to properly type
+# the kwargs passed to confidence computer functions. Currently using Any because
+# kwargs contain heterogeneous types (column names as str, interval_size as float,
+# treatment_weights as List[float], etc.) and TypedDict would be needed to express
+# "when key is DENOMINATOR, value is str; when key is INTERVAL_SIZE, value is float".
 
 NUMERATOR = "numerator"
 NUMERATOR_SUM_OF_SQUARES = "numerator_sum_of_squares"
@@ -43,7 +49,6 @@ P_VALUE = "p-value"
 ADJUSTED_P = "adjusted p-value"
 SFX1, SFX2 = "_1", "_2"
 STD_ERR = "std_err"
-Z_CRIT = "z_crit"
 ALPHA = "alpha"
 ADJUSTED_ALPHA = "adjusted_alpha"
 ADJUSTED_ALPHA_POWER_SAMPLE_SIZE = "adjusted_alpha_power_sample_size"
@@ -142,10 +147,6 @@ CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO = [
     SPOT_1_FDR_TSBKY,
 ]
 
-CORRECTION_METHODS_THAT_DONT_REQUIRE_METRIC_INFO = list(
-    set(CORRECTION_METHODS) - set(CORRECTION_METHODS_THAT_REQUIRE_METRIC_INFO)
-)
-
 NULL_HYPOTHESIS = "null_hypothesis"
 ALTERNATIVE_HYPOTHESIS = "alternative_hypothesis"
 NIM = "non-inferiority margin"
@@ -157,7 +158,7 @@ TWO_SIDED = "two-sided"
 PREFERENCE = "preference"
 PREFERENCE_TEST = "preference_used_in_test"
 PREFERENCE_DICT = {"smaller": DECREASE_PREFFERED, "larger": INCREASE_PREFFERED, TWO_SIDED: TWO_SIDED}
-NIM_TYPE = Union[Tuple[float, str], Dict[str, Tuple[float, str]], bool]
+NIM_TYPE = Union[Tuple[Optional[float], Optional[str]], Dict[Any, Tuple[Optional[float], Optional[str]]], bool]
 METHOD_COLUMN_NAME = "method_column_name"
 CHI2 = "chi-squared"
 TTEST = "t-test"

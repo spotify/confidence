@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 from pandas import DataFrame
 
@@ -41,7 +41,7 @@ class SampleSizeCalculator:
         mde_column: str,
         nim_column: str,
         preferred_direction_column: str,
-        final_expected_sample_size_column: str = None,
+        final_expected_sample_size_column: Optional[str] = None,
     ) -> DataFrame:
         """Args:
             treatment_weights (Iterable): The first weight is treated as control, the rest as treatment groups.
@@ -68,7 +68,7 @@ class SampleSizeCalculator:
 
     def optimal_weights_and_sample_size(
         self, sample_size_df: DataFrame, number_of_groups: int
-    ) -> Tuple[Iterable, int]:
+    ) -> Tuple[List[float], Optional[float]]:
         """Args:
             sample_size_df (DataFrame): A data frame returned by the sample_size method of this class
             number_of_groups (int): Number of groups in the experiment, including control

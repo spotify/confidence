@@ -16,6 +16,10 @@ uv pip install -e . --group dev
 
 ### Testing
 ```bash
+# IMPORTANT Run all tests across Python versions
+# to make sure all code changes work on older Python versions
+uv run tox -p auto
+
 # Run all tests with coverage
 uv run pytest
 
@@ -27,9 +31,6 @@ uv run pytest tests/frequentist/test_z_test.py
 
 # Run specific test
 uv run pytest tests/frequentist/test_z_test.py::test_name
-
-# Run all tests across Python versions
-uv run tox
 ```
 
 ### Code Quality
@@ -40,8 +41,11 @@ uv run ruff check
 # Run formatting
 uv run ruff format
 
+# Run type checking
+uv run ty check
+
 # Run all quality checks (as done in CI)
-uv run ruff check && uv run ruff format && uv run pytest
+uv run ruff check && uv run ruff format --check && uv run ty check && uv run pytest
 ```
 
 ### Build
@@ -148,4 +152,6 @@ The project uses `tox-uv` to leverage uv's fast package installation and environ
 
 ## Code Style
 
-Uses ruff linting and formatting.
+- **Linting & Formatting**: Uses [ruff](https://github.com/astral-sh/ruff) for code linting and formatting
+- **Type Checking**: Uses [ty](https://github.com/astral-sh/ty) (Astral's fast Python type checker) for static type analysis
+- Both tools are configured in `pyproject.toml` and exclude the `examples/` directory

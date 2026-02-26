@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -46,14 +46,20 @@ from spotify_confidence.analysis.constants import (
     TWO_SIDED,
     VARIANCE,
 )
-from spotify_confidence.analysis.frequentist.sequential_bound_solver import bounds
+from spotify_confidence.analysis.frequentist.sequential_bound_solver import (
+    CalculationResult,
+    ComputationState,
+    bounds,
+)
 
 
-def sequential_bounds(t: np.array, alpha: float, sides: int, state: DataFrame = None):
+def sequential_bounds(
+    t: np.ndarray, alpha: float, sides: int, state: Optional[ComputationState] = None
+) -> CalculationResult:
     return bounds(t, alpha, rho=2, ztrun=8, sides=sides, max_nints=1000, state=state)
 
 
-def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+def point_estimate(df: DataFrame, **kwargs: Any) -> float:
     numerator = kwargs[NUMERATOR]
     denominator = kwargs[DENOMINATOR]
     if (df[denominator] == 0).any():
@@ -61,7 +67,7 @@ def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     return df[numerator] / df[denominator]
 
 
-def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+def variance(df: DataFrame, **kwargs: Any) -> float:
     numerator = kwargs[NUMERATOR]
     denominator = kwargs[DENOMINATOR]
     numerator_sumsq = kwargs[NUMERATOR_SUM_OF_SQUARES]
@@ -77,12 +83,12 @@ def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     return variance
 
 
-def std_err(df: Series, **kwargs: Dict[str, str]) -> float:
+def std_err(df: DataFrame, **kwargs: Any) -> float:
     denominator = kwargs[DENOMINATOR]
     return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
 
-def add_point_estimate_ci(df: Series, **kwargs: Dict[str, str]) -> Series:
+def add_point_estimate_ci(df: DataFrame, **kwargs: Any) -> DataFrame:
     denominator = kwargs[DENOMINATOR]
     interval_size = kwargs[INTERVAL_SIZE]
     df[CI_LOWER], df[CI_UPPER] = _zconfint_generic(
@@ -94,7 +100,7 @@ def add_point_estimate_ci(df: Series, **kwargs: Dict[str, str]) -> Series:
     return df
 
 
-def p_value(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def p_value(df: DataFrame, **kwargs: Any) -> Series:
     _, p_value = _zstat_generic(
         value1=df[POINT_ESTIMATE + SFX2],
         value2=df[POINT_ESTIMATE + SFX1],
@@ -105,13 +111,13 @@ def p_value(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
     return p_value
 
 
-def ci(df: DataFrame, alpha_column: str, **kwargs: Dict[str, str]) -> Tuple[Series, Series]:
+def ci(df: DataFrame, alpha_column: str, **kwargs: Any) -> Tuple[Series, Series]:
     return _zconfint_generic(
         mean=df[DIFFERENCE], std_mean=df[STD_ERR], alpha=df[alpha_column], alternative=df[PREFERENCE_TEST].values[0]
     )
 
 
-def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Dict[str, str]) -> DataFrame:
+def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Any) -> Union[int, float]:
     denominator = kwargs[DENOMINATOR]
     v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
     n1, n2 = df[denominator + SFX1], df[denominator + SFX2]
@@ -121,7 +127,7 @@ def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Dict[str, 
     return power_calculation(mde, var_pooled, alpha, n1, n2)
 
 
-def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Dict[str, str]):
+def compute_sequential_adjusted_alpha(df: DataFrame, **kwargs: Any):
     denominator = kwargs[DENOMINATOR]
     final_expected_sample_size_column = kwargs[FINAL_EXPECTED_SAMPLE_SIZE]
     ordinal_group_column = kwargs[ORDINAL_GROUP_COLUMN]
@@ -204,7 +210,7 @@ def ci_for_multiple_comparison_methods(
             f"{SPOT_1_HOLM}, {SPOT_1_HOMMEL} and {SPOT_1_SIMES_HOCHBERG}"
         )
 
-    def _compute_ci_for_row(row: Series) -> Tuple[float, float]:
+    def _compute_ci_for_row(row: Series) -> Series:
         if row[IS_SIGNIFICANT] and num_significant == m_scal:
             alpha_adj = adjusted_alpha_rej_equal_m
         elif row[IS_SIGNIFICANT] and num_significant < m_scal:
@@ -290,10 +296,10 @@ def required_sample_size(
     hypothetical_effect: Union[Series, float],
     control_avg: Union[Series, float],
     control_var: Union[Series, float],
-    z_alpha: float = None,
-    kappa: float = None,
-    proportion_of_total: Union[Series, float] = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    kappa: Optional[float] = None,
+    proportion_of_total: Optional[Union[Series, float]] = None,
+    z_power: Optional[float] = None,
 ) -> Union[Series, float]:
     if kappa is None:
         raise ValueError("kappa is None, must be postive float")
@@ -323,8 +329,8 @@ def _search_MDE_binary_local_search(
     kappa: float,
     proportion_of_total: float,
     current_number_of_units: float,
-    z_alpha: float = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    z_power: Optional[float] = None,
 ):
     def f(x):
         return _find_current_powered_effect(
@@ -409,8 +415,8 @@ def _search_MDE_binary(
     kappa: float,
     proportion_of_total: float,
     current_number_of_units: float,
-    z_alpha: float = None,
-    z_power: float = None,
+    z_alpha: Optional[float] = None,
+    z_power: Optional[float] = None,
     return_cost_val=False,
 ):
     candidate_effects = np.linspace(10e-9, 1 - control_avg, num=2000)
@@ -448,13 +454,15 @@ def _search_MDE_binary(
 
 
 def _treatment_group_sample_size(
-    z_alpha: float,
-    z_power: float,
-    hypothetical_effect: float,
-    control_var: float,
-    treatment_var: float,
+    z_alpha: Optional[Union[int, float]],
+    z_power: Optional[Union[int, float]],
+    hypothetical_effect: Union[Series, int, float],
+    control_var: Union[Series, int, float],
+    treatment_var: Union[Series, int, float, np.ndarray],
     kappa: float,
-) -> float:
+) -> Union[float, np.ndarray]:
+    if z_alpha is None or z_power is None:
+        raise ValueError("z_alpha and z_power must not be None")
     return np.ceil(np.power((z_alpha + z_power) / abs(hypothetical_effect), 2) * (control_var / kappa + treatment_var))
 
 
@@ -467,8 +475,8 @@ def _find_current_powered_effect(
     kappa: float,
     proportion_of_total: float,
     current_number_of_units: float,
-    z_power: float = None,
-    z_alpha: float = None,
+    z_power: Optional[float] = None,
+    z_alpha: Optional[float] = None,
 ) -> float:
     treatment_var = _get_hypothetical_treatment_var(
         binary_metric=binary,

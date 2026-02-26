@@ -91,6 +91,7 @@ Ready to contribute? Here's how to set up `confidence` for local development.
 
     $ uv run ruff format       # Format code
     $ uv run ruff check        # Lint code
+    $ uv run ty check          # Type check code
     $ uv run pytest            # Run tests
 
    To test across all supported Python versions (3.9, 3.10, 3.11, 3.12)::

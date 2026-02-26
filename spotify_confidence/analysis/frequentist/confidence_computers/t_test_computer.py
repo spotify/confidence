@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Any, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame, Series
@@ -24,7 +24,7 @@ from spotify_confidence.analysis.constants import (
 )
 
 
-def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+def point_estimate(df: DataFrame, **kwargs: Any) -> float:
     numerator = kwargs[NUMERATOR]
     denominator = kwargs[DENOMINATOR]
     if (df[denominator] == 0).any():
@@ -32,7 +32,7 @@ def point_estimate(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     return df[numerator] / df[denominator]
 
 
-def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
+def variance(df: DataFrame, **kwargs: Any) -> float:
     numerator = kwargs[NUMERATOR]
     denominator = kwargs[DENOMINATOR]
     numerator_sumsq = kwargs[NUMERATOR_SUM_OF_SQUARES]
@@ -48,12 +48,12 @@ def variance(df: DataFrame, **kwargs: Dict[str, str]) -> float:
     return variance
 
 
-def std_err(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def std_err(df: DataFrame, **kwargs: Any) -> Series:
     denominator = kwargs[DENOMINATOR]
     return np.sqrt(df[VARIANCE + SFX1] / df[denominator + SFX1] + df[VARIANCE + SFX2] / df[denominator + SFX2])
 
 
-def add_point_estimate_ci(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
+def add_point_estimate_ci(df: DataFrame, **kwargs: Any) -> DataFrame:
     denominator = kwargs[DENOMINATOR]
     interval_size = kwargs[INTERVAL_SIZE]
     df[CI_LOWER], df[CI_UPPER] = _tconfint_generic(
@@ -66,14 +66,14 @@ def add_point_estimate_ci(df: DataFrame, **kwargs: Dict[str, str]) -> Series:
     return df
 
 
-def _dof(row: Series, **kwargs: Dict[str, str]) -> float:
+def _dof(df: DataFrame, **kwargs: Any) -> float:
     denominator = kwargs[DENOMINATOR]
-    v1, v2 = row[VARIANCE + SFX1], row[VARIANCE + SFX2]
-    n1, n2 = row[denominator + SFX1], row[denominator + SFX2]
+    v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
+    n1, n2 = df[denominator + SFX1], df[denominator + SFX2]
     return (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
 
 
-def p_value(df: Series, **kwargs: Dict[str, str]) -> Series:
+def p_value(df: DataFrame, **kwargs: Any) -> Series:
     _, p_value = _tstat_generic(
         value1=df[POINT_ESTIMATE + SFX2],
         value2=df[POINT_ESTIMATE + SFX1],
@@ -85,7 +85,7 @@ def p_value(df: Series, **kwargs: Dict[str, str]) -> Series:
     return p_value
 
 
-def ci(df: DataFrame, alpha_column: str, **kwargs: Dict[str, str]) -> Tuple[Series, Series]:
+def ci(df: DataFrame, alpha_column: str, **kwargs: Any) -> Tuple[Series, Series]:
     return _tconfint_generic(
         mean=df[DIFFERENCE],
         std_mean=df[STD_ERR],
@@ -95,7 +95,7 @@ def ci(df: DataFrame, alpha_column: str, **kwargs: Dict[str, str]) -> Tuple[Seri
     )
 
 
-def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Dict[str, str]) -> DataFrame:
+def achieved_power(df: DataFrame, mde: float, alpha: float, **kwargs: Any) -> Union[int, float]:
     v1, v2 = df[VARIANCE + SFX1], df[VARIANCE + SFX2]
     d1, d2 = kwargs[DENOMINATOR] + SFX1, kwargs[DENOMINATOR] + SFX2
     n1, n2 = df[d1], df[d2]

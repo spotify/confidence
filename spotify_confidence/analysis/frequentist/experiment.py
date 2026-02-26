@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from pandas import DataFrame
 
@@ -68,23 +68,23 @@ class Experiment(ConfidenceABC):
     def __init__(
         self,
         data_frame: DataFrame,
-        numerator_column: str,
+        numerator_column: Optional[str],
         numerator_sum_squares_column: Union[str, None],
-        denominator_column: str,
+        denominator_column: Optional[str],
         categorical_group_columns: Union[str, Iterable],
         ordinal_group_column: Union[str, None] = None,
         interval_size: float = 0.95,
         correction_method: str = BONFERRONI,
-        confidence_computer: ConfidenceComputerABC = None,
-        confidence_grapher: ConfidenceGrapherABC = None,
-        method_column: str = None,
-        bootstrap_samples_column: str = None,
+        confidence_computer: Optional[ConfidenceComputerABC] = None,
+        confidence_grapher: Optional[ConfidenceGrapherABC] = None,
+        method_column: Optional[str] = None,
+        bootstrap_samples_column: Optional[str] = None,
         metric_column=None,
         treatment_column=None,
         power: float = 0.8,
-        feature_column: str = None,
-        feature_sum_squares_column: str = None,
-        feature_cross_sum_column: str = None,
+        feature_column: Optional[str] = None,
+        feature_sum_squares_column: Optional[str] = None,
+        feature_cross_sum_column: Optional[str] = None,
     ):
         validate_categorical_columns(categorical_group_columns)
         self._df = data_frame
@@ -145,11 +145,11 @@ class Experiment(ConfidenceABC):
         level_1: Union[str, Tuple],
         level_2: Union[str, Tuple],
         absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
+        groupby: Optional[Union[str, Iterable]] = None,
+        non_inferiority_margins: Optional[NIM_TYPE] = None,
+        final_expected_sample_size_column: Optional[str] = None,
         verbose: bool = False,
-        minimum_detectable_effects_column: str = None,
+        minimum_detectable_effects_column: Optional[str] = None,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
 
@@ -168,11 +168,11 @@ class Experiment(ConfidenceABC):
         self,
         levels: Union[Tuple, List[Tuple]],
         absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
+        groupby: Optional[Union[str, Iterable]] = None,
+        non_inferiority_margins: Optional[NIM_TYPE] = None,
+        final_expected_sample_size_column: Optional[str] = None,
         verbose: bool = False,
-        minimum_detectable_effects_column: str = None,
+        minimum_detectable_effects_column: Optional[str] = None,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
         return self._confidence_computer.compute_differences(
@@ -187,14 +187,14 @@ class Experiment(ConfidenceABC):
 
     def multiple_difference(
         self,
-        level: Union[str, Tuple],
+        level: Union[str, Tuple, int],
         absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        level_as_reference: bool = None,
-        non_inferiority_margins: NIM_TYPE = None,
-        final_expected_sample_size_column: str = None,
+        groupby: Optional[Union[str, Iterable]] = None,
+        level_as_reference: Optional[bool] = None,
+        non_inferiority_margins: Optional[NIM_TYPE] = None,
+        final_expected_sample_size_column: Optional[str] = None,
         verbose: bool = False,
-        minimum_detectable_effects_column: str = None,
+        minimum_detectable_effects_column: Optional[str] = None,
     ) -> DataFrame:
         self._validate_sequential(final_expected_sample_size_column, groupby)
 
@@ -209,7 +209,7 @@ class Experiment(ConfidenceABC):
             minimum_detectable_effects_column,
         )
 
-    def summary_plot(self, groupby: Union[str, Iterable] = None) -> ChartGrid:
+    def summary_plot(self, groupby: Optional[Union[str, Iterable]] = None) -> ChartGrid:
         summary_df = self.summary()
         graph = self._confidence_grapher.plot_summary(summary_df, groupby)
         return graph
@@ -219,10 +219,10 @@ class Experiment(ConfidenceABC):
         level_1: Union[str, Tuple],
         level_2: Union[str, Tuple],
         absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
+        groupby: Optional[Union[str, Iterable]] = None,
+        non_inferiority_margins: Optional[NIM_TYPE] = None,
         use_adjusted_intervals: bool = False,
-        final_expected_sample_size_column: str = None,
+        final_expected_sample_size_column: Optional[str] = None,
         split_plot_by_groups: bool = False,
     ) -> ChartGrid:
         difference_df = self.difference(
@@ -243,10 +243,10 @@ class Experiment(ConfidenceABC):
         self,
         levels: List[Tuple],
         absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        non_inferiority_margins: NIM_TYPE = None,
+        groupby: Optional[Union[str, Iterable]] = None,
+        non_inferiority_margins: Optional[NIM_TYPE] = None,
         use_adjusted_intervals: bool = False,
-        final_expected_sample_size_column: str = None,
+        final_expected_sample_size_column: Optional[str] = None,
         split_plot_by_groups: bool = False,
     ) -> ChartGrid:
         difference_df = self.differences(
@@ -259,13 +259,13 @@ class Experiment(ConfidenceABC):
 
     def multiple_difference_plot(
         self,
-        level: Union[str, Tuple],
+        level: Union[str, Tuple, int],
         absolute: bool = True,
-        groupby: Union[str, Iterable] = None,
-        level_as_reference: bool = None,
-        non_inferiority_margins: NIM_TYPE = None,
+        groupby: Optional[Union[str, Iterable]] = None,
+        level_as_reference: Optional[bool] = None,
+        non_inferiority_margins: Optional[NIM_TYPE] = None,
         use_adjusted_intervals: bool = False,
-        final_expected_sample_size_column: str = None,
+        final_expected_sample_size_column: Optional[str] = None,
         split_plot_by_groups: bool = False,
     ) -> ChartGrid:
         difference_df = self.multiple_difference(
@@ -289,6 +289,8 @@ class Experiment(ConfidenceABC):
         return chartgrid
 
     def sample_ratio_test(self, expected_proportions: Dict) -> Tuple[float, DataFrame]:
+        if self._denominator is None:
+            raise ValueError("Denominator is not set")
         return sample_ratio_test(
             self._df,
             all_group_columns=self._all_group_columns,
@@ -320,7 +322,9 @@ class Experiment(ConfidenceABC):
         """
         return self._confidence_computer.achieved_power(level_1, level_2, mde, alpha, groupby)
 
-    def _validate_sequential(self, final_expected_sample_size: float, groupby: Union[str, Iterable]):
+    def _validate_sequential(
+        self, final_expected_sample_size: Optional[Union[str, float]], groupby: Optional[Union[str, Iterable]]
+    ):
         if final_expected_sample_size is not None:
             if self._ordinal_group_column not in listify(groupby):
                 raise ValueError(

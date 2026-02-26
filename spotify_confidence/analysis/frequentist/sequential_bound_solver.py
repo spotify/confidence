@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 import numpy as np
 import pandas
 from scipy.stats import norm
 
 
-def _alphas(alpha: np.array, phi: float, t: np.array):
+def _alphas(alpha: float, phi: float, t: np.ndarray):
     """Alpha spending function."""
     pe = np.zeros(len(t))
     pd = np.zeros(len(t))
@@ -27,7 +29,7 @@ def _alphas(alpha: np.array, phi: float, t: np.array):
     return pe, pd
 
 
-def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: float):
+def _qp(xq: float, last: np.ndarray, nints: int, yam1: float, ybm1: float, stdv: float):
     hlast = (ybm1 - yam1) / nints
     grid = np.linspace(yam1, ybm1, nints + 1)
     fun = last * norm.cdf(grid, xq, stdv)
@@ -36,13 +38,13 @@ def _qp(xq: float, last: float, nints: int, yam1: float, ybm1: float, stdv: floa
 
 
 def _bsearch(
-    last: np.array,
+    last: np.ndarray,
     nints: int,
     pd: float,
     stdv: float,
     ya: float,
     yb: float,
-) -> np.array:
+) -> float:
     """
     Note: function signature slightly modified in comparison to R implementation (which takes complete nints
     array instead of scalar), but should be semantically equivalent
@@ -73,13 +75,13 @@ def _bsearch(
 _NORM_CONSTANT = 1 / np.sqrt(2 * np.pi)
 
 
-def _fast_norm_pdf_prescaled(x: np.array, scale):
+def _fast_norm_pdf_prescaled(x: np.ndarray, scale):
     norm_constant2 = _NORM_CONSTANT / scale
     pdf_val = norm_constant2 * np.exp(-0.5 * np.power(x, 2))
     return pdf_val
 
 
-def _fcab(last: np.array, nints: int, yam1: float, h: float, x: np.array, stdv: float):
+def _fcab(last: np.ndarray, nints: int, yam1: float, h: float, x: np.ndarray, stdv: float):
     X, Y = np.meshgrid(x / stdv, (h * np.linspace(0, nints, nints + 1) + yam1) / stdv)
     scaled_x = Y - X
     pdf_prescaled = _fast_norm_pdf_prescaled(scaled_x, stdv)
@@ -100,7 +102,7 @@ class ComputationState:
     structure may be changed anytime.
     """
 
-    def __init__(self, df: pandas.DataFrame, last_fcab: np.array):
+    def __init__(self, df: pandas.DataFrame, last_fcab: Optional[np.ndarray]):
         if df is None or any(df["zb"].isnull()) or len(df) > 0 and last_fcab is None:
             raise ValueError()
 
@@ -121,17 +123,17 @@ class ComputationState:
 
     def __eq__(self, other):
         if isinstance(other, ComputationState):
-            return self._df.equals(other._df) and np.array_equal(self._last_fcab, other._last_fcab)
+            return self._df.equals(other._df) and np.array_equal(self._last_fcab, other._last_fcab)  # type: ignore[arg-type,unused-ignore]
         return False
 
 
 def landem(
-    t: np.array,
+    t: np.ndarray,
     alpha: float,
     phi: float,
     ztrun: float,
     state: ComputationState,
-    max_nints: int = None,
+    max_nints: Optional[int] = None,
 ):
     """
     This function is a Python implementation of landem.R of ldbounds package.
@@ -310,20 +312,20 @@ class CalculationResult:
         return self._state
 
 
-columns = ["za", "zb", "ya", "yb", "pe", "pd", "stdv", "sdproc", "nints", "information_ratio"]
+_BOUND_COLUMNS = pandas.Index(["za", "zb", "ya", "yb", "pe", "pd", "stdv", "sdproc", "nints", "information_ratio"])
 
 # Initial state to be fed into bounds() to calculate sequential bounds from scratch
-EMPTY_STATE = ComputationState(df=pandas.DataFrame(index=None, columns=columns, dtype=float), last_fcab=None)
+EMPTY_STATE = ComputationState(df=pandas.DataFrame(index=None, columns=_BOUND_COLUMNS, dtype=float), last_fcab=None)
 
 
 def bounds(
-    t: np.array,
+    t: np.ndarray,
     alpha: float,
     rho: float,
     ztrun: float,
     sides: int,
-    state: ComputationState = EMPTY_STATE,
-    max_nints=None,
+    state: Optional[ComputationState] = None,
+    max_nints: Optional[int] = None,
 ) -> CalculationResult:
     """
     See landem() for parameter explanation
@@ -332,9 +334,11 @@ def bounds(
     """
 
     def get_input_str():
+        state_df_str = state.df.to_json() if state is not None else "None"
+        state_fcab_str = state.last_fcab if state is not None else "None"
         return (
             f"input params: t={t}, alpha={alpha}, sides={sides}, rho={rho}, ztrun={ztrun},"
-            f"state_df={state.df.to_json()}, state_fcab={state.last_fcab}, max_nints={max_nints}"
+            f"state_df={state_df_str}, state_fcab={state_fcab_str}, max_nints={max_nints}"
         )
 
     if any(t == 0.0):

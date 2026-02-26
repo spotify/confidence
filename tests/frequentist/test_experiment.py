@@ -206,16 +206,18 @@ class TestBootstrap(object):
             assert False, f"Using non_inferiority_margins={nims} raised an exception: {e}."
 
     def get_experiment_with_some_nims(self):
-        columns = [
-            "group_name",
-            "num_user",
-            "sum",
-            "sum_squares",
-            "method",
-            "metric",
-            "preferred_direction",
-            "non_inferiority_margin",
-        ]
+        columns = pd.Index(
+            [
+                "group_name",
+                "num_user",
+                "sum",
+                "sum_squares",
+                "method",
+                "metric",
+                "preferred_direction",
+                "non_inferiority_margin",
+            ]
+        )
         data = [
             ["Control", 6267728, 3240932, 3240932, "z-test", "m1", "increase", 0.15],
             ["Test", 6260737, 3239706, 3239706, "z-test", "m1", "increase", 0.15],

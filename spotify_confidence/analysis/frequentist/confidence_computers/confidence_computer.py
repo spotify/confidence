@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from numpy import isnan
@@ -24,7 +24,7 @@ from spotify_confidence.analysis.confidence_utils import (
     drop_and_rename_columns,
     get_all_categorical_group_columns,
     get_all_group_columns,
-    get_remaning_groups,
+    get_remaining_groups,
     groupbyApplyParallel,
     level2str,
     listify,
@@ -261,13 +261,13 @@ class ConfidenceComputer(ConfidenceComputerABC):
         level_1: Union[str, Iterable],
         level_2: Union[str, Iterable],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
             level_columns=level_columns,
             levels=[(level_1, level_2)],
@@ -291,16 +291,16 @@ class ConfidenceComputer(ConfidenceComputerABC):
 
     def compute_multiple_difference(
         self,
-        level: Union[str, Iterable],
+        level: Union[str, Iterable, int],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        level_as_reference: bool,
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         other_levels = [
             other
             for other in self._sufficient_statistics.groupby(level_columns, sort=False).groups.keys()
@@ -340,15 +340,15 @@ class ConfidenceComputer(ConfidenceComputerABC):
 
     def compute_differences(
         self,
-        levels: List[Tuple],
+        levels: Union[Tuple, List[Tuple]],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
         verbose: bool,
-        mde_column: str,
+        mde_column: Optional[str],
     ) -> DataFrame:
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         difference_df = self._compute_differences(
             level_columns=level_columns,
             levels=[levels] if isinstance(levels, tuple) else levels,
@@ -375,11 +375,11 @@ class ConfidenceComputer(ConfidenceComputerABC):
         level_columns: Iterable,
         levels: Union[str, Iterable],
         absolute: bool,
-        groupby: Union[str, Iterable],
-        level_as_reference: bool,
-        nims: NIM_TYPE,
-        final_expected_sample_size_column: str,
-        mde_column: str,
+        groupby: Optional[Union[str, Iterable]],
+        level_as_reference: Optional[bool],
+        nims: Optional[NIM_TYPE],
+        final_expected_sample_size_column: Optional[str],
+        mde_column: Optional[str],
     ):
         if type(level_as_reference) is not bool:
             raise ValueError(f"level_as_reference must be either True or False, but is {level_as_reference}.")
@@ -534,9 +534,16 @@ class ConfidenceComputer(ConfidenceComputerABC):
 
         return comparison_df
 
-    def achieved_power(self, level_1, level_2, mde, alpha, groupby):
+    def achieved_power(
+        self,
+        level_1: Union[str, Iterable],
+        level_2: Union[str, Iterable],
+        mde: float,
+        alpha: float,
+        groupby: Optional[Union[str, Iterable]],
+    ) -> DataFrame:
         groupby = listify(groupby)
-        level_columns = get_remaning_groups(self._all_group_columns, groupby)
+        level_columns = get_remaining_groups(self._all_group_columns, groupby)
         kwargs = {NUMERATOR: self._numerator, DENOMINATOR: self._denominator}
         return (
             self._compute_differences(
@@ -561,7 +568,7 @@ class ConfidenceComputer(ConfidenceComputerABC):
         )[["level_1", "level_2", "achieved_power"]]
 
 
-def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _compute_comparisons(df: DataFrame, **kwargs: Any) -> DataFrame:
     return (
         df.assign(**{DIFFERENCE: lambda df: df[POINT_ESTIMATE + SFX2] - df[POINT_ESTIMATE + SFX1]})
         .assign(**{STD_ERR: confidence_computers[df[kwargs[METHOD]].values[0]].std_err(df, **kwargs)})
@@ -572,7 +579,7 @@ def _compute_comparisons(df: DataFrame, **kwargs: Dict) -> DataFrame:
     )
 
 
-def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_variance_reduction_rate(df: DataFrame, **kwargs: Any) -> DataFrame:
     denominator = kwargs[DENOMINATOR]
     method_column = kwargs[METHOD]
     if (df[method_column] == ZTESTLINREG).any():
@@ -587,13 +594,13 @@ def _add_variance_reduction_rate(df: DataFrame, **kwargs: Dict) -> DataFrame:
     return df
 
 
-def _add_p_value(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_p_value(df: DataFrame, **kwargs: Any) -> DataFrame:
     return df.pipe(set_alpha_and_adjust_preference, **kwargs).assign(
         **{P_VALUE: lambda df: df.pipe(_p_value, **kwargs)}
     )
 
 
-def _add_ci_and_adjust_if_absolute(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _add_ci_and_adjust_if_absolute(df: DataFrame, **kwargs: Any) -> DataFrame:
     return df.pipe(add_ci, **kwargs).pipe(_adjust_if_absolute, absolute=kwargs[ABSOLUTE])
 
 
@@ -613,13 +620,13 @@ def _adjust_if_absolute(df: DataFrame, absolute: bool) -> DataFrame:
         )
 
 
-def _p_value(df: DataFrame, **kwargs: Dict) -> float:
+def _p_value(df: DataFrame, **kwargs: Any) -> float:
     if df[kwargs[METHOD]].values[0] == CHI2 and (df[NIM].notna()).any():
         raise ValueError("Non-inferiority margins not supported in ChiSquared. Use StudentsTTest or ZTest instead.")
     return confidence_computers[df[kwargs[METHOD]].values[0]].p_value(df, **kwargs)
 
 
-def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, **kwargs: Dict) -> DataFrame:
+def _powered_effect_and_required_sample_size_from_difference_df(df: DataFrame, **kwargs: Any) -> DataFrame:
     if df[kwargs[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] and kwargs[MDE] in df:
         raise ValueError("Minimum detectable effects only supported for ZTest.")
     elif df[kwargs[METHOD]].values[0] not in [ZTEST, ZTESTLINREG] or (df[ADJUSTED_POWER].isna()).any():

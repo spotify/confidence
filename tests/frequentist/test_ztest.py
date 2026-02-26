@@ -23,6 +23,7 @@ from spotify_confidence.analysis.constants import (
     REQUIRED_SAMPLE_SIZE,
     SPOT_1,
 )
+from spotify_confidence.analysis.frequentist.confidence_computers.confidence_computer import ConfidenceComputer
 
 
 class TestPoweredEffectContinuousSingleMetric(object):
@@ -1507,6 +1508,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_difference(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         if BONFERRONI in correction_method:
             difference_df = self.test.difference(level_1=("control", "gb", 1), level_2=("test", "us", 2))
@@ -1519,6 +1521,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_difference_groupby(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         if BONFERRONI in correction_method:
             difference_df = self.test.difference(
@@ -1536,6 +1539,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         if correction_method in [
             BONFERRONI,
@@ -1595,6 +1599,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference_groupby(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         if correction_method in [
             BONFERRONI,
@@ -1651,6 +1656,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_difference_with_nims(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         df = self.test.difference(
             level_1=("test", "us"),
@@ -1718,6 +1724,7 @@ class TestOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_differece_with_nims_in_df(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
 
         df = self.test.difference(
@@ -2048,6 +2055,7 @@ class TestWithNims(object):
         np.testing.assert_almost_equal(diff[CI_LOWER].values[0], -0.0723, 3)
         assert diff[P_VALUE].values[0] > 0.01
 
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         diff_2 = self.test.difference(level_1="1", level_2="2", non_inferiority_margins=(0.02, "increase"))
 
@@ -2072,6 +2080,7 @@ class TestWithNims(object):
         np.testing.assert_almost_equal(diff[CI_UPPER].values[0], 0.0207, 3)
         assert diff[P_VALUE].values[0] < 0.01
 
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
         diff_2 = self.test.difference(level_1="1", level_2="2", non_inferiority_margins=(0.02, "decrease"))
 
@@ -2506,6 +2515,7 @@ class TestSequentialOrdinalPlusTwoCategorical(object):
 
     @pytest.mark.parametrize("correction_method", CORRECTION_METHODS, ids=lambda x: f"correction method: {x}")
     def test_multiple_difference_groupby(self, correction_method):
+        assert isinstance(self.test._confidence_computer, ConfidenceComputer)
         self.test._confidence_computer._correction_method = correction_method
 
         def get_diff() -> pd.DataFrame:
