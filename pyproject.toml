@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spotify-confidence"
-version = "4.0.0"
+version = "4.1.0"
 description = "Package for calculating and visualising confidence intervals, e.g. for A/B test analysis."
 readme = "README.md"
 license = {file = "LICENSE"}

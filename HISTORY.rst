@@ -2,9 +2,15 @@
 History
 =======
 
-in development
---------------
-* Modernize infrastructure (pyproject.toml, uv, ruff, update dependencies)
+4.1.0 (2026-02-26)
+------------------
+* Modernize build infrastructure: migrate to pyproject.toml, remove setup.py/setup.cfg/Makefile
+* Switch to ruff for linting and formatting, add ty for type checking
+* Use uv and tox-uv for faster CI and local development
+* Add type annotations throughout the codebase (Optional parameters, return types, abstract methods)
+* Remove dead code: unused functions, constants, and commented-out class stubs
+* Fix pandas deprecation warnings
+* Remove BetaBinomial.as_cumulative() classmethod (unused, untested)
 
 4.0.0 (2024-11-24)
 ------------------
